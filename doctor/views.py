@@ -1,0 +1,158 @@
+from django.db.models import Count, Max, Q
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers
+from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from appointments.models import Appointment
+from core.pagination import StandardPagination
+from users.models import DoctorProfile, User
+from .permissions import IsDoctor
+from .serializers import (
+    DoctorAppointmentSerializer,
+    DoctorOwnProfileSerializer,
+    DoctorPatientSerializer,
+    DoctorScheduleSerializer,
+)
+
+
+class DoctorProfileView(RetrieveUpdateAPIView):
+    permission_classes = (IsDoctor,)
+    serializer_class = DoctorOwnProfileSerializer
+    http_method_names = ['get', 'put']
+
+    def get_object(self):
+        return DoctorProfile.objects.select_related('user').get(user=self.request.user)
+
+
+class DoctorScheduleView(RetrieveUpdateAPIView):
+    permission_classes = (IsDoctor,)
+    serializer_class = DoctorScheduleSerializer
+    http_method_names = ['get', 'put']
+
+    def get_object(self):
+        return DoctorProfile.objects.get(user=self.request.user)
+
+
+class DoctorAppointmentListView(ListAPIView):
+    permission_classes = (IsDoctor,)
+    serializer_class = DoctorAppointmentSerializer
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        doctor_profile = DoctorProfile.objects.get(user=self.request.user)
+        qs = (
+            Appointment.objects
+            .filter(doctor=doctor_profile)
+            .select_related('patient', 'service')
+            .order_by('date', 'time')
+        )
+
+        params = self.request.query_params
+
+        status_filter = params.get('status', '').strip()
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        date_filter = params.get('date', '').strip()
+        if date_filter:
+            qs = qs.filter(date=date_filter)
+
+        date_from = params.get('date_from', '').strip()
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+
+        date_to = params.get('date_to', '').strip()
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+
+        is_online = params.get('is_online')
+        if is_online is not None:
+            qs = qs.filter(is_online=is_online.lower() in ('true', '1', 'yes'))
+
+        return qs
+
+
+class DoctorPatientListView(ListAPIView):
+    permission_classes = (IsDoctor,)
+    serializer_class = DoctorPatientSerializer
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        doctor_profile = DoctorProfile.objects.get(user=self.request.user)
+        doctor_filter = Q(appointments__doctor=doctor_profile)
+
+        qs = (
+            User.objects
+            .filter(doctor_filter)
+            .annotate(
+                visits_count=Count('appointments', filter=doctor_filter),
+                last_visit=Max('appointments__date', filter=doctor_filter),
+            )
+            .distinct()
+            .order_by('-last_visit')
+        )
+
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(phone__icontains=search)
+                | Q(email__icontains=search)
+            )
+
+        return qs
+
+
+@extend_schema(
+    responses={200: inline_serializer('DoctorStats', fields={
+        'profile_views': serializers.IntegerField(),
+        'rating': serializers.FloatField(),
+        'reviews_count': serializers.IntegerField(),
+        'appointments': inline_serializer('AppointmentCounts', fields={
+            'total': serializers.IntegerField(),
+            'pending': serializers.IntegerField(),
+            'confirmed': serializers.IntegerField(),
+            'completed': serializers.IntegerField(),
+            'cancelled': serializers.IntegerField(),
+        }),
+        'patients_count': serializers.IntegerField(),
+        'completion_rate': serializers.FloatField(),
+    })},
+    tags=['Doctor Cabinet'],
+)
+class DoctorStatsView(APIView):
+    permission_classes = (IsDoctor,)
+
+    def get(self, request):
+        profile = DoctorProfile.objects.get(user=request.user)
+
+        agg = Appointment.objects.filter(doctor=profile).aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(status=Appointment.Status.PENDING)),
+            confirmed=Count('id', filter=Q(status=Appointment.Status.CONFIRMED)),
+            completed=Count('id', filter=Q(status=Appointment.Status.COMPLETED)),
+            cancelled=Count('id', filter=Q(status=Appointment.Status.CANCELLED)),
+            patients_count=Count('patient', distinct=True, filter=Q(patient__isnull=False)),
+        )
+
+        total = agg['total'] or 0
+        completed = agg['completed'] or 0
+        completion_rate = round(completed / total * 100, 1) if total else 0.0
+
+        return Response({
+            'profile_views': profile.profile_views,
+            'rating': float(profile.rating),
+            'reviews_count': profile.reviews_count,
+            'appointments': {
+                'total': total,
+                'pending': agg['pending'],
+                'confirmed': agg['confirmed'],
+                'completed': completed,
+                'cancelled': agg['cancelled'],
+            },
+            'patients_count': agg['patients_count'],
+            'completion_rate': completion_rate,
+        })
