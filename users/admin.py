@@ -72,11 +72,9 @@ class DoctorProfileAdmin(admin.ModelAdmin):
         ('Условия', {'fields': ('equipment', 'patient_conditions', 'payment_methods')}),
         ('Публичный профиль', {'fields': ('about', 'experience_years', 'is_online_available',
                                           'consultation_price', 'is_published')}),
-        ('Биография', {'fields': ('education', 'work_experience', 'skills'), 'classes': ('collapse',)}),
-        ('Статистика', {'fields': ('rating', 'reviews_count', 'profile_views', 'created_at', 'updated_at'),
-                        'classes': ('collapse',)}),
-        ('Согласия', {'fields': ('agree_terms', 'agree_privacy', 'agree_data_processing', 'agree_publishing'),
-                      'classes': ('collapse',)}),
+        ('Биография', {'fields': ('education', 'work_experience', 'skills')}),
+        ('Статистика', {'fields': ('rating', 'reviews_count', 'profile_views', 'created_at', 'updated_at')}),
+        ('Согласия', {'fields': ('agree_terms', 'agree_privacy', 'agree_data_processing', 'agree_publishing')}),
     )
 
     @admin.display(description='Опубликован', boolean=True)
@@ -134,9 +132,8 @@ class ClinicProfileAdmin(admin.ModelAdmin):
         ('Условия', {'fields': ('equipment', 'patient_conditions', 'payment_methods')}),
         ('Публичный профиль', {'fields': ('experience_years', 'is_published')}),
         ('Статистика', {'fields': ('rating', 'reviews_count', 'doctors_count', 'profile_views',
-                                   'created_at', 'updated_at'), 'classes': ('collapse',)}),
-        ('Согласия', {'fields': ('agree_terms', 'agree_privacy', 'agree_data_processing', 'agree_publishing'),
-                      'classes': ('collapse',)}),
+                                   'created_at', 'updated_at')}),
+        ('Согласия', {'fields': ('agree_terms', 'agree_privacy', 'agree_data_processing', 'agree_publishing')}),
     )
 
     @admin.display(description='Опубликована', boolean=True)
