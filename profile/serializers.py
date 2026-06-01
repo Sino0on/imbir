@@ -5,27 +5,39 @@ from users.models import Favorite, PatientProfile
 
 
 class PatientProfileSerializer(serializers.ModelSerializer):
-    # Поля из связанного User
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     phone = serializers.CharField(source='user.phone', required=False, allow_blank=True)
     email = serializers.EmailField(source='user.email', read_only=True)
+    avatar = serializers.SerializerMethodField()
+    avatar_upload = serializers.ImageField(write_only=True, required=False)
 
     class Meta:
         model = PatientProfile
         fields = (
             'first_name', 'last_name', 'email', 'phone',
+            'avatar', 'avatar_upload',
             'blood_type', 'allergies',
             'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relation',
         )
 
+    def get_avatar(self, obj):
+        if not obj.user.avatar:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.user.avatar.url) if request else obj.user.avatar.url
+
     def update(self, instance, validated_data):
+        avatar_file = validated_data.pop('avatar_upload', None)
         user_data = validated_data.pop('user', {})
+
         user = instance.user
         for attr, value in user_data.items():
             setattr(user, attr, value)
-        if user_data:
-            user.save(update_fields=list(user_data.keys()))
+        if avatar_file:
+            user.avatar = avatar_file
+        if user_data or avatar_file:
+            user.save(update_fields=[*user_data.keys(), 'avatar'] if avatar_file else list(user_data.keys()))
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

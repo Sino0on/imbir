@@ -1,6 +1,7 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.generics import DestroyAPIView, ListAPIView, RetrieveUpdateAPIView
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +22,7 @@ from .serializers import (
 class PatientProfileView(RetrieveUpdateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = PatientProfileSerializer
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
     http_method_names = ['get', 'put']
 
     def get_object(self):
