@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -119,9 +119,19 @@ class ClinicRegisterView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
-@extend_schema(responses={200: UserMeSerializer}, tags=['auth'])
+@extend_schema_view(
+    get=extend_schema(responses={200: UserMeSerializer}, tags=['auth']),
+    put=extend_schema(request=UserMeSerializer, responses={200: UserMeSerializer}, tags=['auth']),
+)
 class MeView(APIView):
     permission_classes = (IsAuthenticated,)
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def get(self, request):
-        return Response(UserMeSerializer(request.user).data)
+        return Response(UserMeSerializer(request.user, context={'request': request}).data)
+
+    def put(self, request):
+        serializer = UserMeSerializer(request.user, data=request.data, partial=True, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

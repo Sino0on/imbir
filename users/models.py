@@ -31,6 +31,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20, blank=True)
+    avatar = models.ImageField(upload_to='users/avatars/', null=True, blank=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.PATIENT)
 
     is_active = models.BooleanField(default=True)

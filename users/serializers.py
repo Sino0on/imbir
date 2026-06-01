@@ -42,11 +42,24 @@ class ClientRegisterSerializer(serializers.ModelSerializer):
 
 class UserMeSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'full_name', 'phone', 'role', 'date_joined')
-        read_only_fields = fields
+        fields = ('id', 'email', 'first_name', 'last_name', 'full_name', 'phone', 'avatar', 'role', 'date_joined')
+        read_only_fields = ('id', 'email', 'full_name', 'role', 'date_joined')
+
+    def get_avatar(self, obj):
+        if not obj.avatar:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.avatar.url) if request else obj.avatar.url
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 
 class _LocationSerializer(serializers.Serializer):
