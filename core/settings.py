@@ -38,6 +38,9 @@ INSTALLED_APPS = [
     'profile',
     'doctor',
     'clinic',
+    'blog',
+    'notifications',
+    'upload',
 ]
 
 MIDDLEWARE = [

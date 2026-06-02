@@ -23,6 +23,9 @@ urlpatterns = [
     path('api/reviews/', include('reviews.urls')),
     path('api/profile/', include('profile.urls')),
     path('api/clinic/', include('clinic.urls')),
+    path('api/blog/', include('blog.urls')),
+    path('api/notifications/', include('notifications.urls')),
+    path('api/upload/', include('upload.urls')),
 ]
 
 if settings.DEBUG:
