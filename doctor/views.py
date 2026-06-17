@@ -1,19 +1,24 @@
 from django.db.models import Count, Max, Q
-from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework import serializers
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
+from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from appointments.models import Appointment
 from core.pagination import StandardPagination
+from reviews.models import Review
+from services.models import Service
 from users.models import DoctorProfile, User
 from .permissions import IsDoctor
 from .serializers import (
     DoctorAppointmentSerializer,
     DoctorOwnProfileSerializer,
     DoctorPatientSerializer,
+    DoctorReviewSerializer,
     DoctorScheduleSerializer,
+    DoctorServiceReadSerializer,
+    DoctorServiceWriteSerializer,
 )
 
 
@@ -156,3 +161,72 @@ class DoctorStatsView(APIView):
             'patients_count': agg['patients_count'],
             'completion_rate': completion_rate,
         })
+
+
+@extend_schema(tags=['Doctor Cabinet'])
+class DoctorReviewListView(ListAPIView):
+    permission_classes = (IsDoctor,)
+    serializer_class = DoctorReviewSerializer
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        profile = DoctorProfile.objects.get(user=self.request.user)
+        return Review.objects.filter(doctor=profile).select_related('author').order_by('-created_at')
+
+
+@extend_schema_view(
+    get=extend_schema(responses={200: DoctorServiceReadSerializer(many=True)}, tags=['Doctor Cabinet']),
+    post=extend_schema(request=DoctorServiceWriteSerializer, responses={201: DoctorServiceReadSerializer}, tags=['Doctor Cabinet']),
+)
+class DoctorServiceListCreateView(ListAPIView):
+    permission_classes = (IsDoctor,)
+    pagination_class = StandardPagination
+
+    def get_serializer_class(self):
+        return DoctorServiceWriteSerializer if self.request.method == 'POST' else DoctorServiceReadSerializer
+
+    def get_queryset(self):
+        profile = DoctorProfile.objects.get(user=self.request.user)
+        return Service.objects.filter(doctor=profile).order_by('category', 'name')
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['doctor'] = DoctorProfile.objects.get(user=self.request.user)
+        return ctx
+
+    def post(self, request, *args, **kwargs):
+        serializer = DoctorServiceWriteSerializer(data=request.data, context=self.get_serializer_context())
+        serializer.is_valid(raise_exception=True)
+        service = serializer.save()
+        return Response(DoctorServiceReadSerializer(service).data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema_view(
+    put=extend_schema(request=DoctorServiceWriteSerializer, responses={200: DoctorServiceReadSerializer}, tags=['Doctor Cabinet']),
+    delete=extend_schema(responses={204: None}, tags=['Doctor Cabinet']),
+)
+class DoctorServiceDetailView(APIView):
+    permission_classes = (IsDoctor,)
+
+    def _get_service(self, request, pk):
+        profile = DoctorProfile.objects.get(user=request.user)
+        try:
+            return Service.objects.get(pk=pk, doctor=profile)
+        except Service.DoesNotExist:
+            return None
+
+    def put(self, request, pk):
+        service = self._get_service(request, pk)
+        if not service:
+            return Response({'detail': 'Не найдено'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = DoctorServiceWriteSerializer(service, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        service = serializer.save()
+        return Response(DoctorServiceReadSerializer(service).data)
+
+    def delete(self, request, pk):
+        service = self._get_service(request, pk)
+        if not service:
+            return Response({'detail': 'Не найдено'}, status=status.HTTP_404_NOT_FOUND)
+        service.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

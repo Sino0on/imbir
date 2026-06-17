@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from appointments.models import Appointment
+from reviews.models import Review
+from services.models import Service
 from users.models import DoctorProfile, User
 
 
@@ -109,3 +111,29 @@ class DoctorPatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'full_name', 'phone', 'email', 'visits_count', 'last_visit')
+
+
+class DoctorReviewSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Review
+        fields = ('id', 'author', 'rating', 'text', 'created_at')
+
+    def get_author(self, obj):
+        return {'id': obj.author.id, 'full_name': obj.author.full_name}
+
+
+class DoctorServiceReadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ('id', 'name', 'category', 'description', 'price', 'duration', 'is_active', 'created_at')
+
+
+class DoctorServiceWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ('name', 'category', 'description', 'price', 'duration', 'is_active')
+
+    def create(self, validated_data):
+        return Service.objects.create(doctor=self.context['doctor'], **validated_data)
