@@ -3,7 +3,6 @@ services:
     build: .
     command: >
       sh -c "python manage.py migrate --noinput &&
-             python manage.py collectstatic --noinput &&
              gunicorn core.wsgi:application --bind 0.0.0.0:8030 --workers 2"
     ports:
       - "8030:8030"
