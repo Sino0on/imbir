@@ -75,7 +75,7 @@ class DoctorProfile(models.Model):
 
     # Step 3 — расписание
     schedule = models.JSONField(default=dict)
-    lunch_break = models.JSONField(default=dict)
+    lunch_break = models.JSONField(default=dict, null=True, blank=True)
     emergency_24_7 = models.BooleanField(default=False)
 
     # Step 4 — юридические данные
@@ -91,9 +91,9 @@ class DoctorProfile(models.Model):
     additional_services = models.TextField(blank=True)
 
     # Step 6 — оборудование и условия
-    equipment = models.JSONField(default=list)
-    patient_conditions = models.JSONField(default=list)
-    payment_methods = models.JSONField(default=list)
+    equipment = models.JSONField(default=list. null=True, blank=True)
+    patient_conditions = models.JSONField(default=list, null=True, blank=True)
+    payment_methods = models.JSONField(default=list, null=True, blank=True)
 
     # Step 7 — согласия
     agree_terms = models.BooleanField(default=False)
@@ -109,11 +109,11 @@ class DoctorProfile(models.Model):
 
     # Биография — заполняется врачом в личном кабинете
     # education: [{"institution": "КГМУ", "degree": "Высшее медицинское", "year": 2005}]
-    education = models.JSONField(default=list)
+    education = models.JSONField(default=list, null=True, blank=True)
     # work_experience: [{"clinic": "ГКБ №1", "position": "Терапевт", "from": 2005, "to": 2015}]
-    work_experience = models.JSONField(default=list)
+    work_experience = models.JSONField(default=list, null=True, blank=True)
     # skills: ["Диагностика", "УЗИ"]
-    skills = models.JSONField(default=list)
+    skills = models.JSONField(default=list, null=True, blank=True)
 
     # Кэшированные поля (обновляются при добавлении отзывов)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
