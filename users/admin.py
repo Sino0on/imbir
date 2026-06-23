@@ -18,7 +18,7 @@ class UserAdmin(BaseUserAdmin):
 
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Личные данные', {'fields': ('first_name', 'last_name', 'phone', 'role')}),
+        ('Личные данные', {'fields': ('first_name', 'last_name', 'middle_name', 'phone', 'role')}),
         ('Права доступа', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
                            'classes': ('collapse',)}),
         ('Даты', {'fields': ('last_login', 'date_joined'), 'classes': ('collapse',)}),
@@ -26,7 +26,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'phone', 'role', 'password1', 'password2'),
+            'fields': ('email', 'first_name', 'last_name', 'middle_name', 'phone', 'role', 'password1', 'password2'),
         }),
     )
     readonly_fields = ('date_joined', 'last_login')
@@ -57,7 +57,7 @@ class DoctorProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'city', 'license_number', 'rating', 'reviews_count',
                     'profile_views', 'published_badge', 'created_at')
     list_filter = ('is_published', 'emergency_24_7', 'city', 'is_online_available')
-    search_fields = ('user__email', 'user__first_name', 'user__last_name', 'license_number', 'city')
+    search_fields = ('user__email', 'user__first_name', 'user__last_name', 'user__middle_name', 'license_number', 'city')
     readonly_fields = ('rating', 'reviews_count', 'profile_views', 'created_at', 'updated_at')
     inlines = (DoctorDocumentInline,)
     list_per_page = 25
