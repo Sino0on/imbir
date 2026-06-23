@@ -91,7 +91,7 @@ class DoctorProfile(models.Model):
     additional_services = models.TextField(blank=True)
 
     # Step 6 — оборудование и условия
-    equipment = models.JSONField(default=list. null=True, blank=True)
+    equipment = models.JSONField(default=list, null=True, blank=True)
     patient_conditions = models.JSONField(default=list, null=True, blank=True)
     payment_methods = models.JSONField(default=list, null=True, blank=True)
 
