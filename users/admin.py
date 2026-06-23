@@ -14,7 +14,7 @@ class UserAdmin(BaseUserAdmin):
     list_filter = ('role', 'is_active', 'is_staff')
     search_fields = ('email', 'first_name', 'last_name', 'phone')
     ordering = ('-date_joined',)
-    list_per_page = 25
+    list_per_page = 500
 
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
