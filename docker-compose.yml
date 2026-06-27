@@ -13,10 +13,10 @@ services:
       - |
         python manage.py migrate --noinput &&
         python manage.py collectstatic --noinput &&
-        gunicorn core.asgi:application
-          -k uvicorn.workers.UvicornWorker
-          --bind 0.0.0.0:8114
-          --workers 2
+        gunicorn core.asgi:application \
+          -k uvicorn.workers.UvicornWorker \
+          --bind 0.0.0.0:8114 \
+          --workers 2 \
           --timeout 120
     volumes:
       - media_volume:/app/media
