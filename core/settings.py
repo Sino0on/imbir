@@ -41,7 +41,19 @@ INSTALLED_APPS = [
     'blog',
     'notifications',
     'upload',
+    'chat',
 ]
+
+ASGI_APPLICATION = 'core.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [config('REDIS_URL', default='redis://127.0.0.1:6379')],
+        },
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -133,6 +145,14 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+
+OPENAI_API_KEY = config('OPENAI_API_KEY', default=None)
+
+# Google Calendar API (OAuth2, для генерации Google Meet ссылок)
+GOOGLE_OAUTH_CLIENT_ID = config('GOOGLE_OAUTH_CLIENT_ID', default=None)
+GOOGLE_OAUTH_CLIENT_SECRET = config('GOOGLE_OAUTH_CLIENT_SECRET', default=None)
+GOOGLE_OAUTH_REFRESH_TOKEN = config('GOOGLE_OAUTH_REFRESH_TOKEN', default=None)
+GOOGLE_CALENDAR_CALENDAR_ID = config('GOOGLE_CALENDAR_CALENDAR_ID', default='primary')
 
 JAZZMIN_SETTINGS = {
     'site_title': 'Imbir Admin',

@@ -13,11 +13,16 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             'doctor_id', 'clinic_id', 'service_id',
             'date', 'time', 'notes',
             'guest_name', 'guest_phone', 'guest_email',
+            'is_online',
         )
 
     def validate(self, data):
         request = self.context['request']
         if not request.user.is_authenticated:
+            if data.get('is_online'):
+                raise serializers.ValidationError(
+                    {'is_online': 'Онлайн-запись доступна только авторизованным пользователям.'}
+                )
             if not data.get('guest_name'):
                 raise serializers.ValidationError({'guest_name': 'Обязательно для гостевой записи.'})
             if not data.get('guest_phone'):
@@ -29,6 +34,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         from users.models import DoctorProfile, ClinicProfile
         from services.models import Service
+        from .utils import generate_meet_link
 
         doctor_id = validated_data.pop('doctor_id', None)
         clinic_id = validated_data.pop('clinic_id', None)
@@ -45,6 +51,12 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         if service_id:
             validated_data['service'] = Service.objects.filter(id=service_id).first()
 
+        if validated_data.get('is_online'):
+            validated_data['google_meet_link'] = generate_meet_link(
+                validated_data['date'],
+                validated_data['time'],
+            )
+
         return Appointment.objects.create(**validated_data)
 
 
@@ -60,7 +72,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'id', 'patient',
             'guest_name', 'guest_phone', 'guest_email',
             'doctor', 'clinic', 'service',
-            'date', 'time', 'status', 'notes',
+            'date', 'time', 'is_online', 'google_meet_link',
+            'status', 'notes',
             'created_at',
         )
 

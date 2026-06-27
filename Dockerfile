@@ -17,5 +17,10 @@ COPY . .
 
 RUN mkdir -p /app/media /app/staticfiles
 
+RUN python manage.py collectstatic --noinput
 
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8030", "--workers", "2"]
+CMD ["gunicorn", "core.asgi:application", \
+     "-k", "uvicorn.workers.UvicornWorker", \
+     "--bind", "0.0.0.0:8000", \
+     "--workers", "2", \
+     "--timeout", "120"]

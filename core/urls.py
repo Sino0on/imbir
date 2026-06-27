@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/blog/', include('blog.urls')),
     path('api/notifications/', include('notifications.urls')),
     path('api/upload/', include('upload.urls')),
+    path('api/chat/', include('chat.urls')),
 ]
 
 if settings.DEBUG:

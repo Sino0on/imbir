@@ -37,6 +37,7 @@ class Appointment(models.Model):
     date = models.DateField()
     time = models.TimeField()
     is_online = models.BooleanField(default=False)
+    google_meet_link = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     notes = models.TextField(blank=True)
 
