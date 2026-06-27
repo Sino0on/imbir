@@ -21,6 +21,6 @@ RUN python manage.py collectstatic --noinput
 
 CMD ["gunicorn", "core.asgi:application", \
      "-k", "uvicorn.workers.UvicornWorker", \
-     "--bind", "0.0.0.0:8000", \
+     "--bind", "0.0.0.0:8114", \
      "--workers", "2", \
      "--timeout", "120"]
