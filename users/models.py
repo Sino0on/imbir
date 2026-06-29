@@ -121,8 +121,8 @@ class DoctorProfile(models.Model):
 
     is_published = models.BooleanField(default=False)
     profile_views = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
         verbose_name = 'Профиль врача'

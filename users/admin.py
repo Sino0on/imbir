@@ -60,7 +60,7 @@ class DoctorProfileAdmin(admin.ModelAdmin):
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'user__middle_name', 'license_number', 'city')
     readonly_fields = ('rating', 'reviews_count', 'profile_views', 'created_at', 'updated_at')
     inlines = (DoctorDocumentInline,)
-    list_per_page = 25
+    list_per_page = 500
 
     fieldsets = (
         ('Основное', {'fields': ('user', 'gender', 'birth_date', 'city', 'languages', 'photo')}),
