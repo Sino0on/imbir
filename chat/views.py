@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from openai import OpenAI
+from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from .models import ChatRoom, ChatMessage, AIMessage
 from .serializers import (
@@ -23,6 +24,19 @@ MAX_HISTORY = 20
 
 # ── Комнаты ──────────────────────────────────────────────────────────────────
 
+@extend_schema_view(
+    get=extend_schema(
+        responses={200: ChatRoomSerializer(many=True)},
+        tags=['Chat Rooms'],
+        summary='Список комнат чата'
+    ),
+    post=extend_schema(
+        request=CreateRoomSerializer,
+        responses={201: ChatRoomSerializer},
+        tags=['Chat Rooms'],
+        summary='Создать или получить комнату чата с пользователем'
+    )
+)
 class RoomListCreateView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -58,6 +72,13 @@ class RoomListCreateView(APIView):
         return Response(ChatRoomSerializer(room).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        responses={200: ChatMessageSerializer(many=True)},
+        tags=['Chat Rooms'],
+        summary='Список сообщений в комнате'
+    )
+)
 class RoomMessagesView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -73,6 +94,18 @@ class RoomMessagesView(APIView):
 
 # ── ИИ чат (комната 0) ───────────────────────────────────────────────────────
 
+@extend_schema_view(
+    get=extend_schema(
+        responses={200: AIMessageSerializer(many=True)},
+        tags=['AI Chat'],
+        summary='История сообщений с ИИ'
+    ),
+    delete=extend_schema(
+        responses={204: None},
+        tags=['AI Chat'],
+        summary='Очистить историю сообщений с ИИ'
+    )
+)
 class AIChatHistoryView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -85,6 +118,14 @@ class AIChatHistoryView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema_view(
+    post=extend_schema(
+        request=SendAIMessageSerializer,
+        responses={201: AIMessageSerializer},
+        tags=['AI Chat'],
+        summary='Отправить сообщение ИИ-врачу'
+    )
+)
 class AIChatSendView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -109,3 +150,4 @@ class AIChatSendView(APIView):
             user=request.user, role=AIMessage.Role.ASSISTANT, content=reply
         )
         return Response(AIMessageSerializer(ai_message).data, status=status.HTTP_201_CREATED)
+
