@@ -2,6 +2,7 @@ import json
 from django.db.models import Q
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from users.models import DoctorProfile
 from core.pagination import StandardPagination
@@ -13,6 +14,21 @@ def _json_escape(value: str) -> str:
     return json.dumps(value, ensure_ascii=True)[1:-1]
 
 
+@extend_schema(
+    parameters=[
+        OpenApiParameter(name='search', type=str, description='Поиск по имени и специализации'),
+        OpenApiParameter(name='city', type=str, description='Фильтр по городу'),
+        OpenApiParameter(name='specialization', type=str, description='Фильтр по специализации'),
+        OpenApiParameter(name='min_price', type=int, description='Минимальная цена приёма'),
+        OpenApiParameter(name='max_price', type=int, description='Максимальная цена приёма'),
+        OpenApiParameter(name='min_rating', type=float, description='Минимальный рейтинг (0–5)'),
+        OpenApiParameter(name='is_online', type=bool, description='Принимает онлайн (true/false)'),
+        OpenApiParameter(name='payment_method', type=str, description='Способ оплаты'),
+    ],
+    tags=['Doctors Catalog'],
+    summary='Список врачей с фильтрацией',
+    description='Возвращает список врачей с пагинацией и поддержкой фильтрации по различным параметрам.'
+)
 class DoctorListView(ListAPIView):
     permission_classes = (AllowAny,)
     serializer_class = DoctorListSerializer
