@@ -43,3 +43,6 @@ Thumbs.db
 htmlcov/
 .pytest_cache/
 
+# Migrations
+**/migrations/*.py
+!**/migrations/__init__.py
