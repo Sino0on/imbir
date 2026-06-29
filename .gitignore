@@ -43,6 +43,6 @@ Thumbs.db
 htmlcov/
 .pytest_cache/
 
-# Migrations — числовые (генерируются автоматически, конфликтуют при мерже)
-*/migrations/0[0-9][0-9][0-9]_*.py
-!*/migrations/0001_initial_squashed.py
+# Migrations
+**/migrations/*.py
+!**/migrations/__init__.py
