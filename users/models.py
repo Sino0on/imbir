@@ -1,6 +1,7 @@
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from services.models import Service
 from django.utils import timezone
 
 
@@ -123,7 +124,7 @@ class DoctorProfile(models.Model):
     profile_views = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
-    services = models.ManyToManyField('services.Service', related_name='doctors', blank=True)
+    services = models.ManyToManyField(Service, related_name='doctors', blank=True)
 
     class Meta:
         verbose_name = 'Профиль врача'
