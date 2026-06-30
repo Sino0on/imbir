@@ -1,0 +1,2284 @@
+[
+  {
+    "model": "services.service",
+    "pk": 3,
+    "fields": {
+      "name": "Прием первичный (30 мин)",
+      "category": "Услуги нова клиник",
+      "description": "Первичный консультативный прием специалиста",
+      "price": "1550.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:00:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 4,
+    "fields": {
+      "name": "Прием вторичный (30 мин)",
+      "category": "Услуги нова клиник",
+      "description": "Повторный консультативный прием специалиста по результатам анализов/лечения",
+      "price": "1400.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:00:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 5,
+    "fields": {
+      "name": "Геморроидэктомия",
+      "category": "Услуги нова клиник",
+      "description": "Хирургическое удаление геморроидальных узлов",
+      "price": "40000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:00:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 6,
+    "fields": {
+      "name": "Вскрытие парапроктита",
+      "category": "Услуги нова клиник",
+      "description": "Хирургическое вскрытие и дренирование гнойника при парапроктите",
+      "price": "12000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:00:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 7,
+    "fields": {
+      "name": "Медикаментозное лечение анальной трещины",
+      "category": "Услуги нова клиник",
+      "description": "Консервативное лечение анальной трещины без хирургического вмешательства",
+      "price": "9500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:00:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 8,
+    "fields": {
+      "name": "Вскрытие сложных форм парапроктита",
+      "category": "Услуги нова клиник",
+      "description": "Хирургическое лечение осложненных форм острого парапроктита",
+      "price": "14000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:00:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 9,
+    "fields": {
+      "name": "Тромбоз геморроидального узла (1 узел)",
+      "category": "Услуги нова клиник",
+      "description": "Оперативное лечение тромбоза одного геморроидального узла",
+      "price": "6500.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:00:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 10,
+    "fields": {
+      "name": "Удаление папиллом, кондилом, анальной бахромки",
+      "category": "Услуги нова клиник",
+      "description": "Иссечение доброкачественных новообразований перианальной области",
+      "price": "7500.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:00:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 11,
+    "fields": {
+      "name": "Иссечение свища",
+      "category": "Услуги нова клиник",
+      "description": "Хирургическая операция по удалению свищевого хода",
+      "price": "25000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:00:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 12,
+    "fields": {
+      "name": "Вскрытие ЭКХ (эпителиального копчикового хода)",
+      "category": "Услуги нова клиник",
+      "description": "Хирургическое лечение воспаления эпителиального копчикового хода",
+      "price": "19000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:00:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 13,
+    "fields": {
+      "name": "Прием первичный (30 мин)",
+      "category": "Гепатология",
+      "description": "Первичный консультативный прием врача-гепатолога",
+      "price": "2000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:30:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 14,
+    "fields": {
+      "name": "Прием вторичный (30 мин)",
+      "category": "Гепатология",
+      "description": "Повторный консультативный прием врача-гепатолога по результатам обследований",
+      "price": "1500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:30:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 15,
+    "fields": {
+      "name": "Онлайн-консультация (30 мин)",
+      "category": "Гепатология",
+      "description": "Дистанционная консультация врача-гепатолога с применением телемедицинских технологий",
+      "price": "1500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:30:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 16,
+    "fields": {
+      "name": "Фиброскан",
+      "category": "Гепатология",
+      "description": "Неинвазивное исследование печени (эластометрия) для оценки степени фиброза",
+      "price": "1750.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:30:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 17,
+    "fields": {
+      "name": "Прием первичный (40 мин)",
+      "category": "Урология-андрология",
+      "description": "Первичная консультация врача уролога-андролога",
+      "price": "1750.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:40:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 18,
+    "fields": {
+      "name": "Прием вторичный (30 мин)",
+      "category": "Урология-андрология",
+      "description": "Повторная консультация по результатам анализов и корректировка лечения",
+      "price": "1600.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:40:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 19,
+    "fields": {
+      "name": "Онлайн-консультация (40 мин)",
+      "category": "Урология-андрология",
+      "description": "Дистанционная консультация специалиста",
+      "price": "1600.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:40:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 20,
+    "fields": {
+      "name": "Урологический пакет",
+      "category": "Урология-андрология",
+      "description": "Комплексное обследование мужского здоровья",
+      "price": "10000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:40:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 21,
+    "fields": {
+      "name": "Операция при варикоцеле (под местной анестезией)",
+      "category": "Урология-андрология",
+      "description": "Хирургическое лечение расширения вен семенного канатика с использованием местного обезболивания",
+      "price": "28000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:40:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 22,
+    "fields": {
+      "name": "Операция при варикоцеле (под седацией)",
+      "category": "Урология-андрология",
+      "description": "Хирургическое лечение расширения вен семенного канатика в условиях медикаментозного сна",
+      "price": "35000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:40:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 23,
+    "fields": {
+      "name": "Индивидуальная консультация психолога (60 мин)",
+      "category": "Психология",
+      "description": "Первичный или повторный сеанс индивидуального психологического консультирования",
+      "price": "4000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 24,
+    "fields": {
+      "name": "Расширенная консультация психолога (120 мин)",
+      "category": "Психология",
+      "description": "Глубокая проработка психологических запросов, спаренный сеанс",
+      "price": "5000.00",
+      "duration": 120,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 25,
+    "fields": {
+      "name": "Курс из 10 консультаций психолога",
+      "category": "Психология",
+      "description": "Пакетное предложение: предоплата за 10 индивидуальных сеансов",
+      "price": "35000.00",
+      "duration": 600,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 26,
+    "fields": {
+      "name": "Первичная консультация флеболога + УЗИ вен нижних конечностей",
+      "category": "Флебология",
+      "description": "Комплексный первичный осмотр сосудистого хирурга с ультразвуковым сканированием вен",
+      "price": "1300.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 27,
+    "fields": {
+      "name": "Повторная консультация флеболога + УЗИ вен нижних конечностей",
+      "category": "Флебология",
+      "description": "Повторный осмотр в динамике с контрольным ультразвуковым сканированием",
+      "price": "1000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 28,
+    "fields": {
+      "name": "Первичная консультация флеболога + УЗИ артерий и вен нижних конечностей",
+      "category": "Флебология",
+      "description": "Расширенное комплексное обследование сосудистой системы нижних конечностей",
+      "price": "1800.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 29,
+    "fields": {
+      "name": "Повторная консультация флеболога + УЗИ артерий и вен нижних конечностей",
+      "category": "Флебология",
+      "description": "Повторный осмотр и контрольное УЗИ артерий и вен",
+      "price": "1200.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 30,
+    "fields": {
+      "name": "УЗИ артерий и вен нижних конечностей + оценка рисков",
+      "category": "Флебология",
+      "description": "Специализированное исследование для предоперационных пациентов",
+      "price": "1600.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 31,
+    "fields": {
+      "name": "Консультация флеболога + УЗИ сосудов верхних конечностей",
+      "category": "Флебология",
+      "description": "Осмотр специалиста и ультразвуковое сканирование сосудов рук",
+      "price": "1300.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 32,
+    "fields": {
+      "name": "УЗИ сосудов шеи (БЦА)",
+      "category": "Флебология",
+      "description": "Ультразвуковое исследование брахиоцефальных артерий и вен",
+      "price": "1600.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 33,
+    "fields": {
+      "name": "Первичная консультация по сосудистым опухолям и гемангиомам",
+      "category": "Флебология",
+      "description": "Специализированный прием ангиохирурга по новообразованиям сосудов",
+      "price": "2200.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 34,
+    "fields": {
+      "name": "Повторная консультация по сосудистым опухолям и гемангиомам",
+      "category": "Флебология",
+      "description": "Повторный прием ангиохирурга для контроля лечения новообразований",
+      "price": "1500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 35,
+    "fields": {
+      "name": "Консультация по лимфологическим болезням + УЗИ сосудов",
+      "category": "Флебология",
+      "description": "Прием специалиста по лимфостазу с ультразвуковым контролем",
+      "price": "1600.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 36,
+    "fields": {
+      "name": "Лазерная операция на варикозные вены (ЭВЛК) - 1 нога",
+      "category": "Флебология",
+      "description": "Эндовенозная лазерная коагуляция, малоинвазивное лечение варикоза одной конечности",
+      "price": "42000.00",
+      "duration": 90,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 37,
+    "fields": {
+      "name": "Лазерная операция на варикозные вены (ЭВЛК) - 2 ноги",
+      "category": "Флебология",
+      "description": "Эндовенозная лазерная коагуляция, малоинвазивное лечение варикоза обеих конечностей",
+      "price": "70000.00",
+      "duration": 150,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 38,
+    "fields": {
+      "name": "Склеротерапия мальформаций",
+      "category": "Флебология",
+      "description": "Инъекционное введение склерозанта для устранения сосудистых аномалий",
+      "price": "25000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 39,
+    "fields": {
+      "name": "Эстетическая склеротерапия",
+      "category": "Флебология",
+      "description": "Удаление сосудистых сеточек и звездочек (телеангиэктазий) инъекционным методом",
+      "price": "7000.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 40,
+    "fields": {
+      "name": "Подбор и коррекция препарата (флебология)",
+      "category": "Флебология",
+      "description": "Индивидуальный подбор медикаментозной терапии или компрессионного трикотажа",
+      "price": "14000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 41,
+    "fields": {
+      "name": "Пункция и эвакуация жидкостных образований",
+      "category": "Флебология",
+      "description": "Удаление скопления жидкости под контролем УЗИ",
+      "price": "3000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:42:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 45,
+    "fields": {
+      "name": "Прием первичный (60 мин)",
+      "category": "Неврология",
+      "description": "Прием первичный (60 мин)",
+      "price": "1750.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 46,
+    "fields": {
+      "name": "Прием вторичный (60 мин)",
+      "category": "Неврология",
+      "description": "Прием вторичный (60 мин)",
+      "price": "1600.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 47,
+    "fields": {
+      "name": "Онлайн-консультация (30-40 мин)",
+      "category": "Неврология",
+      "description": "Онлайн-консультация (30-40 мин)",
+      "price": "1600.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 48,
+    "fields": {
+      "name": "Прием без дерматоскопии (30 мин)",
+      "category": "Дерматовенерология",
+      "description": "Прием без дерматоскопии (30 мин)",
+      "price": "1900.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 49,
+    "fields": {
+      "name": "Прием с дерматоскопией",
+      "category": "Дерматовенерология",
+      "description": "Прием с дерматоскопией",
+      "price": "2500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 50,
+    "fields": {
+      "name": "Удаление новообразований",
+      "category": "Дерматовенерология",
+      "description": "Удаление новообразований",
+      "price": "2500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 51,
+    "fields": {
+      "name": "Удаление ногтевой пластины",
+      "category": "Дерматовенерология",
+      "description": "Удаление ногтевой пластины",
+      "price": "2000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 52,
+    "fields": {
+      "name": "Онлайн-консультация (30-40 мин)",
+      "category": "Дерматовенерология",
+      "description": "Онлайн-консультация (30-40 мин)",
+      "price": "1800.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 53,
+    "fields": {
+      "name": "Прием первичный с кинезиологическим тестированием (30-40 мин)",
+      "category": "Остеопатия",
+      "description": "Прием первичный с кинезиологическим тестированием (30-40 мин)",
+      "price": "2000.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 54,
+    "fields": {
+      "name": "Прием вторичный (30-40 мин)",
+      "category": "Остеопатия",
+      "description": "Прием вторичный (30-40 мин)",
+      "price": "1800.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 55,
+    "fields": {
+      "name": "Иглотерапия (30 мин)",
+      "category": "Остеопатия",
+      "description": "Иглотерапия (30 мин)",
+      "price": "2500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 56,
+    "fields": {
+      "name": "Иглотерапия с аурикулотерапией (30-40 мин)",
+      "category": "Остеопатия",
+      "description": "Иглотерапия с аурикулотерапией (30-40 мин)",
+      "price": "3000.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 57,
+    "fields": {
+      "name": "Остеопатия (сеанс 1час 15 мин)",
+      "category": "Остеопатия",
+      "description": "Остеопатия (сеанс 1час 15 мин)",
+      "price": "4800.00",
+      "duration": 75,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 58,
+    "fields": {
+      "name": "Акупунктура (30 мин)",
+      "category": "Остеопатия",
+      "description": "Акупунктура (30 мин)",
+      "price": "3000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 59,
+    "fields": {
+      "name": "Баночный массаж (30 мин)",
+      "category": "Остеопатия",
+      "description": "Баночный массаж (30 мин)",
+      "price": "2000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 60,
+    "fields": {
+      "name": "Медовый массаж (30 мин)",
+      "category": "Остеопатия",
+      "description": "Медовый массаж (30 мин)",
+      "price": "2500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 61,
+    "fields": {
+      "name": "Массаж камнями (30 мин)",
+      "category": "Остеопатия",
+      "description": "Массаж камнями (30 мин)",
+      "price": "2000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 62,
+    "fields": {
+      "name": "Массаж банками + иглотерапия (60 мин)",
+      "category": "Остеопатия",
+      "description": "Массаж банками + иглотерапия (60 мин)",
+      "price": "3000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 63,
+    "fields": {
+      "name": "Детская остеопатия 0+ (30-40 мин)",
+      "category": "Остеопатия",
+      "description": "Детская остеопатия 0+ (30-40 мин)",
+      "price": "2700.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 64,
+    "fields": {
+      "name": "Прием первичный (60 мин)",
+      "category": "Ревматология",
+      "description": "Прием первичный (60 мин)",
+      "price": "2200.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 65,
+    "fields": {
+      "name": "Прием вторичный",
+      "category": "Ревматология",
+      "description": "Прием вторичный",
+      "price": "2000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 66,
+    "fields": {
+      "name": "Короткая консультация",
+      "category": "Ревматология",
+      "description": "Короткая консультация",
+      "price": "1500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 67,
+    "fields": {
+      "name": "Пакет - 2 консультации (1 офлайн и 1 онлайн)",
+      "category": "Ревматология",
+      "description": "Пакет - 2 консультации (1 офлайн и 1 онлайн)",
+      "price": "4000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 68,
+    "fields": {
+      "name": "Онлайн-консультация (30-40 мин)",
+      "category": "Ревматология",
+      "description": "Онлайн-консультация (30-40 мин)",
+      "price": "2000.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 69,
+    "fields": {
+      "name": "Прием без УЗИ",
+      "category": "Маммология",
+      "description": "Прием без УЗИ",
+      "price": "1750.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 70,
+    "fields": {
+      "name": "Прием с УЗИ (30 мин)",
+      "category": "Маммология",
+      "description": "Прием с УЗИ (30 мин)",
+      "price": "2700.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 71,
+    "fields": {
+      "name": "Прием без УЗИ",
+      "category": "Маммология",
+      "description": "Прием без УЗИ",
+      "price": "1750.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 72,
+    "fields": {
+      "name": "Прием с УЗИ (30 мин)",
+      "category": "Маммология",
+      "description": "Прием с УЗИ (30 мин)",
+      "price": "2500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 73,
+    "fields": {
+      "name": "Иссечение фиброаденомы",
+      "category": "Маммология",
+      "description": "Иссечение фиброаденомы",
+      "price": "25000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 74,
+    "fields": {
+      "name": "Иссечение атеромы",
+      "category": "Маммология",
+      "description": "Иссечение атеромы",
+      "price": "15000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 75,
+    "fields": {
+      "name": "Сцеживание молочных желез",
+      "category": "Маммология",
+      "description": "Сцеживание молочных желез",
+      "price": "1600.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 76,
+    "fields": {
+      "name": "Секторальная резекция молочной железы",
+      "category": "Маммология",
+      "description": "Секторальная резекция молочной железы",
+      "price": "20000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 77,
+    "fields": {
+      "name": "Core биопсия молочной железы",
+      "category": "Маммология",
+      "description": "Core биопсия молочной железы",
+      "price": "9000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 78,
+    "fields": {
+      "name": "Онлайн-консультация (30-40 мин)",
+      "category": "Маммология",
+      "description": "Онлайн-консультация (30-40 мин)",
+      "price": "1600.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 79,
+    "fields": {
+      "name": "Прием превентивного терапевта-нутрициолога первичный (60 мин)",
+      "category": "Нутрициология",
+      "description": "Прием превентивного терапевта-нутрициолога первичный (60 мин)",
+      "price": "3000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 80,
+    "fields": {
+      "name": "Прием превентивного терапевта-нутрициолога вторичный (60 мин)",
+      "category": "Нутрициология",
+      "description": "Прием превентивного терапевта-нутрициолога вторичный (60 мин)",
+      "price": "2800.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 81,
+    "fields": {
+      "name": "Онлайн-консультация (30-40 мин)",
+      "category": "Нутрициология",
+      "description": "Онлайн-консультация (30-40 мин)",
+      "price": "2800.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 82,
+    "fields": {
+      "name": "Прием терапевта первичный",
+      "category": "Терапия",
+      "description": "Прием терапевта первичный",
+      "price": "1550.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 83,
+    "fields": {
+      "name": "Прием терапевта вторичный",
+      "category": "Терапия",
+      "description": "Прием терапевта вторичный",
+      "price": "1400.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 84,
+    "fields": {
+      "name": "Прием первичный (40 мин)",
+      "category": "Кардиология",
+      "description": "Прием первичный (40 мин)",
+      "price": "1750.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 85,
+    "fields": {
+      "name": "Прием вторичный (60 мин)",
+      "category": "Кардиология",
+      "description": "Прием вторичный (60 мин)",
+      "price": "1600.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 86,
+    "fields": {
+      "name": "ЭКГ",
+      "category": "Кардиология",
+      "description": "ЭКГ",
+      "price": "650.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 87,
+    "fields": {
+      "name": "ЭКГ + консультация терапевта-кардиолога (предоперационные пациенты)",
+      "category": "Кардиология",
+      "description": "ЭКГ + консультация терапевта-кардиолога (предоперационные пациенты)",
+      "price": "3000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 88,
+    "fields": {
+      "name": "Суточный мониторинг АД",
+      "category": "Кардиология",
+      "description": "Суточный мониторинг АД",
+      "price": "2800.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 89,
+    "fields": {
+      "name": "Суточный мониторинг ЭКГ",
+      "category": "Кардиология",
+      "description": "Суточный мониторинг ЭКГ",
+      "price": "2800.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 90,
+    "fields": {
+      "name": "Сут.мониторинг АД+ЭКГ",
+      "category": "Кардиология",
+      "description": "Сут.мониторинг АД+ЭКГ",
+      "price": "5000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 91,
+    "fields": {
+      "name": "Прием первичный (60 мин)",
+      "category": "Гастроэнтерология",
+      "description": "Прием первичный (60 мин)",
+      "price": "1750.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 92,
+    "fields": {
+      "name": "Прием вторичный (60 мин)",
+      "category": "Гастроэнтерология",
+      "description": "Прием вторичный (60 мин)",
+      "price": "1600.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 93,
+    "fields": {
+      "name": "Прием первичный + видеоэндоскопия (30 мин)",
+      "category": "Отоларингология",
+      "description": "Прием первичный + видеоэндоскопия (30 мин)",
+      "price": "1750.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 94,
+    "fields": {
+      "name": "Прием вторичный + видеоэндоскопия (30 мин)",
+      "category": "Отоларингология",
+      "description": "Прием вторичный + видеоэндоскопия (30 мин)",
+      "price": "1600.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 95,
+    "fields": {
+      "name": "Короткая консультация",
+      "category": "Отоларингология",
+      "description": "Короткая консультация",
+      "price": "1200.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 96,
+    "fields": {
+      "name": "Промывание уха",
+      "category": "Отоларингология",
+      "description": "Промывание уха",
+      "price": "900.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 97,
+    "fields": {
+      "name": "Промывание носа",
+      "category": "Отоларингология",
+      "description": "Промывание носа",
+      "price": "900.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 98,
+    "fields": {
+      "name": "Санация миндалин (промывание миндалин)",
+      "category": "Отоларингология",
+      "description": "Санация миндалин (промывание миндалин)",
+      "price": "1300.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 99,
+    "fields": {
+      "name": "Удаление серной пробки",
+      "category": "Отоларингология",
+      "description": "Удаление серной пробки",
+      "price": "700.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 100,
+    "fields": {
+      "name": "Аудиометрия",
+      "category": "Отоларингология",
+      "description": "Аудиометрия",
+      "price": "700.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 101,
+    "fields": {
+      "name": "Жерлицина Юлия Сергеевна (Московская) Прием первичный + видеодиагностика кожи головы (40 мин)",
+      "category": "Ортопедия",
+      "description": "Жерлицина Юлия Сергеевна (Московская) Прием первичный + видеодиагностика кожи головы (40 мин)",
+      "price": "3000.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 102,
+    "fields": {
+      "name": "Экспресс консультация по анализам в режиме офлайн/онлайн в течение месяца",
+      "category": "Ортопедия",
+      "description": "Экспресс консультация по анализам в режиме офлайн/онлайн в течение месяца",
+      "price": "1000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 103,
+    "fields": {
+      "name": "Повторный прием трихолога с трихоскопией ч-з 3мес от начала лечения (20 мин)",
+      "category": "Ортопедия",
+      "description": "Повторный прием трихолога с трихоскопией ч-з 3мес от начала лечения (20 мин)",
+      "price": "2000.00",
+      "duration": 20,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 104,
+    "fields": {
+      "name": "Первичный прием дерматолога (лицо)",
+      "category": "Ортопедия",
+      "description": "Первичный прием дерматолога (лицо)",
+      "price": "2000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 105,
+    "fields": {
+      "name": "Вторичный прием дерматолога (лицо)",
+      "category": "Ортопедия",
+      "description": "Вторичный прием дерматолога (лицо)",
+      "price": "1000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 106,
+    "fields": {
+      "name": "Внутриочаговое введение кеналога (40 мин)",
+      "category": "Ортопедия",
+      "description": "Внутриочаговое введение кеналога (40 мин)",
+      "price": "2500.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 107,
+    "fields": {
+      "name": "Мезотерапия кожи головы (цена зависит от препарата) (40 мин)",
+      "category": "Ортопедия",
+      "description": "Мезотерапия кожи головы (цена зависит от препарата) (40 мин)",
+      "price": "3800.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 108,
+    "fields": {
+      "name": "Плазмотерапия (40 мин)",
+      "category": "Ортопедия",
+      "description": "Плазмотерапия (40 мин)",
+      "price": "5000.00",
+      "duration": 40,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 109,
+    "fields": {
+      "name": "Удаление кератом Папилломы, при удалении более 10 шт – стоимость за 1 элемент 250 сом",
+      "category": "Ортопедия",
+      "description": "Удаление кератом Папилломы, при удалении более 10 шт – стоимость за 1 элемент 250 сом",
+      "price": "300.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 110,
+    "fields": {
+      "name": "Кератомы до 0,5 см",
+      "category": "Ортопедия",
+      "description": "Кератомы до 0,5 см",
+      "price": "600.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 111,
+    "fields": {
+      "name": "Кератомы 1 см",
+      "category": "Ортопедия",
+      "description": "Кератомы 1 см",
+      "price": "900.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 112,
+    "fields": {
+      "name": "Кератомы более 1 см",
+      "category": "Ортопедия",
+      "description": "Кератомы более 1 см",
+      "price": "1200.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 113,
+    "fields": {
+      "name": "Мягкие фибромы, акрохордоны",
+      "category": "Ортопедия",
+      "description": "Мягкие фибромы, акрохордоны",
+      "price": "500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 114,
+    "fields": {
+      "name": "Удаление образований на веках одиночные образования на реснитчатом крае век",
+      "category": "Ортопедия",
+      "description": "Удаление образований на веках одиночные образования на реснитчатом крае век",
+      "price": "1000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 115,
+    "fields": {
+      "name": "единичные образования до 0,3 см",
+      "category": "Ортопедия",
+      "description": "единичные образования до 0,3 см",
+      "price": "1000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 116,
+    "fields": {
+      "name": "множественные образования до 0,3 см (от 3-х до 10 образований )",
+      "category": "Ортопедия",
+      "description": "множественные образования до 0,3 см (от 3-х до 10 образований )",
+      "price": "3500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 117,
+    "fields": {
+      "name": "множественные образования до 0,3 см (от 10 и более)",
+      "category": "Ортопедия",
+      "description": "множественные образования до 0,3 см (от 10 и более)",
+      "price": "4500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 118,
+    "fields": {
+      "name": "Удаление невусов (родинок) 1 образование до 1 см",
+      "category": "Ортопедия",
+      "description": "Удаление невусов (родинок) 1 образование до 1 см",
+      "price": "900.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 119,
+    "fields": {
+      "name": "1 образование 1 см",
+      "category": "Ортопедия",
+      "description": "1 образование 1 см",
+      "price": "1200.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 120,
+    "fields": {
+      "name": "1 образование более 1 см",
+      "category": "Ортопедия",
+      "description": "1 образование более 1 см",
+      "price": "1500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 121,
+    "fields": {
+      "name": "Удаление капилляров, сосудистых \"звездочек\", гемангиом",
+      "category": "Ортопедия",
+      "description": "Удаление капилляров, сосудистых \"звездочек\", гемангиом",
+      "price": "1000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 122,
+    "fields": {
+      "name": "Удаление кондилом Единичный элемент",
+      "category": "Ортопедия",
+      "description": "Удаление кондилом Единичный элемент",
+      "price": "1500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 123,
+    "fields": {
+      "name": "единичных образований кондилом (от 1 до 3 штук)",
+      "category": "Ортопедия",
+      "description": "единичных образований кондилом (от 1 до 3 штук)",
+      "price": "3000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 124,
+    "fields": {
+      "name": "единичных образований - от 4 до 10 шт.",
+      "category": "Ортопедия",
+      "description": "единичных образований - от 4 до 10 шт.",
+      "price": "5000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 125,
+    "fields": {
+      "name": "единичных образований – более 10 шт.",
+      "category": "Ортопедия",
+      "description": "единичных образований – более 10 шт.",
+      "price": "6000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 126,
+    "fields": {
+      "name": "Удаление кондилом перианальной зоны Единичный элемент",
+      "category": "Ортопедия",
+      "description": "Удаление кондилом перианальной зоны Единичный элемент",
+      "price": "1500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 127,
+    "fields": {
+      "name": "Более 2х элементов, в зависимости от локализации и сложности удаления",
+      "category": "Ортопедия",
+      "description": "Более 2х элементов, в зависимости от локализации и сложности удаления",
+      "price": "3000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 128,
+    "fields": {
+      "name": "Анестезия Анестезия препаратами (Септонест,Ультракани, Убистезин 1 карпула)",
+      "category": "Ортопедия",
+      "description": "Анестезия Анестезия препаратами (Септонест,Ультракани, Убистезин 1 карпула)",
+      "price": "600.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 129,
+    "fields": {
+      "name": "Анестезия 2% р/ром Лидокаина (1 ампула)",
+      "category": "Ортопедия",
+      "description": "Анестезия 2% р/ром Лидокаина (1 ампула)",
+      "price": "300.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 130,
+    "fields": {
+      "name": "Анест.кр.\"Эмла\"(малая зона)",
+      "category": "Ортопедия",
+      "description": "Анест.кр.\"Эмла\"(малая зона)",
+      "price": "1000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 131,
+    "fields": {
+      "name": "Анестезия кремом \"Эмла\"(большая зона)",
+      "category": "Ортопедия",
+      "description": "Анестезия кремом \"Эмла\"(большая зона)",
+      "price": "1200.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 132,
+    "fields": {
+      "name": "Шейно-воротниковая зона (30 мин)",
+      "category": "Массаж",
+      "description": "Шейно-воротниковая зона (30 мин)",
+      "price": "900.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 133,
+    "fields": {
+      "name": "Шейно-воротниковая зона со спиной (45мин)",
+      "category": "Массаж",
+      "description": "Шейно-воротниковая зона со спиной (45мин)",
+      "price": "1200.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 134,
+    "fields": {
+      "name": "Лимфодренажный (80мин)",
+      "category": "Массаж",
+      "description": "Лимфодренажный (80мин)",
+      "price": "2300.00",
+      "duration": 80,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 135,
+    "fields": {
+      "name": "Стоун терапия (горячие камни) (75-80мин)",
+      "category": "Массаж",
+      "description": "Стоун терапия (горячие камни) (75-80мин)",
+      "price": "2000.00",
+      "duration": 80,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 136,
+    "fields": {
+      "name": "Спортивный (60мин)",
+      "category": "Массаж",
+      "description": "Спортивный (60мин)",
+      "price": "2000.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 137,
+    "fields": {
+      "name": "Общий (классический) (80мин)",
+      "category": "Массаж",
+      "description": "Общий (классический) (80мин)",
+      "price": "2000.00",
+      "duration": 80,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 138,
+    "fields": {
+      "name": "Антицеллюлитный (90мин)",
+      "category": "Массаж",
+      "description": "Антицеллюлитный (90мин)",
+      "price": "3000.00",
+      "duration": 90,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 139,
+    "fields": {
+      "name": "Антимегажир (80мин)",
+      "category": "Массаж",
+      "description": "Антимегажир (80мин)",
+      "price": "2700.00",
+      "duration": 80,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 140,
+    "fields": {
+      "name": "Баночно-вакуумный (80мин)",
+      "category": "Массаж",
+      "description": "Баночно-вакуумный (80мин)",
+      "price": "2000.00",
+      "duration": 80,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 141,
+    "fields": {
+      "name": "Медовый (60мин)",
+      "category": "Массаж",
+      "description": "Медовый (60мин)",
+      "price": "2300.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 142,
+    "fields": {
+      "name": "Прием превентивного эндокринолога первичный (45 мин)",
+      "category": "Эндокринология",
+      "description": "Прием превентивного эндокринолога первичный (45 мин)",
+      "price": "3000.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 143,
+    "fields": {
+      "name": "Прием превентивного эндокринолога вторичный (45 мин)",
+      "category": "Эндокринология",
+      "description": "Прием превентивного эндокринолога вторичный (45 мин)",
+      "price": "2800.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 144,
+    "fields": {
+      "name": "Биоимпеданс исследование + Ангиосканирование сосудистой системы + расшифровка",
+      "category": "Эндокринология",
+      "description": "Биоимпеданс исследование + Ангиосканирование сосудистой системы + расшифровка",
+      "price": "2200.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 145,
+    "fields": {
+      "name": "Короткая консультация",
+      "category": "Эндокринология",
+      "description": "Короткая консультация",
+      "price": "1500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 146,
+    "fields": {
+      "name": "Короткая консультация",
+      "category": "Эндокриналогия",
+      "description": "Короткая консультация",
+      "price": "1500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 147,
+    "fields": {
+      "name": "Прием превентивного эндокринолога первичный (45 мин)",
+      "category": "Эндокриналогия",
+      "description": "Прием превентивного эндокринолога первичный (45 мин)",
+      "price": "2400.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 148,
+    "fields": {
+      "name": "Прием превентивного эндокринолога вторичный (45 мин)",
+      "category": "Эндокриналогия",
+      "description": "Прием превентивного эндокринолога вторичный (45 мин)",
+      "price": "1500.00",
+      "duration": 45,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 149,
+    "fields": {
+      "name": "Прием эндокринного хирурга + УЗИ щитовидной железы (30-60 мин)",
+      "category": "Эндокринная хирургия",
+      "description": "Прием эндокринного хирурга + УЗИ щитовидной железы (30-60 мин)",
+      "price": "3500.00",
+      "duration": 60,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 150,
+    "fields": {
+      "name": "Срочная консультация",
+      "category": "Эндокринная хирургия",
+      "description": "Срочная консультация",
+      "price": "5000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 151,
+    "fields": {
+      "name": "Повторная консультация в течении 2х месяцев",
+      "category": "Эндокринная хирургия",
+      "description": "Повторная консультация в течении 2х месяцев",
+      "price": "2400.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 152,
+    "fields": {
+      "name": "Консультация пациентов, получивших хир.лечение в др.клиниках",
+      "category": "Эндокринная хирургия",
+      "description": "Консультация пациентов, получивших хир.лечение в др.клиниках",
+      "price": "5000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 153,
+    "fields": {
+      "name": "Гемитиреоидэктомия",
+      "category": "Эндокринная хирургия",
+      "description": "Гемитиреоидэктомия",
+      "price": "1200.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 154,
+    "fields": {
+      "name": "Гемитиреоидэктомия с ЦЛД",
+      "category": "Эндокринная хирургия",
+      "description": "Гемитиреоидэктомия с ЦЛД",
+      "price": "1400.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 155,
+    "fields": {
+      "name": "Тиреоидэктомия",
+      "category": "Эндокринная хирургия",
+      "description": "Тиреоидэктомия",
+      "price": "1500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 156,
+    "fields": {
+      "name": "Тиреоидэктомия при ДТЗ / Тиреоидэктомия с ЦЛД",
+      "category": "Эндокринная хирургия",
+      "description": "Тиреоидэктомия при ДТЗ / Тиреоидэктомия с ЦЛД",
+      "price": "1700.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 157,
+    "fields": {
+      "name": "Тиреоидэктомия с ЦЛД + БЛД / загрудинный зоб",
+      "category": "Эндокринная хирургия",
+      "description": "Тиреоидэктомия с ЦЛД + БЛД / загрудинный зоб",
+      "price": "2100.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 158,
+    "fields": {
+      "name": "Повторная гемитиреоидэктомия для РЙТ",
+      "category": "Эндокринная хирургия",
+      "description": "Повторная гемитиреоидэктомия для РЙТ",
+      "price": "1000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 159,
+    "fields": {
+      "name": "Паратиреоидэктомия",
+      "category": "Эндокринная хирургия",
+      "description": "Паратиреоидэктомия",
+      "price": "1000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 160,
+    "fields": {
+      "name": "Повторные операции на ЩЖ",
+      "category": "Эндокринная хирургия",
+      "description": "Повторные операции на ЩЖ",
+      "price": "0.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 161,
+    "fields": {
+      "name": "Ушивание прямых мышц живота / удаление липомы под местной анестезией",
+      "category": "Эндокринная хирургия",
+      "description": "Ушивание прямых мышц живота / удаление липомы под местной анестезией",
+      "price": "600.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 162,
+    "fields": {
+      "name": "Герниопластика",
+      "category": "Эндокринная хирургия",
+      "description": "Герниопластика",
+      "price": "500.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 163,
+    "fields": {
+      "name": "Холецистэктомия",
+      "category": "Эндокринная хирургия",
+      "description": "Холецистэктомия",
+      "price": "800.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 164,
+    "fields": {
+      "name": "Этаноловая деструкция кисты в ЩЖ",
+      "category": "Эндокринная хирургия",
+      "description": "Этаноловая деструкция кисты в ЩЖ",
+      "price": "10000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 165,
+    "fields": {
+      "name": "Абляция (узел до 4см)",
+      "category": "Эндокринная хирургия",
+      "description": "Абляция (узел до 4см)",
+      "price": "1400.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 166,
+    "fields": {
+      "name": "Абляция (узлы от 4см и выше/узлы в обеих долях щж)",
+      "category": "Эндокринная хирургия",
+      "description": "Абляция (узлы от 4см и выше/узлы в обеих долях щж)",
+      "price": "1600.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 167,
+    "fields": {
+      "name": "Наркоз при гемитиреоидэктомии, ушивании диастаза, удалении липомы",
+      "category": "Эндокринная хирургия",
+      "description": "Наркоз при гемитиреоидэктомии, ушивании диастаза, удалении липомы",
+      "price": "15000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  },
+  {
+    "model": "services.service",
+    "pk": 168,
+    "fields": {
+      "name": "Наркоз при тиреоидэктомии",
+      "category": "Эндокринная хирургия",
+      "description": "Наркоз при тиреоидэктомии",
+      "price": "15000.00",
+      "duration": 30,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-07-01T01:50:00Z"
+    }
+  }
+]
