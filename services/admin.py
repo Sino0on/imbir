@@ -9,7 +9,7 @@ class ServiceAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'price_display', 'duration_display', 'clinic', 'doctors_list', 'active_badge')
     list_filter = ('category', 'is_active')
     search_fields = ('name', 'category', 'clinic__name')
-    list_per_page = 30
+    list_per_page = 500
 
     fieldsets = (
         ('Услуга', {'fields': ('name', 'category', 'description', 'is_active')}),
