@@ -6,16 +6,20 @@ from .models import Service
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'price_display', 'duration_display', 'clinic', 'doctor', 'active_badge')
+    list_display = ('name', 'category', 'price_display', 'duration_display', 'clinic', 'doctors_list', 'active_badge')
     list_filter = ('category', 'is_active')
-    search_fields = ('name', 'category', 'clinic__name', 'doctor__user__last_name')
+    search_fields = ('name', 'category', 'clinic__name')
     list_per_page = 30
 
     fieldsets = (
         ('Услуга', {'fields': ('name', 'category', 'description', 'is_active')}),
         ('Параметры', {'fields': ('price', 'duration')}),
-        ('Привязка', {'fields': ('clinic', 'doctor')}),
+        ('Привязка', {'fields': ('clinic',)}),
     )
+
+    @admin.display(description='Врачи')
+    def doctors_list(self, obj):
+        return ", ".join([d.user.full_name for d in obj.doctors.all()])
 
     @admin.display(description='Цена')
     def price_display(self, obj):

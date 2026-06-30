@@ -5,12 +5,15 @@ from services.models import Service
 from users.models import DoctorProfile, User
 
 
+from users.serializers import HybridImageField
+
+
 class DoctorOwnProfileSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     email = serializers.EmailField(source='user.email', read_only=True)
     phone = serializers.CharField(source='user.phone', required=False, allow_blank=True)
-    photo = serializers.SerializerMethodField()
+    photo = HybridImageField(required=False, allow_null=True)
 
     class Meta:
         model = DoctorProfile
@@ -35,12 +38,6 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
             'is_published', 'profile_views', 'rating', 'reviews_count',
         )
         read_only_fields = ('profile_views', 'rating', 'reviews_count')
-
-    def get_photo(self, obj):
-        if not obj.photo:
-            return None
-        request = self.context.get('request')
-        return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
@@ -115,13 +112,22 @@ class DoctorPatientSerializer(serializers.ModelSerializer):
 
 class DoctorReviewSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
+    reply = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = ('id', 'author', 'rating', 'text', 'created_at')
+        fields = ('id', 'author', 'rating', 'text', 'reply', 'created_at')
 
     def get_author(self, obj):
         return {'id': obj.author.id, 'full_name': obj.author.full_name}
+
+    def get_reply(self, obj):
+        if obj.reply_text:
+            return {
+                'text': obj.reply_text,
+                'created_at': obj.reply_created_at,
+            }
+        return None
 
 
 class DoctorServiceReadSerializer(serializers.ModelSerializer):
@@ -136,4 +142,7 @@ class DoctorServiceWriteSerializer(serializers.ModelSerializer):
         fields = ('name', 'category', 'description', 'price', 'duration', 'is_active')
 
     def create(self, validated_data):
-        return Service.objects.create(doctor=self.context['doctor'], **validated_data)
+        doctor = self.context['doctor']
+        service = Service.objects.create(**validated_data)
+        doctor.services.add(service)
+        return service

@@ -21,16 +21,39 @@ def _update_rating(review):
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
+    target_id = serializers.SerializerMethodField()
+    reply = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = ('id', 'author', 'target_type', 'rating', 'text', 'created_at')
+        fields = ('id', 'author', 'target_type', 'target_id', 'rating', 'text', 'reply', 'created_at')
+        read_only_fields = ('id', 'author', 'target_type', 'target_id', 'reply', 'created_at')
 
     def get_author(self, obj):
         return {
             'id': obj.author.id,
             'full_name': obj.author.full_name,
         }
+
+    def get_target_id(self, obj):
+        if obj.target_type == Review.TargetType.DOCTOR and obj.doctor:
+            return obj.doctor.user_id
+        elif obj.target_type == Review.TargetType.CLINIC and obj.clinic:
+            return obj.clinic.user_id
+        return None
+
+    def get_reply(self, obj):
+        if obj.reply_text:
+            return {
+                'text': obj.reply_text,
+                'created_at': obj.reply_created_at,
+            }
+        return None
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        _update_rating(instance)
+        return instance
 
 
 class ReviewCreateSerializer(serializers.ModelSerializer):

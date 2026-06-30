@@ -4,6 +4,7 @@ from appointments.models import Appointment
 from reviews.models import Review
 from services.models import Service
 from users.models import ClinicBranch, ClinicInvite, ClinicProfile, DoctorClinicLink
+from users.serializers import HybridImageField
 
 
 class ClinicBranchUpdateSerializer(serializers.ModelSerializer):
@@ -41,7 +42,7 @@ class ClinicInviteCreateSerializer(serializers.ModelSerializer):
 
 class ClinicOwnProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', read_only=True)
-    logo = serializers.SerializerMethodField()
+    logo = HybridImageField(required=False, allow_null=True)
     branches = ClinicBranchUpdateSerializer(many=True, read_only=True)
 
     class Meta:
@@ -59,12 +60,6 @@ class ClinicOwnProfileSerializer(serializers.ModelSerializer):
             'branches',
         )
         read_only_fields = ('rating', 'reviews_count', 'doctors_count', 'profile_views')
-
-    def get_logo(self, obj):
-        if not obj.logo:
-            return None
-        request = self.context.get('request')
-        return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
 
 
 class ClinicAppointmentSerializer(serializers.ModelSerializer):
@@ -144,13 +139,22 @@ class ClinicServiceWriteSerializer(serializers.ModelSerializer):
 
 class ClinicReviewSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
+    reply = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = ('id', 'author', 'rating', 'text', 'created_at')
+        fields = ('id', 'author', 'rating', 'text', 'reply', 'created_at')
 
     def get_author(self, obj):
         return {
             'id': obj.author.id,
             'full_name': obj.author.full_name,
         }
+
+    def get_reply(self, obj):
+        if obj.reply_text:
+            return {
+                'text': obj.reply_text,
+                'created_at': obj.reply_created_at,
+            }
+        return None

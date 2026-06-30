@@ -12,10 +12,6 @@ class Service(models.Model):
         ClinicProfile, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='services',
     )
-    doctor = models.ForeignKey(
-        DoctorProfile, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='services',
-    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

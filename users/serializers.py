@@ -1,6 +1,35 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import ClinicBranch, ClinicInvite, DoctorClinicLink, User, DoctorProfile, ClinicProfile
+from users.utils import get_relative_path_from_url
+
+class HybridImageField(serializers.ImageField):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            if not data.strip():
+                return None
+            return get_relative_path_from_url(data)
+        return super().to_internal_value(data)
+
+    def to_representation(self, value):
+        if not value:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(value.url) if request else value.url
+
+class HybridFileField(serializers.FileField):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            if not data.strip():
+                return None
+            return get_relative_path_from_url(data)
+        return super().to_internal_value(data)
+
+    def to_representation(self, value):
+        if not value:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(value.url) if request else value.url
 
 
 class LoginSerializer(serializers.Serializer):
@@ -128,7 +157,7 @@ class DoctorRegisterSerializer(serializers.Serializer):
     step5 = DoctorStep5Serializer()
     step6 = DoctorStep6Serializer()
     step7 = DoctorStep7Serializer()
-    photo = serializers.ImageField(required=False)
+    photo = HybridImageField(required=False, allow_null=True)
     invite_clinic_id = serializers.IntegerField(required=False, allow_null=True)
     invite_branch_id = serializers.IntegerField(required=False, allow_null=True)
 
@@ -257,7 +286,7 @@ class ClinicRegisterSerializer(serializers.Serializer):
     step5 = serializers.CharField()
     step6 = serializers.CharField()
     step7 = serializers.CharField()
-    logo = serializers.ImageField(required=False)
+    logo = HybridImageField(required=False, allow_null=True)
 
     def validate(self, data):
         s1 = _parse_step(data['step1'], 'step1')

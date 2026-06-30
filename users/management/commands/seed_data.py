@@ -492,10 +492,11 @@ class Command(BaseCommand):
                     "category": category,
                     "price": price,
                     "duration": duration,
-                    "doctor": doctor,
                     "is_active": True,
                 },
             )
+            if doctor:
+                doctor.services.add(service)
             services.append(service)
         self.stdout.write(f"  Создано услуг: {len(services)}")
         return services

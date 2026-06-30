@@ -1,5 +1,5 @@
 from rest_framework import status
-from rest_framework.generics import CreateAPIView, UpdateAPIView
+from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
@@ -23,10 +23,14 @@ class AppointmentCreateView(CreateAPIView):
         )
 
 
-class AppointmentCancelView(UpdateAPIView):
+class AppointmentDetailView(RetrieveUpdateAPIView):
     permission_classes = (AllowAny,)
-    serializer_class = AppointmentCancelSerializer
-    http_method_names = ['patch']
+    http_method_names = ['get', 'patch']
+
+    def get_serializer_class(self):
+        if self.request.method == 'PATCH':
+            return AppointmentCancelSerializer
+        return AppointmentSerializer
 
     def get_object(self):
         appointment = get_object_or_404(

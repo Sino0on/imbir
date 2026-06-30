@@ -13,6 +13,7 @@ from .serializers import (
     LoginSerializer, UserMeSerializer,
     ClientRegisterSerializer, DoctorRegisterSerializer, ClinicRegisterSerializer,
 )
+from users.utils import save_hybrid_documents
 
 _TOKEN_RESPONSE = inline_serializer('TokenResponse', fields={
     'access': serializers.CharField(),
@@ -84,8 +85,7 @@ class DoctorRegisterView(APIView):
         user = serializer.save()
 
         doctor_profile = user.doctor_profile
-        for doc_file in request.FILES.getlist('documents'):
-            DoctorDocument.objects.create(doctor=doctor_profile, file=doc_file)
+        save_hybrid_documents(doctor_profile, 'documents', DoctorDocument, request)
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -98,7 +98,7 @@ class DoctorRegisterView(APIView):
 @extend_schema(request=ClinicRegisterSerializer, responses={201: _TOKEN_RESPONSE}, tags=['auth'])
 class ClinicRegisterView(APIView):
     permission_classes = (AllowAny,)
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def post(self, request):
         serializer = ClinicRegisterSerializer(data=request.data)
@@ -106,10 +106,8 @@ class ClinicRegisterView(APIView):
         user = serializer.save()
 
         clinic_profile = user.clinic_profile
-        for photo_file in request.FILES.getlist('photos'):
-            ClinicPhoto.objects.create(clinic=clinic_profile, image=photo_file)
-        for doc_file in request.FILES.getlist('documents'):
-            ClinicDocument.objects.create(clinic=clinic_profile, file=doc_file)
+        save_hybrid_documents(clinic_profile, 'photos', ClinicPhoto, request)
+        save_hybrid_documents(clinic_profile, 'documents', ClinicDocument, request)
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -135,3 +133,90 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+from django.core import signing
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+@extend_schema(
+    request=inline_serializer('PasswordResetRequest', fields={'email': serializers.EmailField()}),
+    responses={200: inline_serializer('PasswordResetRequestSuccess', fields={'detail': serializers.CharField()})},
+    tags=['auth'],
+)
+class PasswordResetRequestView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        email = request.data.get('email', '').strip()
+        if not email:
+            return Response({'error': 'Email обязателен'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+            token = signing.dumps({'email': user.email}, salt='password-reset')
+
+            subject = "Восстановление пароля — Imbir"
+            message = (
+                f"Здравствуйте!\n\n"
+                f"Вы получили это письмо, потому что запросили сброс пароля.\n"
+                f"Используйте следующий токен для подтверждения:\n\n"
+                f"{token}\n\n"
+                f"Если вы не запрашивали сброс пароля, проигнорируйте это письмо.\n"
+            )
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL or 'noreply@imbir.kg',
+                [user.email],
+                fail_silently=True,
+            )
+        except User.DoesNotExist:
+            pass
+
+        return Response({'detail': 'Если пользователь существует, письмо с инструкциями отправлено.'}, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    request=inline_serializer('PasswordResetConfirm', fields={
+        'token': serializers.CharField(),
+        'password': serializers.CharField(),
+    }),
+    responses={200: inline_serializer('PasswordResetConfirmSuccess', fields={'detail': serializers.CharField()})},
+    tags=['auth'],
+)
+class PasswordResetConfirmView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        token = request.data.get('token', '').strip()
+        password = request.data.get('password', '').strip()
+
+        if not token or not password:
+            return Response({'error': 'Токен и пароль обязательны'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(password) < 8:
+            return Response({'password': 'Пароль должен быть не менее 8 символов.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            data = signing.loads(token, salt='password-reset', max_age=86400)  # 24 часа
+            email = data.get('email')
+        except signing.SignatureExpired:
+            return Response({'error': 'Срок действия токена истёк'}, status=status.HTTP_400_BAD_REQUEST)
+        except signing.BadSignature:
+            return Response({'error': 'Неверный токен сброса пароля'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'Пользователь не найден'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(password)
+        user.save()
+
+        return Response({'detail': 'Пароль успешно сброшен'}, status=status.HTTP_200_OK)
+

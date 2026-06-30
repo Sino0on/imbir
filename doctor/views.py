@@ -187,7 +187,7 @@ class DoctorServiceListCreateView(ListAPIView):
 
     def get_queryset(self):
         profile = DoctorProfile.objects.get(user=self.request.user)
-        return Service.objects.filter(doctor=profile).order_by('category', 'name')
+        return profile.services.all().order_by('category', 'name')
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -211,7 +211,7 @@ class DoctorServiceDetailView(APIView):
     def _get_service(self, request, pk):
         profile = DoctorProfile.objects.get(user=request.user)
         try:
-            return Service.objects.get(pk=pk, doctor=profile)
+            return profile.services.get(pk=pk)
         except Service.DoesNotExist:
             return None
 

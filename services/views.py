@@ -12,7 +12,7 @@ class ServiceListView(ListAPIView):
     pagination_class = StandardPagination
 
     def get_queryset(self):
-        qs = Service.objects.filter(is_active=True).select_related('clinic', 'doctor__user')
+        qs = Service.objects.filter(is_active=True).select_related('clinic').prefetch_related('doctors__user')
 
         params = self.request.query_params
 
@@ -30,7 +30,7 @@ class ServiceListView(ListAPIView):
         doctor_id = params.get('doctor_id')
         if doctor_id:
             try:
-                qs = qs.filter(doctor__user_id=int(doctor_id))
+                qs = qs.filter(doctors__user_id=int(doctor_id))
             except ValueError:
                 pass
 
@@ -54,6 +54,4 @@ class ServiceListView(ListAPIView):
 class ServiceDetailView(RetrieveAPIView):
     permission_classes = (AllowAny,)
     serializer_class = ServiceDetailSerializer
-    queryset = Service.objects.filter(is_active=True).select_related(
-        'clinic', 'doctor__user',
-    )
+    queryset = Service.objects.filter(is_active=True).select_related('clinic').prefetch_related('doctors__user')

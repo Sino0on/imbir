@@ -184,10 +184,12 @@ class FavoriteCreateSerializer(serializers.Serializer):
 
 class PatientReviewSerializer(serializers.ModelSerializer):
     target = serializers.SerializerMethodField()
+    target_id = serializers.SerializerMethodField()
+    reply = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = ('id', 'target_type', 'target', 'rating', 'text', 'created_at')
+        fields = ('id', 'target_type', 'target_id', 'target', 'rating', 'text', 'reply', 'created_at')
 
     def get_target(self, obj):
         if obj.target_type == Review.TargetType.DOCTOR and obj.doctor:
@@ -199,5 +201,20 @@ class PatientReviewSerializer(serializers.ModelSerializer):
             return {
                 'id': obj.clinic.user_id,
                 'name': obj.clinic.name,
+            }
+        return None
+
+    def get_target_id(self, obj):
+        if obj.target_type == Review.TargetType.DOCTOR and obj.doctor:
+            return obj.doctor.user_id
+        elif obj.target_type == Review.TargetType.CLINIC and obj.clinic:
+            return obj.clinic.user_id
+        return None
+
+    def get_reply(self, obj):
+        if obj.reply_text:
+            return {
+                'text': obj.reply_text,
+                'created_at': obj.reply_created_at,
             }
         return None

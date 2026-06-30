@@ -8,16 +8,34 @@ class ServiceListSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'category', 'price', 'duration')
 
 
+class ServiceDoctorSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='user_id')
+    full_name = serializers.CharField(source='user.full_name')
+    photo = serializers.SerializerMethodField()
+
+    class Meta:
+        from users.models import DoctorProfile
+        model = DoctorProfile
+        fields = ('id', 'full_name', 'photo')
+
+    def get_photo(self, obj):
+        if not obj.photo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
+
+
 class ServiceDetailSerializer(serializers.ModelSerializer):
     clinic = serializers.SerializerMethodField()
     doctor = serializers.SerializerMethodField()
+    doctors = ServiceDoctorSerializer(many=True, read_only=True)
 
     class Meta:
         model = Service
         fields = (
             'id', 'name', 'category', 'description',
             'price', 'duration',
-            'clinic', 'doctor',
+            'clinic', 'doctor', 'doctors',
         )
 
     def get_clinic(self, obj):
@@ -29,9 +47,10 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
         }
 
     def get_doctor(self, obj):
-        if not obj.doctor:
+        first_doc = obj.doctors.first()
+        if not first_doc:
             return None
         return {
-            'id': obj.doctor.user_id,
-            'full_name': obj.doctor.user.full_name,
+            'id': first_doc.user_id,
+            'full_name': first_doc.user.full_name,
         }
