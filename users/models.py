@@ -344,3 +344,21 @@ class PasswordResetCode(models.Model):
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(minutes=15)
 
+
+class PhoneVerificationCode(models.Model):
+    phone = models.CharField(max_length=20)
+    code = models.CharField(max_length=4)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'Код подтверждения телефона'
+        verbose_name_plural = 'Коды подтверждения телефонов'
+
+    def __str__(self):
+        return f'{self.phone} -> {self.code}'
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(minutes=10)
+
+

@@ -273,3 +273,10 @@ JAZZMIN_UI_TWEAKS = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@imbir.kg'
+
+# Nikita SMS settings
+NIKITA_SMS_URL = config('NIKITA_SMS_URL', default='https://smspro.nikita.kg/api/send')
+NIKITA_SMS_LOGIN = config('NIKITA_SMS_LOGIN', default='')
+NIKITA_SMS_PASSWORD = config('NIKITA_SMS_PASSWORD', default='')
+NIKITA_SMS_SENDER = config('NIKITA_SMS_SENDER', default='Imbir')
+

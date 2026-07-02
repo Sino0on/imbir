@@ -75,3 +75,52 @@ def save_hybrid_documents(profile, field_name, model_class, request):
                     else:
                         if not model_class.objects.filter(clinic=profile, file=rel_path).exists():
                             model_class.objects.create(clinic=profile, file=rel_path)
+
+
+import urllib.request
+import urllib.parse
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
+def send_sms_nikita(phone, text):
+    url = getattr(settings, 'NIKITA_SMS_URL', 'https://smspro.nikita.kg/api/send')
+    login = getattr(settings, 'NIKITA_SMS_LOGIN', '')
+    password = getattr(settings, 'NIKITA_SMS_PASSWORD', '')
+    sender = getattr(settings, 'NIKITA_SMS_SENDER', 'Imbir')
+
+    if not login or not password:
+        logger.warning(f"Nikita SMS credentials not set. SMS to {phone} would be: {text}")
+        print(f"\n--- SMS to {phone} (Nikita SMS simulation) ---\n{text}\n------------------------------------------\n")
+        return True
+
+    phone_cleaned = ''.join(c for c in phone if c.isdigit())
+    payload = {
+        "login": login,
+        "password": password,
+        "messages": [
+            {
+                "id": "1",
+                "phone": phone_cleaned,
+                "text": text,
+                "sender": sender
+            }
+        ]
+    }
+    
+    try:
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(
+            url, 
+            data=data, 
+            headers={'Content-Type': 'application/json'}
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            res_data = response.read().decode('utf-8')
+            logger.info(f"Nikita SMS sent to {phone}. Response: {res_data}")
+            return True
+    except Exception as e:
+        logger.error(f"Failed to send SMS to {phone} via Nikita SMS: {e}")
+        return False
+

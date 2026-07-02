@@ -9,13 +9,14 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.exceptions import TokenError
 
 import random
-from .models import DoctorDocument, ClinicPhoto, ClinicDocument, PasswordResetCode
+from .models import DoctorDocument, ClinicPhoto, ClinicDocument, PasswordResetCode, PhoneVerificationCode
 from .serializers import (
     LoginSerializer, UserMeSerializer,
     ClientRegisterSerializer, DoctorRegisterSerializer, ClinicRegisterSerializer,
     PasswordResetVerifySerializer, PasswordResetConfirmSerializer,
+    PhoneRegisterRequestSerializer, PhoneRegisterConfirmSerializer,
 )
-from users.utils import save_hybrid_documents
+from users.utils import save_hybrid_documents, send_sms_nikita
 
 _TOKEN_RESPONSE = inline_serializer('TokenResponse', fields={
     'access': serializers.CharField(),
@@ -225,5 +226,75 @@ class PasswordResetConfirmView(APIView):
             return Response({'error': 'Пользователь не найден'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'detail': 'Пароль успешно сброшен'}, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    request=PhoneRegisterRequestSerializer,
+    responses={200: inline_serializer('PhoneRegisterRequestSuccess', fields={'detail': serializers.CharField()})},
+    tags=['auth'],
+)
+class PhoneRegisterRequestView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = PhoneRegisterRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone = serializer.validated_data['phone']
+
+        # Generate 4-digit code
+        code = f"{random.randint(1000, 9999)}"
+        PhoneVerificationCode.objects.create(phone=phone, code=code)
+
+        # Send SMS via Nikita
+        message = f"Код подтверждения для регистрации в Imbir: {code}"
+        send_sms_nikita(phone, message)
+
+        return Response({'detail': 'Код подтверждения отправлен на указанный номер телефона.'}, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    request=PhoneRegisterConfirmSerializer,
+    responses={201: _TOKEN_RESPONSE},
+    tags=['auth'],
+)
+class PhoneRegisterConfirmView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = PhoneRegisterConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data['phone']
+        password = serializer.validated_data['password']
+        first_name = serializer.validated_data['first_name']
+        last_name = serializer.validated_data['last_name']
+        verification = serializer.validated_data['verification']
+
+        # Generate a unique placeholder email based on phone digits only
+        phone_digits = ''.join(c for c in phone if c.isdigit())
+        placeholder_email = f"{phone_digits}@phone.imbir.kg"
+
+        # Create user
+        user = User.objects.create_user(
+            email=placeholder_email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            phone=phone,
+            role=User.Role.PATIENT
+        )
+
+        # Mark code as used
+        verification.is_used = True
+        verification.save()
+
+        # Login immediately and return tokens
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserMeSerializer(user, context={'request': request}).data,
+        }, status=status.HTTP_201_CREATED)
+
 
 

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import ClinicBranch, ClinicInvite, DoctorClinicLink, User, DoctorProfile, ClinicProfile, PasswordResetCode
+from .models import ClinicBranch, ClinicInvite, DoctorClinicLink, User, DoctorProfile, ClinicProfile, PasswordResetCode, PhoneVerificationCode
 from users.utils import get_relative_path_from_url
 
 class HybridImageField(serializers.ImageField):
@@ -33,17 +33,32 @@ class HybridFileField(serializers.FileField):
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.CharField()  # Accepts either email or phone
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        user = authenticate(username=data['email'], password=data['password'])
+        login_id = data.get('email', '').strip()
+        password = data.get('password', '')
+
+        user = None
+        if '@' in login_id:
+            user = authenticate(username=login_id, password=password)
+        else:
+            # Phone number login
+            try:
+                target_user = User.objects.filter(phone=login_id).first()
+                if target_user:
+                    user = authenticate(username=target_user.email, password=password)
+            except Exception:
+                pass
+
         if not user:
-            raise serializers.ValidationError('Неверный email или пароль')
+            raise serializers.ValidationError('Неверный email, телефон или пароль')
         if not user.is_active:
             raise serializers.ValidationError('Аккаунт отключён')
         data['user'] = user
         return data
+
 
 
 class ClientRegisterSerializer(serializers.ModelSerializer):
@@ -441,4 +456,45 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
         data['reset_code'] = reset_code
         return data
+
+
+class PhoneRegisterRequestSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+
+    def validate_phone(self, value):
+        phone_cleaned = value.strip()
+        if User.objects.filter(phone=phone_cleaned).exists():
+            raise serializers.ValidationError('Пользователь с таким номером телефона уже зарегистрирован')
+        return phone_cleaned
+
+
+class PhoneRegisterConfirmSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+    code = serializers.CharField(max_length=4, min_length=4)
+    password = serializers.CharField(write_only=True, min_length=8)
+    first_name = serializers.CharField(max_length=100)
+    last_name = serializers.CharField(max_length=100)
+
+    def validate(self, data):
+        phone = data.get('phone')
+        code = data.get('code')
+
+        verification = PhoneVerificationCode.objects.filter(
+            phone=phone,
+            code=code,
+            is_used=False
+        ).order_by('-created_at').first()
+
+        if not verification:
+            raise serializers.ValidationError({'code': 'Неверный код подтверждения'})
+
+        if verification.is_expired():
+            raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
+
+        if User.objects.filter(phone=phone).exists():
+            raise serializers.ValidationError({'phone': 'Пользователь с таким номером телефона уже зарегистрирован'})
+
+        data['verification'] = verification
+        return data
+
 
