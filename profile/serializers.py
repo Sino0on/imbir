@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from appointments.models import Appointment
 from reviews.models import Review
 from users.models import Favorite, PatientProfile
@@ -55,6 +56,8 @@ class PatientAppointmentSerializer(serializers.ModelSerializer):
         model = Appointment
         fields = (
             'id', 'date', 'time', 'status', 'notes',
+            'is_online', 'google_meet_link',
+            'diagnosis', 'recommendations',
             'doctor', 'clinic', 'service',
             'can_review', 'created_at',
         )
@@ -84,6 +87,7 @@ class PatientAppointmentSerializer(serializers.ModelSerializer):
             'price': obj.service.price,
         }
 
+    @extend_schema_field(serializers.BooleanField)
     def get_can_review(self, obj):
         if obj.status != Appointment.Status.COMPLETED:
             return False

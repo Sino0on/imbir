@@ -72,7 +72,7 @@ class DoctorAppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = (
-            'id', 'date', 'time', 'is_online', 'status', 'notes',
+            'id', 'date', 'time', 'is_online', 'google_meet_link', 'status', 'notes',
             'patient', 'service', 'created_at',
         )
 
@@ -104,10 +104,36 @@ class DoctorPatientSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField()
     visits_count = serializers.IntegerField()
     last_visit = serializers.DateField()
+    diagnosis = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'full_name', 'phone', 'email', 'visits_count', 'last_visit')
+        fields = ('id', 'full_name', 'phone', 'email', 'visits_count', 'last_visit', 'diagnosis')
+
+    def get_diagnosis(self, obj):
+        doctor_profile = self.context.get('doctor_profile')
+        if not doctor_profile:
+            request = self.context.get('request')
+            if request and request.user.is_authenticated:
+                doctor_profile = getattr(request.user, 'doctor_profile', None)
+        if not doctor_profile:
+            return ""
+        
+        latest_appt = (
+            Appointment.objects
+            .filter(patient=obj, doctor=doctor_profile)
+            .exclude(diagnosis="")
+            .exclude(diagnosis__isnull=True)
+            .order_by('-date', '-time')
+            .first()
+        )
+        return latest_appt.diagnosis if latest_appt else ""
+
+
+class DoctorAppointmentSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appointment
+        fields = ('diagnosis', 'recommendations', 'doctor_notes')
 
 
 class DoctorReviewSerializer(serializers.ModelSerializer):

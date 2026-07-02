@@ -40,6 +40,9 @@ class Appointment(models.Model):
     google_meet_link = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     notes = models.TextField(blank=True)
+    diagnosis = models.TextField(blank=True, null=True)
+    recommendations = models.TextField(blank=True, null=True)
+    doctor_notes = models.TextField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

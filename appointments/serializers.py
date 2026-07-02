@@ -27,8 +27,38 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'guest_name': 'Обязательно для гостевой записи.'})
             if not data.get('guest_phone'):
                 raise serializers.ValidationError({'guest_phone': 'Обязательно для гостевой записи.'})
-        if not data.get('doctor_id') and not data.get('clinic_id'):
+        
+        doctor_id = data.get('doctor_id')
+        clinic_id = data.get('clinic_id')
+        
+        if not doctor_id and not clinic_id:
             raise serializers.ValidationError('Укажите doctor_id или clinic_id.')
+            
+        from users.models import DoctorProfile, ClinicProfile
+        
+        if doctor_id:
+            try:
+                doctor = DoctorProfile.objects.select_related('user').get(user_id=doctor_id)
+            except DoctorProfile.DoesNotExist:
+                raise serializers.ValidationError({'doctor_id': 'Врач не найден.'})
+            
+            if not doctor.user.is_active or not doctor.is_published:
+                raise serializers.ValidationError({'doctor_id': 'Выбранный врач не принимает записи (не опубликован).'})
+                
+            if data.get('is_online') and not doctor.is_online_available:
+                raise serializers.ValidationError(
+                    {'is_online': 'Этот врач не проводит онлайн-консультации.'}
+                )
+                
+        if clinic_id:
+            try:
+                clinic = ClinicProfile.objects.select_related('user').get(user_id=clinic_id)
+            except ClinicProfile.DoesNotExist:
+                raise serializers.ValidationError({'clinic_id': 'Клиника не найдена.'})
+                
+            if not clinic.user.is_active or not clinic.is_published:
+                raise serializers.ValidationError({'clinic_id': 'Выбранная клиника не принимает записи (не опубликована).'})
+                
         return data
 
     def create(self, validated_data):
@@ -109,6 +139,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
         return {
             'id': obj.service.id,
             'name': obj.service.name,
+            'price': obj.service.price,
         }
 
 

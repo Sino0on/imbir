@@ -19,6 +19,7 @@ from .serializers import (
     DoctorScheduleSerializer,
     DoctorServiceReadSerializer,
     DoctorServiceWriteSerializer,
+    DoctorAppointmentSummarySerializer,
 )
 
 
@@ -109,6 +110,11 @@ class DoctorPatientListView(ListAPIView):
             )
 
         return qs
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['doctor_profile'] = DoctorProfile.objects.get(user=self.request.user)
+        return ctx
 
 
 @extend_schema(
@@ -230,3 +236,20 @@ class DoctorServiceDetailView(APIView):
             return Response({'detail': 'Не найдено'}, status=status.HTTP_404_NOT_FOUND)
         service.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema_view(
+    get=extend_schema(responses={200: DoctorAppointmentSummarySerializer}, tags=['Doctor Cabinet']),
+    patch=extend_schema(request=DoctorAppointmentSummarySerializer, responses={200: DoctorAppointmentSummarySerializer}, tags=['Doctor Cabinet']),
+)
+class DoctorAppointmentSummaryView(RetrieveUpdateAPIView):
+    permission_classes = (IsDoctor,)
+    serializer_class = DoctorAppointmentSummarySerializer
+    http_method_names = ['get', 'patch']
+
+    def get_object(self):
+        doctor_profile = DoctorProfile.objects.get(user=self.request.user)
+        return get_object_or_404(
+            Appointment.objects.filter(doctor=doctor_profile),
+            pk=self.kwargs['pk']
+        )

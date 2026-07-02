@@ -1,6 +1,7 @@
 import json
 from django.db.models import Q
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
@@ -110,3 +111,104 @@ class DoctorDetailView(RetrieveAPIView):
             ),
             user__id=self.kwargs['pk'],
         )
+
+
+class DoctorAvailableSlotsView(APIView):
+    permission_classes = (AllowAny,)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='date', type=str, description='Дата в формате YYYY-MM-DD', required=True),
+        ],
+        tags=['Doctors Catalog'],
+        summary='Свободные слоты времени врача',
+        description='Возвращает список 30-минутных интервалов с флагом доступности (available: true/false).'
+    )
+    def get(self, request, pk):
+        from rest_framework.response import Response
+        from rest_framework import status
+        from django.shortcuts import get_object_or_404
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        from appointments.models import Appointment
+
+        doctor_profile = get_object_or_404(
+            DoctorProfile.objects.select_related('user').filter(
+                user__is_active=True, is_published=True
+            ),
+            user__id=pk,
+        )
+        date_str = request.query_params.get('date', '').strip()
+        if not date_str:
+            return Response({'detail': 'Параметр date обязателен (YYYY-MM-DD).'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Helper to compute slots
+        try:
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({'detail': 'Некорректный формат даты. Используйте YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        weekday = target_date.strftime('%a').lower()
+        schedule = doctor_profile.schedule or {}
+        day_schedule = schedule.get(weekday)
+
+        if not day_schedule or not day_schedule.get('start') or not day_schedule.get('end'):
+            return Response({'date': date_str, 'slots': []})
+
+        try:
+            start_time = datetime.strptime(day_schedule['start'], '%H:%M').time()
+            end_time = datetime.strptime(day_schedule['end'], '%H:%M').time()
+        except ValueError:
+            return Response({'date': date_str, 'slots': []})
+
+        booked_times = set(
+            Appointment.objects.filter(
+                doctor=doctor_profile,
+                date=target_date,
+                status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED]
+            ).values_list('time', flat=True)
+        )
+
+        lunch = doctor_profile.lunch_break or {}
+        lunch_start = None
+        lunch_end = None
+        if lunch.get('start') and lunch.get('end'):
+            try:
+                lunch_start = datetime.strptime(lunch['start'], '%H:%M').time()
+                lunch_end = datetime.strptime(lunch['end'], '%H:%M').time()
+            except ValueError:
+                pass
+
+        slots = []
+        current_dt = datetime.combine(target_date, start_time)
+        end_dt = datetime.combine(target_date, end_time)
+
+        local_now = timezone.localtime(timezone.now())
+        local_today = local_now.date()
+        local_time = local_now.time()
+
+        while current_dt < end_dt:
+            slot_time = current_dt.time()
+            available = True
+
+            if slot_time in booked_times:
+                available = False
+
+            if available and lunch_start and lunch_end:
+                if lunch_start <= slot_time < lunch_end:
+                    available = False
+
+            if available and target_date < local_today:
+                available = False
+            elif available and target_date == local_today:
+                if slot_time <= local_time:
+                    available = False
+
+            slots.append({
+                'time': slot_time.strftime('%H:%M'),
+                'available': available
+            })
+
+            current_dt += timedelta(minutes=30)
+
+        return Response({'date': date_str, 'slots': slots})

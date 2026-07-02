@@ -37,10 +37,27 @@ class AppointmentDetailView(RetrieveUpdateAPIView):
             Appointment.objects.select_related('patient', 'doctor__user', 'clinic', 'service'),
             pk=self.kwargs['pk'],
         )
-        # Запись привязана к пациенту — проверяем владельца
+        user = self.request.user
         if appointment.patient is not None:
-            if not self.request.user.is_authenticated or self.request.user != appointment.patient:
+            if not user.is_authenticated:
                 raise PermissionDenied('Нет доступа к этой записи.')
+            
+            is_patient = appointment.patient == user
+            is_doctor = appointment.doctor and appointment.doctor.user == user
+            is_clinic = appointment.clinic and appointment.clinic.user == user
+            
+            if not (is_patient or is_doctor or is_clinic):
+                raise PermissionDenied('Нет доступа к этой записи.')
+        else:
+            if user.is_authenticated:
+                if user.role == 'doctor':
+                    is_doctor = appointment.doctor and appointment.doctor.user == user
+                    if not is_doctor:
+                        raise PermissionDenied('Нет доступа к этой записи.')
+                elif user.role == 'clinic':
+                    is_clinic = appointment.clinic and appointment.clinic.user == user
+                    if not is_clinic:
+                        raise PermissionDenied('Нет доступа к этой записи.')
         return appointment
 
     def update(self, request, *args, **kwargs):

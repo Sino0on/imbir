@@ -23,11 +23,12 @@ class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
     target_id = serializers.SerializerMethodField()
     reply = serializers.SerializerMethodField()
+    appointment_id = serializers.IntegerField(source='appointment.id', read_only=True, allow_null=True)
 
     class Meta:
         model = Review
-        fields = ('id', 'author', 'target_type', 'target_id', 'rating', 'text', 'reply', 'created_at')
-        read_only_fields = ('id', 'author', 'target_type', 'target_id', 'reply', 'created_at')
+        fields = ('id', 'author', 'target_type', 'target_id', 'appointment_id', 'rating', 'text', 'reply', 'created_at')
+        read_only_fields = ('id', 'author', 'target_type', 'target_id', 'appointment_id', 'reply', 'created_at')
 
     def get_author(self, obj):
         return {
@@ -90,6 +91,10 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             except Appointment.DoesNotExist:
                 raise serializers.ValidationError(
                     {'appointment_id': 'Запись не найдена или не принадлежит вам.'}
+                )
+            if appt.status != Appointment.Status.COMPLETED:
+                raise serializers.ValidationError(
+                    {'appointment_id': 'Отзыв можно оставить только после завершения приёма.'}
                 )
             if Review.objects.filter(appointment=appt).exists():
                 raise serializers.ValidationError('На эту запись уже оставлен отзыв.')
