@@ -326,3 +326,21 @@ class DoctorClinicLink(models.Model):
 
     def __str__(self):
         return f'{self.doctor.user.full_name} @ {self.clinic.name}'
+
+
+class PasswordResetCode(models.Model):
+    email = models.EmailField()
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'Код сброса пароля'
+        verbose_name_plural = 'Коды сброса пароля'
+
+    def __str__(self):
+        return f'{self.email} -> {self.code}'
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(minutes=15)
+

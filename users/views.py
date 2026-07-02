@@ -8,10 +8,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.exceptions import TokenError
 
-from .models import DoctorDocument, ClinicPhoto, ClinicDocument
+import random
+from .models import DoctorDocument, ClinicPhoto, ClinicDocument, PasswordResetCode
 from .serializers import (
     LoginSerializer, UserMeSerializer,
     ClientRegisterSerializer, DoctorRegisterSerializer, ClinicRegisterSerializer,
+    PasswordResetVerifySerializer, PasswordResetConfirmSerializer,
 )
 from users.utils import save_hybrid_documents
 
@@ -158,14 +160,15 @@ class PasswordResetRequestView(APIView):
 
         try:
             user = User.objects.get(email=email)
-            token = signing.dumps({'email': user.email}, salt='password-reset')
+            code = f"{random.randint(100000, 999999)}"
+            PasswordResetCode.objects.create(email=email, code=code)
 
             subject = "Восстановление пароля — Imbir"
             message = (
                 f"Здравствуйте!\n\n"
                 f"Вы получили это письмо, потому что запросили сброс пароля.\n"
-                f"Используйте следующий токен для подтверждения:\n\n"
-                f"{token}\n\n"
+                f"Код подтверждения для сброса пароля:\n\n"
+                f"{code}\n\n"
                 f"Если вы не запрашивали сброс пароля, проигнорируйте это письмо.\n"
             )
             send_mail(
@@ -178,14 +181,25 @@ class PasswordResetRequestView(APIView):
         except User.DoesNotExist:
             pass
 
-        return Response({'detail': 'Если пользователь существует, письмо с инструкциями отправлено.'}, status=status.HTTP_200_OK)
+        return Response({'detail': 'Если пользователь существует, письмо с кодом подтверждения отправлено.'}, status=status.HTTP_200_OK)
 
 
 @extend_schema(
-    request=inline_serializer('PasswordResetConfirm', fields={
-        'token': serializers.CharField(),
-        'password': serializers.CharField(),
-    }),
+    request=PasswordResetVerifySerializer,
+    responses={200: inline_serializer('PasswordResetVerifySuccess', fields={'detail': serializers.CharField()})},
+    tags=['auth'],
+)
+class PasswordResetVerifyView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = PasswordResetVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({'detail': 'Код подтверждён успешно.'}, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    request=PasswordResetConfirmSerializer,
     responses={200: inline_serializer('PasswordResetConfirmSuccess', fields={'detail': serializers.CharField()})},
     tags=['auth'],
 )
@@ -193,30 +207,23 @@ class PasswordResetConfirmView(APIView):
     permission_classes = (AllowAny,)
 
     def post(self, request):
-        token = request.data.get('token', '').strip()
-        password = request.data.get('password', '').strip()
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        if not token or not password:
-            return Response({'error': 'Токен и пароль обязательны'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if len(password) < 8:
-            return Response({'password': 'Пароль должен быть не менее 8 символов.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            data = signing.loads(token, salt='password-reset', max_age=86400)  # 24 часа
-            email = data.get('email')
-        except signing.SignatureExpired:
-            return Response({'error': 'Срок действия токена истёк'}, status=status.HTTP_400_BAD_REQUEST)
-        except signing.BadSignature:
-            return Response({'error': 'Неверный токен сброса пароля'}, status=status.HTTP_400_BAD_REQUEST)
+        email = serializer.validated_data['email']
+        password = serializer.validated_data['password']
+        reset_code = serializer.validated_data['reset_code']
 
         try:
             user = User.objects.get(email=email)
+            user.set_password(password)
+            user.save()
+
+            reset_code.is_used = True
+            reset_code.save()
         except User.DoesNotExist:
             return Response({'error': 'Пользователь не найден'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user.set_password(password)
-        user.save()
-
         return Response({'detail': 'Пароль успешно сброшен'}, status=status.HTTP_200_OK)
+
 

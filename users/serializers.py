@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import ClinicBranch, ClinicInvite, DoctorClinicLink, User, DoctorProfile, ClinicProfile
+from .models import ClinicBranch, ClinicInvite, DoctorClinicLink, User, DoctorProfile, ClinicProfile, PasswordResetCode
 from users.utils import get_relative_path_from_url
 
 class HybridImageField(serializers.ImageField):
@@ -389,3 +389,56 @@ class ClinicRegisterSerializer(serializers.Serializer):
             )
 
         return user
+
+
+class PasswordResetVerifySerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6, min_length=6)
+
+    def validate(self, data):
+        email = data.get('email')
+        code = data.get('code')
+
+        reset_code = PasswordResetCode.objects.filter(
+            email=email,
+            code=code,
+            is_used=False
+        ).order_by('-created_at').first()
+
+        if not reset_code:
+            raise serializers.ValidationError({'code': 'Неверный код подтверждения'})
+
+        if reset_code.is_expired():
+            raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
+
+        data['reset_code'] = reset_code
+        return data
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6, min_length=6)
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, data):
+        email = data.get('email')
+        code = data.get('code')
+
+        reset_code = PasswordResetCode.objects.filter(
+            email=email,
+            code=code,
+            is_used=False
+        ).order_by('-created_at').first()
+
+        if not reset_code:
+            raise serializers.ValidationError({'code': 'Неверный код подтверждения'})
+
+        if reset_code.is_expired():
+            raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
+
+        if not User.objects.filter(email=email).exists():
+            raise serializers.ValidationError({'email': 'Пользователь с таким email не найден'})
+
+        data['reset_code'] = reset_code
+        return data
+
