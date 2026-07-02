@@ -148,16 +148,28 @@ class DoctorAvailableSlotsView(APIView):
         except ValueError:
             return Response({'detail': 'Некорректный формат даты. Используйте YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        weekday = target_date.strftime('%a').lower()
-        schedule = doctor_profile.schedule or {}
-        day_schedule = schedule.get(weekday)
+        # Locale-independent day name mapping
+        DAYS_OF_WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        weekday_name = DAYS_OF_WEEK[target_date.weekday()]
 
-        if not day_schedule or not day_schedule.get('start') or not day_schedule.get('end'):
+        schedule = doctor_profile.schedule or {}
+        day_schedule = schedule.get(weekday_name)
+
+        if not day_schedule or not isinstance(day_schedule, dict):
+            return Response({'date': date_str, 'slots': []})
+
+        if not day_schedule.get('enabled', True):
+            return Response({'date': date_str, 'slots': []})
+
+        start_str = day_schedule.get('from') or day_schedule.get('start')
+        end_str = day_schedule.get('to') or day_schedule.get('end')
+
+        if not start_str or not end_str:
             return Response({'date': date_str, 'slots': []})
 
         try:
-            start_time = datetime.strptime(day_schedule['start'], '%H:%M').time()
-            end_time = datetime.strptime(day_schedule['end'], '%H:%M').time()
+            start_time = datetime.strptime(start_str, '%H:%M').time()
+            end_time = datetime.strptime(end_str, '%H:%M').time()
         except ValueError:
             return Response({'date': date_str, 'slots': []})
 
@@ -172,10 +184,14 @@ class DoctorAvailableSlotsView(APIView):
         lunch = doctor_profile.lunch_break or {}
         lunch_start = None
         lunch_end = None
-        if lunch.get('start') and lunch.get('end'):
+
+        lunch_start_str = lunch.get('from') or lunch.get('start')
+        lunch_end_str = lunch.get('to') or lunch.get('end')
+
+        if lunch_start_str and lunch_end_str:
             try:
-                lunch_start = datetime.strptime(lunch['start'], '%H:%M').time()
-                lunch_end = datetime.strptime(lunch['end'], '%H:%M').time()
+                lunch_start = datetime.strptime(lunch_start_str, '%H:%M').time()
+                lunch_end = datetime.strptime(lunch_end_str, '%H:%M').time()
             except ValueError:
                 pass
 
