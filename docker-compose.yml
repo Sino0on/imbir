@@ -23,7 +23,7 @@ services:
       - redis_data:/data
 
   back:
-    container_name: bsv-web-api-active
+    container_name: imbir-backend
     build:
       context: ./
       dockerfile: Dockerfile
