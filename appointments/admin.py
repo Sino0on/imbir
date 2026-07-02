@@ -44,5 +44,6 @@ class AppointmentAdmin(admin.ModelAdmin):
     @admin.display(description='Формат')
     def format_badge(self, obj):
         if obj.is_online:
-            return format_html('<span style="color:#17a2b8">&#127760; Онлайн</span>')
-        return format_html('<span style="color:#6c757d">&#127968; Офлайн</span>')
+            return format_html('<span style="color:#17a2b8">{}</span>', '🌐 Онлайн')
+        return format_html('<span style="color:#6c757d">{}</span>', '🏠 Офлайн')
+
