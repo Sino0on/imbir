@@ -22,35 +22,27 @@ services:
     volumes:
       - redis_data:/data
 
-  web:
-    build: .
-    command:
-      - sh
-      - -c
-      - |
-        python manage.py migrate --noinput &&
-        python manage.py collectstatic --noinput &&
-        gunicorn core.asgi:application \
-          -k uvicorn.workers.UvicornWorker \
-          --bind 0.0.0.0:8114 \
-          --workers 2 \
-          --timeout 120
-    volumes:
-      - .:/app
-      - media_volume:/app/media
-      - static_volume:/app/staticfiles
-    env_file:
-      - .env
-    ports:
-      - "8114:8114"
-    environment:
-      - REDIS_URL=redis://redis:6379
-      # DB_HOST=db и другие переменные берутся автоматически из .env
+  back:
+    container_name: bsv-web-api-active
+    build:
+      context: ./
+      dockerfile: Dockerfile
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
+    env_file:
+      - .env
+    ports:
+      - "8114:8114"
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+      - static_volume:/app/staticfiles
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     restart: unless-stopped
 
 volumes:
