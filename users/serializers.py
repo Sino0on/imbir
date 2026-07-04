@@ -142,6 +142,10 @@ class DoctorStep4Serializer(serializers.Serializer):
     license_number = serializers.CharField(required=False, allow_blank=True, default='')
     license_date = serializers.DateField(required=False, allow_null=True, default=None)
     license_authority = serializers.CharField(required=False, allow_blank=True, default='')
+    documents = serializers.ListField(
+        child=serializers.CharField(), required=False, default=list,
+        help_text='Список URL документов из /api/upload/'
+    )
 
 
 class DoctorStep5Serializer(serializers.Serializer):
@@ -279,6 +283,17 @@ class DoctorRegisterSerializer(serializers.Serializer):
                     branch=invite.branch,
                 )
 
+            # Сохраняем документы из step4
+            doc_urls = s4.get('documents', [])
+            for url in doc_urls:
+                if url:
+                    from users.utils import get_relative_path_from_url
+                    from users.models import DoctorDocument
+                    DoctorDocument.objects.create(
+                        doctor=user.doctor_profile,
+                        file=get_relative_path_from_url(url),
+                    )
+
         return user
 
 
@@ -402,6 +417,24 @@ class ClinicRegisterSerializer(serializers.Serializer):
                 agree_data_processing=s7.get('agree_data_processing', False),
                 agree_publishing=s7.get('agree_publishing', False),
             )
+
+            # Документы из step4
+            from users.utils import get_relative_path_from_url
+            from users.models import ClinicDocument, ClinicPhoto
+            for url in s4.get('documents', []):
+                if url:
+                    ClinicDocument.objects.create(
+                        clinic=user.clinic_profile,
+                        file=get_relative_path_from_url(url),
+                    )
+
+            # Фотографии галереи из step1
+            for url in s1.get('photos', []):
+                if url:
+                    ClinicPhoto.objects.create(
+                        clinic=user.clinic_profile,
+                        image=get_relative_path_from_url(url),
+                    )
 
         return user
 

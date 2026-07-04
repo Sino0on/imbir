@@ -1,4 +1,3 @@
-import json
 from django.db.models import Q
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.views import APIView
@@ -10,21 +9,18 @@ from core.pagination import StandardPagination
 from .serializers import DoctorListSerializer, DoctorDetailSerializer
 
 
-def _json_escape(value: str) -> str:
-    # SQLite JSONField хранит кириллицу как unicode-escape, нужна конвертация перед icontains
-    return json.dumps(value, ensure_ascii=True)[1:-1]
-
-
 @extend_schema(
     parameters=[
         OpenApiParameter(name='search', type=str, description='Поиск по имени и специализации'),
         OpenApiParameter(name='city', type=str, description='Фильтр по городу'),
-        OpenApiParameter(name='specialization', type=str, description='Фильтр по специализации'),
+        OpenApiParameter(name='specialization', type=str, description='Фильтр по специализации (точное вхождение)'),
         OpenApiParameter(name='min_price', type=int, description='Минимальная цена приёма'),
         OpenApiParameter(name='max_price', type=int, description='Максимальная цена приёма'),
         OpenApiParameter(name='min_rating', type=float, description='Минимальный рейтинг (0–5)'),
         OpenApiParameter(name='is_online', type=bool, description='Принимает онлайн (true/false)'),
         OpenApiParameter(name='payment_method', type=str, description='Способ оплаты'),
+        OpenApiParameter(name='min_experience', type=int, description='Минимальный стаж (лет)'),
+        OpenApiParameter(name='max_experience', type=int, description='Максимальный стаж (лет)'),
     ],
     tags=['Doctors Catalog'],
     summary='Список врачей с фильтрацией',
@@ -45,13 +41,14 @@ class DoctorListView(ListAPIView):
 
         params = self.request.query_params
 
+        # PostgreSQL хранит JSONField как нативный UTF-8 — передаём строку как есть
         search = params.get('search', '').strip()
         if search:
             qs = qs.filter(
                 Q(user__first_name__icontains=search)
                 | Q(user__last_name__icontains=search)
-                | Q(primary_specializations__icontains=_json_escape(search))
-                | Q(narrow_specializations__icontains=_json_escape(search))
+                | Q(primary_specializations__icontains=search)
+                | Q(narrow_specializations__icontains=search)
             )
 
         city = params.get('city', '').strip()
@@ -60,10 +57,9 @@ class DoctorListView(ListAPIView):
 
         specialization = params.get('specialization', '').strip()
         if specialization:
-            escaped = _json_escape(specialization)
             qs = qs.filter(
-                Q(primary_specializations__icontains=escaped)
-                | Q(narrow_specializations__icontains=escaped)
+                Q(primary_specializations__icontains=specialization)
+                | Q(narrow_specializations__icontains=specialization)
             )
 
         min_price = params.get('min_price')
@@ -93,7 +89,21 @@ class DoctorListView(ListAPIView):
 
         payment_method = params.get('payment_method', '').strip()
         if payment_method:
-            qs = qs.filter(payment_methods__icontains=_json_escape(payment_method))
+            qs = qs.filter(payment_methods__icontains=payment_method)
+
+        min_experience = params.get('min_experience')
+        if min_experience:
+            try:
+                qs = qs.filter(experience_years__gte=int(min_experience))
+            except ValueError:
+                pass
+
+        max_experience = params.get('max_experience')
+        if max_experience:
+            try:
+                qs = qs.filter(experience_years__lte=int(max_experience))
+            except ValueError:
+                pass
 
         return qs
 

@@ -44,6 +44,8 @@ class ClinicOwnProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', read_only=True)
     logo = HybridImageField(required=False, allow_null=True)
     branches = ClinicBranchUpdateSerializer(many=True, read_only=True)
+    photos = serializers.SerializerMethodField()
+    documents = serializers.SerializerMethodField()
 
     class Meta:
         model = ClinicProfile
@@ -53,13 +55,37 @@ class ClinicOwnProfileSerializer(serializers.ModelSerializer):
             'country', 'city', 'address', 'latitude', 'longitude',
             'schedule', 'lunch_break', 'emergency_24_7',
             'legal_name', 'reg_number', 'license_number', 'license_date', 'license_authority',
+            'documents',
             'primary_specializations', 'narrow_specializations', 'additional_services',
             'equipment', 'patient_conditions', 'payment_methods',
             'experience_years', 'rating', 'reviews_count', 'doctors_count',
             'is_published', 'profile_views',
             'branches',
+            'photos',
         )
-        read_only_fields = ('rating', 'reviews_count', 'doctors_count', 'profile_views')
+        read_only_fields = ('rating', 'reviews_count', 'doctors_count', 'profile_views', 'photos', 'documents')
+
+    def get_photos(self, obj):
+        request = self.context.get('request')
+        return [
+            {
+                'id': p.id,
+                'url': request.build_absolute_uri(p.image.url) if request else p.image.url,
+                'uploaded_at': p.uploaded_at,
+            }
+            for p in obj.photos.all().order_by('uploaded_at')
+        ]
+
+    def get_documents(self, obj):
+        request = self.context.get('request')
+        return [
+            {
+                'id': d.id,
+                'url': request.build_absolute_uri(d.file.url) if request else d.file.url,
+                'uploaded_at': d.uploaded_at,
+            }
+            for d in obj.documents.all().order_by('uploaded_at')
+        ]
 
 
 class ClinicAppointmentSerializer(serializers.ModelSerializer):

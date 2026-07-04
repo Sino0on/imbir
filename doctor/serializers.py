@@ -14,6 +14,7 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', read_only=True)
     phone = serializers.CharField(source='user.phone', required=False, allow_blank=True)
     photo = HybridImageField(required=False, allow_null=True)
+    documents = serializers.SerializerMethodField()
 
     class Meta:
         model = DoctorProfile
@@ -27,6 +28,8 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
             'schedule', 'lunch_break', 'emergency_24_7',
             # Юридические данные
             'legal_name', 'reg_number', 'license_number', 'license_date', 'license_authority',
+            # Документы
+            'documents',
             # Специализация
             'primary_specializations', 'narrow_specializations', 'additional_services',
             # Оборудование и условия
@@ -37,7 +40,18 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
             # Статус и счётчики
             'is_published', 'profile_views', 'rating', 'reviews_count',
         )
-        read_only_fields = ('profile_views', 'rating', 'reviews_count')
+        read_only_fields = ('profile_views', 'rating', 'reviews_count', 'documents')
+
+    def get_documents(self, obj):
+        request = self.context.get('request')
+        return [
+            {
+                'id': d.id,
+                'url': request.build_absolute_uri(d.file.url) if request else d.file.url,
+                'uploaded_at': d.uploaded_at,
+            }
+            for d in obj.documents.all().order_by('uploaded_at')
+        ]
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})

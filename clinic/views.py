@@ -1,4 +1,7 @@
+import os
+import uuid
 from django.db.models import Count, Q, Sum
+from django.core.files.storage import default_storage
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status
@@ -12,7 +15,7 @@ from appointments.models import Appointment
 from core.pagination import StandardPagination
 from reviews.models import Review
 from services.models import Service
-from users.models import ClinicBranch, ClinicInvite, ClinicProfile, DoctorClinicLink
+from users.models import ClinicBranch, ClinicDocument, ClinicInvite, ClinicPhoto, ClinicProfile, DoctorClinicLink
 from .permissions import IsClinic
 from .serializers import (
     ClinicAppointmentSerializer,
@@ -278,4 +281,149 @@ class InviteDeleteView(DestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         super().destroy(request, *args, **kwargs)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _save_file_or_url(request, folder, model_class, profile, field_name='file'):
+    """Helper: сохраняет multipart-файл или URL и создаёт запись в модель."""
+    from users.utils import get_relative_path_from_url
+    uploaded_file = request.FILES.get('file')
+    url_str = request.data.get('url', '').strip()
+
+    if uploaded_file:
+        ext = os.path.splitext(uploaded_file.name)[1].lower()
+        filename = f'{folder}/{uuid.uuid4().hex}{ext}'
+        saved_path = default_storage.save(filename, uploaded_file)
+        return model_class.objects.create(**{field_name: saved_path, 'clinic': profile})
+    elif url_str:
+        rel_path = get_relative_path_from_url(url_str)
+        return model_class.objects.create(**{field_name: rel_path, 'clinic': profile})
+    return None
+
+
+# ── Clinic Photos ────────────────────────────────────────────────────────────
+
+@extend_schema(
+    request=inline_serializer('ClinicPhotoUpload', fields={
+        'file': serializers.FileField(required=False),
+        'url': serializers.CharField(required=False),
+    }),
+    responses={201: inline_serializer('ClinicPhotoOut', fields={
+        'id': serializers.IntegerField(),
+        'url': serializers.CharField(),
+        'uploaded_at': serializers.DateTimeField(),
+    })},
+    tags=['Clinic Cabinet'],
+    summary='Список и загрузка фотогалереи клиники',
+)
+class ClinicPhotoListCreateView(APIView):
+    permission_classes = (IsClinic,)
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request):
+        clinic = ClinicProfile.objects.get(user=request.user)
+        data = [{
+            'id': p.id,
+            'url': request.build_absolute_uri(p.image.url),
+            'uploaded_at': p.uploaded_at,
+        } for p in clinic.photos.all().order_by('uploaded_at')]
+        return Response(data)
+
+    def post(self, request):
+        clinic = ClinicProfile.objects.get(user=request.user)
+        uploaded_file = request.FILES.get('file')
+        url_str = request.data.get('url', '').strip()
+
+        if uploaded_file:
+            ext = os.path.splitext(uploaded_file.name)[1].lower()
+            filename = f'clinics/photos/{uuid.uuid4().hex}{ext}'
+            saved_path = default_storage.save(filename, uploaded_file)
+            photo = ClinicPhoto.objects.create(clinic=clinic, image=saved_path)
+        elif url_str:
+            from users.utils import get_relative_path_from_url
+            photo = ClinicPhoto.objects.create(clinic=clinic, image=get_relative_path_from_url(url_str))
+        else:
+            return Response({'detail': 'Необходимо передать file или url.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'id': photo.id,
+            'url': request.build_absolute_uri(photo.image.url),
+            'uploaded_at': photo.uploaded_at,
+        }, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(responses={204: None}, tags=['Clinic Cabinet'], summary='Удалить фото клиники')
+class ClinicPhotoDeleteView(APIView):
+    permission_classes = (IsClinic,)
+
+    def delete(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        clinic = ClinicProfile.objects.get(user=request.user)
+        photo = get_object_or_404(ClinicPhoto, pk=pk, clinic=clinic)
+        photo.image.delete(save=False)
+        photo.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Clinic Documents ─────────────────────────────────────────────────────────
+
+@extend_schema(
+    request=inline_serializer('ClinicDocumentUpload', fields={
+        'file': serializers.FileField(required=False),
+        'url': serializers.CharField(required=False),
+    }),
+    responses={201: inline_serializer('ClinicDocumentOut', fields={
+        'id': serializers.IntegerField(),
+        'url': serializers.CharField(),
+        'uploaded_at': serializers.DateTimeField(),
+    })},
+    tags=['Clinic Cabinet'],
+    summary='Список и загрузка документов клиники',
+)
+class ClinicDocumentListCreateView(APIView):
+    permission_classes = (IsClinic,)
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request):
+        clinic = ClinicProfile.objects.get(user=request.user)
+        data = [{
+            'id': d.id,
+            'url': request.build_absolute_uri(d.file.url),
+            'uploaded_at': d.uploaded_at,
+        } for d in clinic.documents.all().order_by('uploaded_at')]
+        return Response(data)
+
+    def post(self, request):
+        clinic = ClinicProfile.objects.get(user=request.user)
+        uploaded_file = request.FILES.get('file')
+        url_str = request.data.get('url', '').strip()
+
+        if uploaded_file:
+            ext = os.path.splitext(uploaded_file.name)[1].lower()
+            filename = f'clinics/documents/{uuid.uuid4().hex}{ext}'
+            saved_path = default_storage.save(filename, uploaded_file)
+            doc = ClinicDocument.objects.create(clinic=clinic, file=saved_path)
+        elif url_str:
+            from users.utils import get_relative_path_from_url
+            doc = ClinicDocument.objects.create(clinic=clinic, file=get_relative_path_from_url(url_str))
+        else:
+            return Response({'detail': 'Необходимо передать file или url.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'id': doc.id,
+            'url': request.build_absolute_uri(doc.file.url),
+            'uploaded_at': doc.uploaded_at,
+        }, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(responses={204: None}, tags=['Clinic Cabinet'], summary='Удалить документ клиники')
+class ClinicDocumentDeleteView(APIView):
+    permission_classes = (IsClinic,)
+
+    def delete(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        clinic = ClinicProfile.objects.get(user=request.user)
+        doc = get_object_or_404(ClinicDocument, pk=pk, clinic=clinic)
+        doc.file.delete(save=False)
+        doc.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

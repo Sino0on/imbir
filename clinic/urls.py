@@ -11,6 +11,10 @@ from .views import (
     ClinicStatsView,
     InviteDeleteView,
     InviteListCreateView,
+    ClinicPhotoListCreateView,
+    ClinicPhotoDeleteView,
+    ClinicDocumentListCreateView,
+    ClinicDocumentDeleteView,
 )
 
 urlpatterns = [
@@ -25,4 +29,8 @@ urlpatterns = [
     path('branches/<int:pk>/', BranchUpdateView.as_view(), name='clinic-branch-update'),
     path('invites/', InviteListCreateView.as_view(), name='clinic-invite-list-create'),
     path('invites/<uuid:pk>/', InviteDeleteView.as_view(), name='clinic-invite-delete'),
+    path('photos/', ClinicPhotoListCreateView.as_view(), name='clinic-photos'),
+    path('photos/<int:pk>/', ClinicPhotoDeleteView.as_view(), name='clinic-photo-delete'),
+    path('documents/', ClinicDocumentListCreateView.as_view(), name='clinic-documents'),
+    path('documents/<int:pk>/', ClinicDocumentDeleteView.as_view(), name='clinic-document-delete'),
 ]

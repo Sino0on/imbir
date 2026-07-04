@@ -8,8 +8,6 @@ services:
       - POSTGRES_DB=imbir
       - POSTGRES_USER=imbir_user
       - POSTGRES_PASSWORD=imbir_password
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U imbir_user -d imbir"]
       interval: 5s
@@ -35,7 +33,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8114:8114"
+      - "127.0.0.1:8114:8114"   # слушаем только localhost — nginx на хосте проксирует
     volumes:
       - .:/app
       - media_volume:/app/media

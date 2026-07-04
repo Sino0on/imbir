@@ -1,7 +1,11 @@
+import os
+import uuid
 from django.db.models import Count, Max, Q
+from django.core.files.storage import default_storage
 from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -9,7 +13,7 @@ from appointments.models import Appointment
 from core.pagination import StandardPagination
 from reviews.models import Review
 from services.models import Service
-from users.models import DoctorProfile, User
+from users.models import DoctorDocument, DoctorProfile, User
 from .permissions import IsDoctor
 from .serializers import (
     DoctorAppointmentSerializer,
@@ -253,3 +257,67 @@ class DoctorAppointmentSummaryView(RetrieveUpdateAPIView):
             Appointment.objects.filter(doctor=doctor_profile),
             pk=self.kwargs['pk']
         )
+
+
+@extend_schema(
+    request=inline_serializer('DoctorDocumentUpload', fields={
+        'file': serializers.FileField(required=False, help_text='Multipart-файл'),
+        'url': serializers.CharField(required=False, help_text='URL из /api/upload/'),
+    }),
+    responses={201: inline_serializer('DoctorDocumentOut', fields={
+        'id': serializers.IntegerField(),
+        'url': serializers.CharField(),
+        'uploaded_at': serializers.DateTimeField(),
+    })},
+    tags=['Doctor Cabinet'],
+    summary='Список и загрузка документов/сертификатов врача',
+)
+class DoctorDocumentListCreateView(APIView):
+    permission_classes = (IsDoctor,)
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request):
+        profile = DoctorProfile.objects.get(user=request.user)
+        docs = profile.documents.all().order_by('uploaded_at')
+        data = [{
+            'id': d.id,
+            'url': request.build_absolute_uri(d.file.url),
+            'uploaded_at': d.uploaded_at,
+        } for d in docs]
+        return Response(data)
+
+    def post(self, request):
+        profile = DoctorProfile.objects.get(user=request.user)
+
+        uploaded_file = request.FILES.get('file')
+        url_str = request.data.get('url', '').strip()
+
+        if uploaded_file:
+            ext = os.path.splitext(uploaded_file.name)[1].lower()
+            filename = f'doctors/documents/{uuid.uuid4().hex}{ext}'
+            saved_path = default_storage.save(filename, uploaded_file)
+            doc = DoctorDocument.objects.create(doctor=profile, file=saved_path)
+        elif url_str:
+            from users.utils import get_relative_path_from_url
+            rel_path = get_relative_path_from_url(url_str)
+            doc = DoctorDocument.objects.create(doctor=profile, file=rel_path)
+        else:
+            return Response({'detail': 'Необходимо передать file (multipart) или url (строка).'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'id': doc.id,
+            'url': request.build_absolute_uri(doc.file.url),
+            'uploaded_at': doc.uploaded_at,
+        }, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(responses={204: None}, tags=['Doctor Cabinet'], summary='Удалить документ врача')
+class DoctorDocumentDeleteView(APIView):
+    permission_classes = (IsDoctor,)
+
+    def delete(self, request, pk):
+        profile = DoctorProfile.objects.get(user=request.user)
+        doc = get_object_or_404(DoctorDocument, pk=pk, doctor=profile)
+        doc.file.delete(save=False)
+        doc.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

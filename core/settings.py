@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'notifications',
     'upload',
     'chat',
+    'channels',
 ]
 
 ASGI_APPLICATION = 'core.asgi.application'
@@ -157,6 +158,26 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+
+_cors_raw = config('CORS_ALLOWED_ORIGINS', default='')
+if _cors_raw:
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_raw.split(',') if o.strip()]
+elif not DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        'https://imbir.sino0on.ru',
+        'https://www.imbir.sino0on.ru',
+    ]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 OPENAI_API_KEY = config('OPENAI_API_KEY', default=None)
 
