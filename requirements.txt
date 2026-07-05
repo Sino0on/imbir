@@ -1,6 +1,7 @@
 asgiref==3.11.1
 channels==4.2.2
 channels-redis==4.2.1
+redis<5.0
 uvicorn[standard]==0.30.6
 openai==2.44.0
 google-api-python-client==2.111.0
