@@ -32,10 +32,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         try:
             data = json.loads(text_data)
-            content = data.get('content', '').strip()
         except (json.JSONDecodeError, AttributeError):
             return
 
+        msg_type = data.get('type', 'message')
+
+        if msg_type == 'typing':
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    'type': 'typing_status',
+                    'sender_channel': self.channel_name,
+                    'user_id': self.user.id,
+                    'user_name': self.user.full_name,
+                    'is_typing': bool(data.get('is_typing', False)),
+                },
+            )
+            return
+
+        content = data.get('content', '').strip()
         if not content:
             return
 
@@ -54,11 +69,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def chat_message(self, event):
+        sender = None
+        if event.get('sender_id') is not None:
+            sender = {'id': event['sender_id'], 'full_name': event['sender_name']}
         await self.send(text_data=json.dumps({
             'id': event['id'],
-            'sender': {'id': event['sender_id'], 'full_name': event['sender_name']},
+            'sender': sender,
             'content': event['content'],
             'created_at': event['created_at'],
+        }))
+
+    async def typing_status(self, event):
+        # не отправляем обратно тому, кто печатает
+        if event['sender_channel'] == self.channel_name:
+            return
+        await self.send(text_data=json.dumps({
+            'type': 'typing',
+            'user_id': event['user_id'],
+            'user_name': event['user_name'],
+            'is_typing': event['is_typing'],
         }))
 
     @database_sync_to_async

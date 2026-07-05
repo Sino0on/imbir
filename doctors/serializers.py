@@ -44,8 +44,24 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
         return {'lat': float(obj.latitude), 'lng': float(obj.longitude)}
 
     def get_workplaces(self, obj):
-        # Заглушка — будет заполнено при реализации модуля клиник
-        return []
+        request = self.context.get('request')
+        links = obj.clinic_links.filter(is_active=True).select_related('clinic')
+        result = []
+        for link in links:
+            clinic = link.clinic
+            logo_url = None
+            if clinic.logo:
+                logo_url = (
+                    request.build_absolute_uri(clinic.logo.url)
+                    if request else clinic.logo.url
+                )
+            result.append({
+                'id': clinic.user_id,
+                'name': clinic.name,
+                'logo': logo_url,
+                'address': clinic.address,
+            })
+        return result
 
 
 class DoctorListSerializer(serializers.ModelSerializer):
@@ -58,7 +74,6 @@ class DoctorListSerializer(serializers.ModelSerializer):
     experience_years = serializers.IntegerField()
     is_online_available = serializers.BooleanField()
     city = serializers.CharField()
-    # workplaces будут добавлены при реализации модуля клиник
     workplaces = serializers.SerializerMethodField()
 
     class Meta:
@@ -83,5 +98,21 @@ class DoctorListSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
 
     def get_workplaces(self, obj):
-        # Заглушка до реализации модуля клиник
-        return []
+        request = self.context.get('request')
+        links = obj.clinic_links.filter(is_active=True).select_related('clinic')
+        result = []
+        for link in links:
+            clinic = link.clinic
+            logo_url = None
+            if clinic.logo:
+                logo_url = (
+                    request.build_absolute_uri(clinic.logo.url)
+                    if request else clinic.logo.url
+                )
+            result.append({
+                'id': clinic.user_id,
+                'name': clinic.name,
+                'logo': logo_url,
+                'address': clinic.address,
+            })
+        return result

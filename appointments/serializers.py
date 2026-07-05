@@ -87,7 +87,24 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
                 validated_data['time'],
             )
 
-        return Appointment.objects.create(**validated_data)
+        appointment = Appointment.objects.create(**validated_data)
+
+        if (appointment.is_online and appointment.patient
+                and appointment.doctor and appointment.doctor.user):
+            self._notify_chat(appointment)
+
+        return appointment
+
+    def _notify_chat(self, appointment):
+        from chat.services import get_or_create_room, send_system_message
+
+        room = get_or_create_room(appointment.patient, appointment.doctor.user)
+        date_str = appointment.date.strftime('%d.%m.%Y')
+        time_str = appointment.time.strftime('%H:%M')
+        content = f'Создана онлайн-запись на {date_str} в {time_str}.'
+        if appointment.google_meet_link:
+            content += f' Ссылка на видеовстречу: {appointment.google_meet_link}'
+        send_system_message(room, content)
 
 
 class AppointmentSerializer(serializers.ModelSerializer):

@@ -71,9 +71,39 @@ class ClinicDetailSerializer(serializers.ModelSerializer):
         return {'lat': float(obj.latitude), 'lng': float(obj.longitude)}
 
     def get_doctors(self, obj):
-        # Заглушка — будет заполнено при реализации связи клиника-врач
-        return []
+        request = self.context.get('request')
+        links = obj.doctor_links.filter(is_active=True).select_related(
+            'doctor', 'doctor__user',
+        )
+        result = []
+        for link in links:
+            doc = link.doctor
+            photo_url = None
+            if doc.photo:
+                photo_url = (
+                    request.build_absolute_uri(doc.photo.url)
+                    if request else doc.photo.url
+                )
+            specs = doc.primary_specializations
+            result.append({
+                'id': doc.user_id,
+                'full_name': doc.user.full_name,
+                'photo': photo_url,
+                'specialty': specs[0] if specs else '',
+                'rating': float(doc.rating),
+                'experience_years': doc.experience_years,
+            })
+        return result
 
     def get_services(self, obj):
-        # Заглушка — будет заполнено при реализации модуля услуг
-        return []
+        services = obj.services.filter(is_active=True)
+        result = []
+        for svc in services:
+            result.append({
+                'id': svc.id,
+                'name': svc.name,
+                'category': svc.category,
+                'price': str(svc.price) if svc.price is not None else None,
+                'duration': svc.duration,
+            })
+        return result
