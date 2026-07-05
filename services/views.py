@@ -12,7 +12,12 @@ class ServiceListView(ListAPIView):
     pagination_class = StandardPagination
 
     def get_queryset(self):
-        qs = Service.objects.filter(is_active=True).select_related('clinic').prefetch_related('doctors__user')
+        qs = (
+            Service.objects
+            .filter(is_active=True)
+            .select_related('clinic')
+            .prefetch_related('doctors__user')
+        )
 
         params = self.request.query_params
 
@@ -45,6 +50,13 @@ class ServiceListView(ListAPIView):
         if max_price:
             try:
                 qs = qs.filter(price__lte=float(max_price))
+            except ValueError:
+                pass
+
+        min_rating = params.get('min_rating')
+        if min_rating:
+            try:
+                qs = qs.filter(clinic__rating__gte=float(min_rating))
             except ValueError:
                 pass
 

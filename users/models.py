@@ -30,7 +30,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    middle_name = models.CharField(max_length=100, blank=True, null=True)
+    patronymic = models.CharField(max_length=100, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True)
     avatar = models.ImageField(upload_to='users/avatars/', null=True, blank=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.PATIENT)
@@ -53,7 +53,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def full_name(self):
-        return f'{self.first_name} {self.last_name}'.strip()
+        parts = [self.first_name, self.patronymic or '', self.last_name]
+        return ' '.join(p for p in parts if p).strip()
 
 
 class DoctorProfile(models.Model):
@@ -119,7 +120,7 @@ class DoctorProfile(models.Model):
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     reviews_count = models.PositiveIntegerField(default=0)
 
-    is_published = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=True)
     profile_views = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
@@ -216,7 +217,7 @@ class ClinicProfile(models.Model):
     reviews_count = models.PositiveIntegerField(default=0)
     doctors_count = models.PositiveIntegerField(default=0)
 
-    is_published = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=True)
     profile_views = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -3,9 +3,51 @@ from .models import Service
 
 
 class ServiceListSerializer(serializers.ModelSerializer):
+    clinic = serializers.SerializerMethodField()
+    rating = serializers.SerializerMethodField()
+    reviews_count = serializers.SerializerMethodField()
+    photo = serializers.SerializerMethodField()
+
     class Meta:
         model = Service
-        fields = ('id', 'name', 'category', 'price', 'duration')
+        fields = ('id', 'name', 'category', 'price', 'duration',
+                  'clinic', 'rating', 'reviews_count', 'photo')
+
+    def get_clinic(self, obj):
+        if not obj.clinic:
+            return None
+        c = obj.clinic
+        request = self.context.get('request')
+        logo_url = None
+        if c.logo:
+            logo_url = request.build_absolute_uri(c.logo.url) if request else c.logo.url
+        return {
+            'id': c.user_id,
+            'name': c.name,
+            'logo': logo_url,
+        }
+
+    def get_rating(self, obj):
+        # Приоритет: рейтинг клиники → первого врача
+        if obj.clinic:
+            return float(obj.clinic.rating)
+        first = obj.doctors.first()
+        return float(first.rating) if first else 0.0
+
+    def get_reviews_count(self, obj):
+        if obj.clinic:
+            return obj.clinic.reviews_count
+        first = obj.doctors.first()
+        return first.reviews_count if first else 0
+
+    def get_photo(self, obj):
+        # Фото первого врача из списка
+        first = obj.doctors.first()
+        if not first or not first.photo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(first.photo.url) if request else first.photo.url
+
 
 
 class ServiceDoctorSerializer(serializers.ModelSerializer):

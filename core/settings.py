@@ -14,6 +14,7 @@ _csrf_raw = config("CSRF_TRUSTED_ORIGINS", default="")
 CSRF_TRUSTED_ORIGINS = [o for o in _csrf_raw.split(",") if o.strip()]
 
 INSTALLED_APPS = [
+    'daphne',
     'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
