@@ -15,10 +15,10 @@ class Command(BaseCommand):
         clinic_user_id = options['clinic_id']
 
         try:
-            clinic = ClinicProfile.objects.get(user_id=clinic_user_id)
+            clinic = ClinicProfile.objects.get(id=clinic_user_id)
         except ClinicProfile.DoesNotExist:
             self.stderr.write(self.style.ERROR(
-                f'Клиника с user_id={clinic_user_id} не найдена.'
+                f'Клиника с id={clinic_user_id} не найдена.'
             ))
             return
 
