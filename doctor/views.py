@@ -1,10 +1,11 @@
 import os
 import uuid
+from django.shortcuts import get_object_or_404
 from django.db.models import Count, Max, Q
 from django.core.files.storage import default_storage
 from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status
-from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,6 +15,7 @@ from core.pagination import StandardPagination
 from reviews.models import Review
 from services.models import Service
 from users.models import DoctorDocument, DoctorProfile, User
+from doctors.models import Interview
 from .permissions import IsDoctor
 from .serializers import (
     DoctorAppointmentSerializer,
@@ -24,6 +26,7 @@ from .serializers import (
     DoctorServiceReadSerializer,
     DoctorServiceWriteSerializer,
     DoctorAppointmentSummarySerializer,
+    DoctorInterviewSerializer,
 )
 
 
@@ -321,3 +324,32 @@ class DoctorDocumentDeleteView(APIView):
         doc.file.delete(save=False)
         doc.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema_view(
+    get=extend_schema(responses={200: DoctorInterviewSerializer(many=True)}, tags=['Doctor Cabinet'], summary='Список видео-интервью врача'),
+    post=extend_schema(request=DoctorInterviewSerializer, responses={201: DoctorInterviewSerializer}, tags=['Doctor Cabinet'], summary='Добавить новое видео-интервью врача'),
+)
+class DoctorInterviewListCreateView(ListCreateAPIView):
+    permission_classes = (IsDoctor,)
+    serializer_class = DoctorInterviewSerializer
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        profile = DoctorProfile.objects.get(user=self.request.user)
+        return Interview.objects.filter(doctor=profile).order_by('-priority', 'id')
+
+
+@extend_schema_view(
+    get=extend_schema(responses={200: DoctorInterviewSerializer}, tags=['Doctor Cabinet'], summary='Детали видео-интервью врача'),
+    put=extend_schema(request=DoctorInterviewSerializer, responses={200: DoctorInterviewSerializer}, tags=['Doctor Cabinet'], summary='Редактировать видео-интервью врача (полностью)'),
+    patch=extend_schema(request=DoctorInterviewSerializer, responses={200: DoctorInterviewSerializer}, tags=['Doctor Cabinet'], summary='Редактировать видео-интервью врача (частично)'),
+    delete=extend_schema(responses={204: None}, tags=['Doctor Cabinet'], summary='Удалить видео-интервью врача'),
+)
+class DoctorInterviewDetailView(RetrieveUpdateDestroyAPIView):
+    permission_classes = (IsDoctor,)
+    serializer_class = DoctorInterviewSerializer
+
+    def get_queryset(self):
+        profile = DoctorProfile.objects.get(user=self.request.user)
+        return Interview.objects.filter(doctor=profile)

@@ -1,5 +1,12 @@
 from rest_framework import serializers
 from users.models import DoctorProfile
+from .models import Interview
+
+
+class InterviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Interview
+        fields = ('id', 'title', 'video_url', 'priority')
 
 
 class DoctorDetailSerializer(serializers.ModelSerializer):
@@ -11,6 +18,8 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email')
     location = serializers.SerializerMethodField()
     workplaces = serializers.SerializerMethodField()
+    clinic = serializers.SerializerMethodField()
+    interviews = InterviewSerializer(many=True, read_only=True)
 
     class Meta:
         model = DoctorProfile
@@ -20,9 +29,9 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
             'is_online_available', 'city', 'languages', 'about',
             'education', 'work_experience', 'skills',
             'primary_specializations', 'narrow_specializations',
-            'workplaces',
+            'workplaces', 'clinic',
             'equipment', 'patient_conditions', 'payment_methods',
-            'phone', 'email', 'location',
+            'phone', 'email', 'location', 'interviews',
         )
 
     def get_full_name(self, obj):
@@ -63,6 +72,25 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
             })
         return result
 
+    def get_clinic(self, obj):
+        request = self.context.get('request')
+        link = obj.clinic_links.filter(is_active=True).select_related('clinic').first()
+        if not link:
+            return None
+        clinic = link.clinic
+        logo_url = None
+        if clinic.logo:
+            logo_url = (
+                request.build_absolute_uri(clinic.logo.url)
+                if request else clinic.logo.url
+            )
+        return {
+            'id': clinic.user_id,
+            'name': clinic.name,
+            'logo': logo_url,
+            'address': clinic.address,
+        }
+
 
 class DoctorListSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='user.id')
@@ -75,13 +103,14 @@ class DoctorListSerializer(serializers.ModelSerializer):
     is_online_available = serializers.BooleanField()
     city = serializers.CharField()
     workplaces = serializers.SerializerMethodField()
+    clinic = serializers.SerializerMethodField()
 
     class Meta:
         model = DoctorProfile
         fields = (
             'id', 'full_name', 'specialty', 'photo',
             'rating', 'reviews_count', 'experience_years',
-            'is_online_available', 'city', 'workplaces',
+            'is_online_available', 'city', 'workplaces', 'clinic',
         )
 
     def get_full_name(self, obj):
@@ -116,3 +145,22 @@ class DoctorListSerializer(serializers.ModelSerializer):
                 'address': clinic.address,
             })
         return result
+
+    def get_clinic(self, obj):
+        request = self.context.get('request')
+        link = obj.clinic_links.filter(is_active=True).select_related('clinic').first()
+        if not link:
+            return None
+        clinic = link.clinic
+        logo_url = None
+        if clinic.logo:
+            logo_url = (
+                request.build_absolute_uri(clinic.logo.url)
+                if request else clinic.logo.url
+            )
+        return {
+            'id': clinic.user_id,
+            'name': clinic.name,
+            'logo': logo_url,
+            'address': clinic.address,
+        }

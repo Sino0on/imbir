@@ -144,7 +144,6 @@ SPECTACULAR_SETTINGS = {
     'COMPONENT_SPLIT_REQUEST': True,
     'SCHEMA_PATH_PREFIX': r'/api/',
     'ENUM_NAME_OVERRIDES': {
-        'FavoriteTargetTypeEnum': 'users.models.Favorite.TargetType',
         'ReviewTargetTypeEnum': 'reviews.models.Review.TargetType',
     },
 }
@@ -238,7 +237,6 @@ JAZZMIN_SETTINGS = {
         'users.ClinicBranch': 'fas fa-code-branch',
         'users.ClinicInvite': 'fas fa-envelope-open-text',
         'users.DoctorClinicLink': 'fas fa-link',
-        'users.Favorite': 'fas fa-heart',
         'appointments.Appointment': 'fas fa-calendar-check',
         'reviews.Review': 'fas fa-star',
         'services.Service': 'fas fa-concierge-bell',

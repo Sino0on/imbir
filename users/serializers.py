@@ -167,24 +167,45 @@ class DoctorStep7Serializer(serializers.Serializer):
     agree_publishing = serializers.BooleanField()
 
 
+def _parse_step(value, field_name):
+    import json
+    if isinstance(value, dict):
+        return value
+    try:
+        return json.loads(value)
+    except (ValueError, TypeError):
+        raise serializers.ValidationError({field_name: 'Ожидается JSON-строка'})
+
+
 class DoctorRegisterSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=8)
-    step1 = DoctorStep1Serializer()
-    step2 = DoctorStep2Serializer()
-    step3 = DoctorStep3Serializer()
-    step4 = DoctorStep4Serializer()
-    step5 = DoctorStep5Serializer()
-    step6 = DoctorStep6Serializer()
-    step7 = DoctorStep7Serializer()
+    step1 = serializers.CharField()
+    step2 = serializers.CharField()
+    step3 = serializers.CharField()
+    step4 = serializers.CharField()
+    step5 = serializers.CharField()
+    step6 = serializers.CharField()
+    step7 = serializers.CharField()
     photo = HybridImageField(required=False, allow_null=True)
     invite_clinic_id = serializers.IntegerField(required=False, allow_null=True)
     invite_branch_id = serializers.IntegerField(required=False, allow_null=True)
 
     def validate(self, data):
-        s1 = data['step1']
-        s7 = data['step7']
+        s1 = _parse_step(data['step1'], 'step1')
+        s2 = _parse_step(data['step2'], 'step2')
+        s3 = _parse_step(data['step3'], 'step3')
+        s4 = _parse_step(data['step4'], 'step4')
+        s5 = _parse_step(data['step5'], 'step5')
+        s6 = _parse_step(data['step6'], 'step6')
+        s7 = _parse_step(data['step7'], 'step7')
 
-        if User.objects.filter(email=s1['email']).exists():
+        if not s1.get('full_name', '').strip():
+            raise serializers.ValidationError({'step1': {'full_name': 'ФИО обязательно'}})
+
+        email = s1.get('email', '')
+        if not email:
+            raise serializers.ValidationError({'step1': {'email': 'Email обязателен'}})
+        if User.objects.filter(email=email).exists():
             raise serializers.ValidationError({'step1': {'email': 'Пользователь с таким email уже существует'}})
 
         for field, msg in [
@@ -214,18 +235,25 @@ class DoctorRegisterSerializer(serializers.Serializer):
         else:
             data['_invite'] = None
 
+        data['_s1'] = s1
+        data['_s2'] = s2
+        data['_s3'] = s3
+        data['_s4'] = s4
+        data['_s5'] = s5
+        data['_s6'] = s6
+        data['_s7'] = s7
         return data
 
     def create(self, validated_data):
         from django.db import transaction
 
-        s1 = validated_data['step1']
-        s2 = validated_data['step2']
-        s3 = validated_data['step3']
-        s4 = validated_data['step4']
-        s5 = validated_data['step5']
-        s6 = validated_data['step6']
-        s7 = validated_data['step7']
+        s1 = validated_data['_s1']
+        s2 = validated_data['_s2']
+        s3 = validated_data['_s3']
+        s4 = validated_data['_s4']
+        s5 = validated_data['_s5']
+        s6 = validated_data['_s6']
+        s7 = validated_data['_s7']
         invite = validated_data.get('_invite')
 
         full_name_parts = s1['full_name'].strip().split()
@@ -270,10 +298,10 @@ class DoctorRegisterSerializer(serializers.Serializer):
                 equipment=s6.get('equipment', []),
                 patient_conditions=s6.get('patient_conditions', []),
                 payment_methods=s6.get('payment_methods', []),
-                agree_terms=s7['agree_terms'],
-                agree_privacy=s7['agree_privacy'],
-                agree_data_processing=s7['agree_data_processing'],
-                agree_publishing=s7['agree_publishing'],
+                agree_terms=s7.get('agree_terms', False),
+                agree_privacy=s7.get('agree_privacy', False),
+                agree_data_processing=s7.get('agree_data_processing', False),
+                agree_publishing=s7.get('agree_publishing', False),
             )
 
             if invite:
@@ -296,15 +324,6 @@ class DoctorRegisterSerializer(serializers.Serializer):
 
         return user
 
-
-def _parse_step(value, field_name):
-    import json
-    if isinstance(value, dict):
-        return value
-    try:
-        return json.loads(value)
-    except (ValueError, TypeError):
-        raise serializers.ValidationError({field_name: 'Ожидается JSON-строка'})
 
 
 class ClinicRegisterSerializer(serializers.Serializer):
@@ -440,18 +459,25 @@ class ClinicRegisterSerializer(serializers.Serializer):
 
 
 class PasswordResetVerifySerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False, allow_null=True)
+    phone = serializers.CharField(required=False, allow_null=True)
     code = serializers.CharField(max_length=6, min_length=6)
 
     def validate(self, data):
         email = data.get('email')
+        phone = data.get('phone')
         code = data.get('code')
 
-        reset_code = PasswordResetCode.objects.filter(
-            email=email,
-            code=code,
-            is_used=False
-        ).order_by('-created_at').first()
+        if not email and not phone:
+            raise serializers.ValidationError('Необходимо передать email или phone')
+
+        filter_kwargs = {'code': code, 'is_used': False}
+        if email:
+            filter_kwargs['email'] = email
+        else:
+            filter_kwargs['phone'] = phone
+
+        reset_code = PasswordResetCode.objects.filter(**filter_kwargs).order_by('-created_at').first()
 
         if not reset_code:
             raise serializers.ValidationError({'code': 'Неверный код подтверждения'})
@@ -464,19 +490,26 @@ class PasswordResetVerifySerializer(serializers.Serializer):
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False, allow_null=True)
+    phone = serializers.CharField(required=False, allow_null=True)
     code = serializers.CharField(max_length=6, min_length=6)
     password = serializers.CharField(write_only=True, min_length=8)
 
     def validate(self, data):
         email = data.get('email')
+        phone = data.get('phone')
         code = data.get('code')
 
-        reset_code = PasswordResetCode.objects.filter(
-            email=email,
-            code=code,
-            is_used=False
-        ).order_by('-created_at').first()
+        if not email and not phone:
+            raise serializers.ValidationError('Необходимо передать email или phone')
+
+        filter_kwargs = {'code': code, 'is_used': False}
+        if email:
+            filter_kwargs['email'] = email
+        else:
+            filter_kwargs['phone'] = phone
+
+        reset_code = PasswordResetCode.objects.filter(**filter_kwargs).order_by('-created_at').first()
 
         if not reset_code:
             raise serializers.ValidationError({'code': 'Неверный код подтверждения'})
@@ -484,8 +517,12 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if reset_code.is_expired():
             raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
 
-        if not User.objects.filter(email=email).exists():
-            raise serializers.ValidationError({'email': 'Пользователь с таким email не найден'})
+        if email:
+            if not User.objects.filter(email=email).exists():
+                raise serializers.ValidationError({'email': 'Пользователь с таким email не найден'})
+        else:
+            if not User.objects.filter(phone=phone).exists():
+                raise serializers.ValidationError({'phone': 'Пользователь с таким номером телефона не найден'})
 
         data['reset_code'] = reset_code
         return data

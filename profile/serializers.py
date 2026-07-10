@@ -2,7 +2,7 @@ from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from appointments.models import Appointment
 from reviews.models import Review
-from users.models import Favorite, PatientProfile
+from users.models import PatientProfile
 
 
 class PatientProfileSerializer(serializers.ModelSerializer):
@@ -98,92 +98,76 @@ class PatientAppointmentSerializer(serializers.ModelSerializer):
             return True
 
 
-class FavoriteSerializer(serializers.ModelSerializer):
-    target = serializers.SerializerMethodField()
+from users.models import DoctorProfile, ClinicProfile
+from services.models import Service
+
+class FavoriteDoctorSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='user.id')
+    full_name = serializers.CharField(source='user.full_name')
+    specialty = serializers.SerializerMethodField()
+    photo = serializers.SerializerMethodField()
 
     class Meta:
-        model = Favorite
-        fields = ('id', 'target_type', 'target_id', 'target', 'created_at')
+        model = DoctorProfile
+        fields = ('id', 'full_name', 'specialty', 'photo', 'rating', 'experience_years')
 
-    def get_target(self, obj):
+    def get_specialty(self, obj):
+        specs = obj.primary_specializations
+        return specs[0] if specs else ''
+
+    def get_photo(self, obj):
+        if not obj.photo:
+            return None
         request = self.context.get('request')
-
-        def abs_url(file_field):
-            if not file_field:
-                return None
-            url = file_field.url
-            return request.build_absolute_uri(url) if request else url
-
-        if obj.target_type == Favorite.TargetType.DOCTOR:
-            from users.models import DoctorProfile
-            try:
-                p = DoctorProfile.objects.select_related('user').get(user_id=obj.target_id)
-                return {
-                    'id': p.user_id,
-                    'full_name': p.user.full_name,
-                    'specialty': p.primary_specializations[0] if p.primary_specializations else '',
-                    'photo': abs_url(p.photo),
-                }
-            except DoctorProfile.DoesNotExist:
-                return None
-
-        if obj.target_type == Favorite.TargetType.CLINIC:
-            from users.models import ClinicProfile
-            try:
-                c = ClinicProfile.objects.get(user_id=obj.target_id)
-                return {
-                    'id': c.user_id,
-                    'name': c.name,
-                    'logo': abs_url(c.logo),
-                }
-            except ClinicProfile.DoesNotExist:
-                return None
-
-        if obj.target_type == Favorite.TargetType.SERVICE:
-            from services.models import Service
-            try:
-                s = Service.objects.get(id=obj.target_id)
-                return {
-                    'id': s.id,
-                    'name': s.name,
-                    'category': s.category,
-                    'price': s.price,
-                }
-            except Service.DoesNotExist:
-                return None
-
-        return None
+        return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
 
 
-class FavoriteCreateSerializer(serializers.Serializer):
-    target_type = serializers.ChoiceField(choices=Favorite.TargetType.values)
+class FavoriteClinicSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='user.id')
+    logo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ClinicProfile
+        fields = ('id', 'name', 'logo', 'city', 'clinic_type', 'rating')
+
+    def get_logo(self, obj):
+        if not obj.logo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
+
+
+class FavoriteServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ('id', 'name', 'category', 'price')
+
+
+class FavoritesListSerializer(serializers.Serializer):
+    doctors = FavoriteDoctorSerializer(source='favorite_doctors', many=True)
+    clinics = FavoriteClinicSerializer(source='favorite_clinics', many=True)
+    services = FavoriteServiceSerializer(source='favorite_services', many=True)
+
+
+class FavoriteActionSerializer(serializers.Serializer):
+    target_type = serializers.ChoiceField(choices=['doctor', 'clinic', 'service'])
     target_id = serializers.IntegerField()
 
     def validate(self, data):
-        from users.models import DoctorProfile, ClinicProfile
-        from services.models import Service
-
         t_type = data['target_type']
         t_id = data['target_id']
 
-        if t_type == Favorite.TargetType.DOCTOR:
+        if t_type == 'doctor':
             if not DoctorProfile.objects.filter(user_id=t_id, is_published=True).exists():
                 raise serializers.ValidationError({'target_id': 'Врач не найден.'})
-        elif t_type == Favorite.TargetType.CLINIC:
+        elif t_type == 'clinic':
             if not ClinicProfile.objects.filter(user_id=t_id, is_published=True).exists():
                 raise serializers.ValidationError({'target_id': 'Клиника не найдена.'})
-        elif t_type == Favorite.TargetType.SERVICE:
+        elif t_type == 'service':
             if not Service.objects.filter(id=t_id, is_active=True).exists():
                 raise serializers.ValidationError({'target_id': 'Услуга не найдена.'})
 
-        user = self.context['request'].user
-        if Favorite.objects.filter(user=user, target_type=t_type, target_id=t_id).exists():
-            raise serializers.ValidationError('Уже в избранном.')
-
         return data
-
-    def create(self, validated_data):
-        return Favorite.objects.create(user=self.context['request'].user, **validated_data)
 
 
 class PatientReviewSerializer(serializers.ModelSerializer):

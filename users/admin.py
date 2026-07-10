@@ -2,9 +2,10 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 
+from doctors.models import Interview
 from .models import (
     ClinicBranch, ClinicDocument, ClinicInvite, ClinicPhoto, ClinicProfile,
-    DoctorClinicLink, DoctorDocument, DoctorProfile, Favorite, PatientProfile, User,
+    DoctorClinicLink, DoctorDocument, DoctorProfile, PatientProfile, User,
 )
 
 
@@ -52,6 +53,11 @@ class DoctorDocumentInline(admin.TabularInline):
     readonly_fields = ('uploaded_at',)
 
 
+class DoctorInterviewInline(admin.TabularInline):
+    model = Interview
+    extra = 0
+
+
 @admin.register(DoctorProfile)
 class DoctorProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'city', 'license_number', 'rating', 'reviews_count',
@@ -59,7 +65,7 @@ class DoctorProfileAdmin(admin.ModelAdmin):
     list_filter = ('is_published', 'emergency_24_7', 'city', 'is_online_available')
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'user__patronymic', 'license_number', 'city')
     readonly_fields = ('rating', 'reviews_count', 'profile_views', 'created_at', 'updated_at')
-    inlines = (DoctorDocumentInline,)
+    inlines = (DoctorDocumentInline, DoctorInterviewInline)
     filter_horizontal = ('services',)
     list_per_page = 500
 
@@ -171,9 +177,4 @@ class DoctorClinicLinkAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at',)
 
 
-@admin.register(Favorite)
-class FavoriteAdmin(admin.ModelAdmin):
-    list_display = ('user', 'target_type', 'target_id', 'created_at')
-    list_filter = ('target_type',)
-    search_fields = ('user__email',)
-    readonly_fields = ('created_at',)
+

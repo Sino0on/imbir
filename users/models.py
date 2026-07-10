@@ -39,6 +39,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
 
+    favorite_doctors = models.ManyToManyField('users.DoctorProfile', related_name='favorited_by_users', blank=True)
+    favorite_clinics = models.ManyToManyField('users.ClinicProfile', related_name='favorited_by_users', blank=True)
+    favorite_services = models.ManyToManyField('services.Service', related_name='favorited_by_users', blank=True)
+
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
@@ -250,27 +254,6 @@ class ClinicDocument(models.Model):
         verbose_name_plural = 'Документы клиник'
 
 
-class Favorite(models.Model):
-    class TargetType(models.TextChoices):
-        DOCTOR = 'doctor', 'Врач'
-        CLINIC = 'clinic', 'Клиника'
-        SERVICE = 'service', 'Услуга'
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
-    target_type = models.CharField(max_length=10, choices=TargetType.choices)
-    # user.id для doctor/clinic, Service.id для service
-    target_id = models.PositiveIntegerField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = 'Избранное'
-        verbose_name_plural = 'Избранное'
-        unique_together = [('user', 'target_type', 'target_id')]
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f'{self.user.full_name} → {self.target_type}:{self.target_id}'
-
 
 class ClinicBranch(models.Model):
     clinic = models.ForeignKey(ClinicProfile, on_delete=models.CASCADE, related_name='branches')
@@ -330,7 +313,8 @@ class DoctorClinicLink(models.Model):
 
 
 class PasswordResetCode(models.Model):
-    email = models.EmailField()
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
     code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
@@ -340,7 +324,8 @@ class PasswordResetCode(models.Model):
         verbose_name_plural = 'Коды сброса пароля'
 
     def __str__(self):
-        return f'{self.email} -> {self.code}'
+        identity = self.email or self.phone or 'unknown'
+        return f'{identity} -> {self.code}'
 
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(minutes=15)

@@ -147,7 +147,10 @@ User = get_user_model()
 
 
 @extend_schema(
-    request=inline_serializer('PasswordResetRequest', fields={'email': serializers.EmailField()}),
+    request=inline_serializer('PasswordResetRequest', fields={
+        'email': serializers.EmailField(required=False),
+        'phone': serializers.CharField(required=False),
+    }),
     responses={200: inline_serializer('PasswordResetRequestSuccess', fields={'detail': serializers.CharField()})},
     tags=['auth'],
 )
@@ -156,33 +159,46 @@ class PasswordResetRequestView(APIView):
 
     def post(self, request):
         email = request.data.get('email', '').strip()
-        if not email:
-            return Response({'error': 'Email обязателен'}, status=status.HTTP_400_BAD_REQUEST)
+        phone = request.data.get('phone', '').strip()
 
-        try:
-            user = User.objects.get(email=email)
-            code = f"{random.randint(100000, 999999)}"
-            PasswordResetCode.objects.create(email=email, code=code)
+        if not email and not phone:
+            return Response({'error': 'Email или телефон обязательны'}, status=status.HTTP_400_BAD_REQUEST)
 
-            subject = "Восстановление пароля — Imbir"
-            message = (
-                f"Здравствуйте!\n\n"
-                f"Вы получили это письмо, потому что запросили сброс пароля.\n"
-                f"Код подтверждения для сброса пароля:\n\n"
-                f"{code}\n\n"
-                f"Если вы не запрашивали сброс пароля, проигнорируйте это письмо.\n"
-            )
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL or 'noreply@imbir.kg',
-                [user.email],
-                fail_silently=True,
-            )
-        except User.DoesNotExist:
-            pass
+        code = f"{random.randint(100000, 999999)}"
 
-        return Response({'detail': 'Если пользователь существует, письмо с кодом подтверждения отправлено.'}, status=status.HTTP_200_OK)
+        if email:
+            try:
+                user = User.objects.get(email=email)
+                PasswordResetCode.objects.create(email=email, code=code)
+
+                subject = "Восстановление пароля — Imbir"
+                message = (
+                    f"Здравствуйте!\n\n"
+                    f"Вы получили это письмо, потому что запросили сброс пароля.\n"
+                    f"Код подтверждения для сброса пароля:\n\n"
+                    f"{code}\n\n"
+                    f"Если вы не запрашивали сброс пароля, проигнорируйте это письмо.\n"
+                )
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL or 'noreply@imbir.kg',
+                    [user.email],
+                    fail_silently=True,
+                )
+            except User.DoesNotExist:
+                pass
+            return Response({'detail': 'Если пользователь существует, письмо с кодом подтверждения отправлено.'}, status=status.HTTP_200_OK)
+        else:
+            try:
+                user = User.objects.get(phone=phone)
+                PasswordResetCode.objects.create(phone=phone, code=code)
+
+                message = f"Код подтверждения для сброса пароля в Imbir: {code}"
+                send_sms_nikita(phone, message)
+            except User.DoesNotExist:
+                pass
+            return Response({'detail': 'Если пользователь существует, СМС с кодом подтверждения отправлено.'}, status=status.HTTP_200_OK)
 
 
 @extend_schema(
@@ -211,12 +227,16 @@ class PasswordResetConfirmView(APIView):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        email = serializer.validated_data['email']
+        email = serializer.validated_data.get('email')
+        phone = serializer.validated_data.get('phone')
         password = serializer.validated_data['password']
         reset_code = serializer.validated_data['reset_code']
 
         try:
-            user = User.objects.get(email=email)
+            if email:
+                user = User.objects.get(email=email)
+            else:
+                user = User.objects.get(phone=phone)
             user.set_password(password)
             user.save()
 

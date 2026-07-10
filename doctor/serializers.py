@@ -3,6 +3,8 @@ from appointments.models import Appointment
 from reviews.models import Review
 from services.models import Service
 from users.models import DoctorProfile, User
+from doctors.serializers import InterviewSerializer
+from doctors.models import Interview
 
 
 from users.serializers import HybridImageField
@@ -15,6 +17,7 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(source='user.phone', required=False, allow_blank=True)
     photo = HybridImageField(required=False, allow_null=True)
     documents = serializers.SerializerMethodField()
+    interviews = InterviewSerializer(many=True, read_only=True)
 
     class Meta:
         model = DoctorProfile
@@ -36,11 +39,12 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
             'equipment', 'patient_conditions', 'payment_methods',
             # Публичный профиль
             'about', 'experience_years', 'is_online_available', 'consultation_price',
-            'education', 'work_experience', 'skills',
+            'education', 'work_experience', 'skills', 'interviews',
             # Статус и счётчики
             'is_published', 'profile_views', 'rating', 'reviews_count',
         )
-        read_only_fields = ('profile_views', 'rating', 'reviews_count', 'documents')
+        read_only_fields = ('profile_views', 'rating', 'reviews_count', 'documents', 'interviews')
+
 
     def get_documents(self, obj):
         request = self.context.get('request')
@@ -65,6 +69,18 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class DoctorInterviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Interview
+        fields = ('id', 'title', 'video_url', 'priority')
+        read_only_fields = ('id',)
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        validated_data['doctor'] = request.user.doctor_profile
+        return super().create(validated_data)
 
 
 class DoctorScheduleSerializer(serializers.ModelSerializer):

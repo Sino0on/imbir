@@ -13,7 +13,8 @@ class PasswordResetTests(APITestCase):
             email='test@example.com',
             password='oldpassword123',
             first_name='Test',
-            last_name='User'
+            last_name='User',
+            phone='+996777888999'
         )
         self.request_url = '/api/auth/password-reset/'
         self.verify_url = '/api/auth/password-reset/verify/'
@@ -115,6 +116,41 @@ class PasswordResetTests(APITestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password', response.data)
+
+    def test_request_password_reset_existing_phone(self):
+        response = self.client.post(self.request_url, {'phone': '+996777888999'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data['detail'],
+            'Если пользователь существует, СМС с кодом подтверждения отправлено.'
+        )
+
+        self.assertTrue(PasswordResetCode.objects.filter(phone='+996777888999').exists())
+        reset_code = PasswordResetCode.objects.filter(phone='+996777888999').first()
+        self.assertEqual(len(reset_code.code), 6)
+
+    def test_verify_correct_code_phone(self):
+        PasswordResetCode.objects.create(phone='+996777888999', code='111222')
+        response = self.client.post(self.verify_url, {
+            'phone': '+996777888999',
+            'code': '111222'
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_confirm_reset_success_phone(self):
+        reset_code = PasswordResetCode.objects.create(phone='+996777888999', code='111222')
+        response = self.client.post(self.confirm_url, {
+            'phone': '+996777888999',
+            'code': '111222',
+            'password': 'newsecretpassword999'
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        reset_code.refresh_from_db()
+        self.assertTrue(reset_code.is_used)
+
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('newsecretpassword999'))
 
 
 class PhoneRegistrationTests(APITestCase):
