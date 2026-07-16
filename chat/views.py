@@ -1,11 +1,11 @@
 from django.conf import settings
 from django.db.models import Q
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from openai import OpenAI
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 
 from .models import ChatRoom, ChatMessage, AIMessage
 from .serializers import (
@@ -150,4 +150,22 @@ class AIChatSendView(APIView):
             user=request.user, role=AIMessage.Role.ASSISTANT, content=reply
         )
         return Response(AIMessageSerializer(ai_message).data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    responses={200: inline_serializer('UnreadCountResponse', fields={'unread_count': serializers.IntegerField()})},
+    tags=['Chat Rooms'],
+    summary='Количество непрочитанных сообщений'
+)
+class UnreadMessagesCountView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        unread_count = ChatMessage.objects.filter(
+            room__participants=request.user,
+            is_read=False
+        ).exclude(
+            sender=request.user
+        ).count()
+        return Response({'unread_count': unread_count})
 

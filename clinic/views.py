@@ -27,6 +27,7 @@ from .serializers import (
     ClinicReviewSerializer,
     ClinicServiceReadSerializer,
     ClinicServiceWriteSerializer,
+    ClinicDoctorCreateSerializer,
 )
 
 
@@ -153,12 +154,18 @@ class ClinicReviewListView(ListCreateAPIView):
 
 # ── Doctors ──────────────────────────────────────────────────────────────────
 
-@extend_schema(tags=['Clinic Cabinet'])
+@extend_schema_view(
+    get=extend_schema(responses={200: ClinicDoctorSerializer(many=True)}, tags=['Clinic Cabinet'], summary='Список врачей клиники'),
+    post=extend_schema(request=ClinicDoctorCreateSerializer, responses={201: ClinicDoctorSerializer}, tags=['Clinic Cabinet'], summary='Создать и привязать врача'),
+)
 class ClinicDoctorListView(ListCreateAPIView):
     permission_classes = (IsClinic,)
-    serializer_class = ClinicDoctorSerializer
     pagination_class = StandardPagination
-    http_method_names = ['get']
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ClinicDoctorCreateSerializer
+        return ClinicDoctorSerializer
 
     def get_queryset(self):
         clinic = ClinicProfile.objects.get(user=self.request.user)
@@ -168,6 +175,12 @@ class ClinicDoctorListView(ListCreateAPIView):
         ctx = super().get_serializer_context()
         ctx['clinic'] = ClinicProfile.objects.get(user=self.request.user)
         return ctx
+
+    def post(self, request, *args, **kwargs):
+        serializer = ClinicDoctorCreateSerializer(data=request.data, context=self.get_serializer_context())
+        serializer.is_valid(raise_exception=True)
+        link = serializer.save()
+        return Response(ClinicDoctorSerializer(link, context=self.get_serializer_context()).data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(responses={204: None}, tags=['Clinic Cabinet'])
@@ -231,9 +244,16 @@ class ClinicServiceDetailView(APIView):
         service = self._get_service(request, pk)
         if not service:
             return Response({'detail': 'Не найдено'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = ClinicServiceWriteSerializer(service, data=request.data, partial=True)
+        clinic = ClinicProfile.objects.get(user=request.user)
+        serializer = ClinicServiceWriteSerializer(
+            service,
+            data=request.data,
+            partial=True,
+            context={'clinic': clinic, 'request': request}
+        )
         serializer.is_valid(raise_exception=True)
         service = serializer.save()
+        service.refresh_from_db()
         return Response(ClinicServiceReadSerializer(service).data)
 
     def delete(self, request, pk):

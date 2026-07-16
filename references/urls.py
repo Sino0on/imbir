@@ -7,6 +7,7 @@ from .views import (
     EquipmentView,
     ConditionsView,
     PaymentMethodsView,
+    CountryCodesView,
 )
 
 urlpatterns = [
@@ -17,4 +18,5 @@ urlpatterns = [
     path('equipment/', EquipmentView.as_view(), name='ref-equipment'),
     path('conditions/', ConditionsView.as_view(), name='ref-conditions'),
     path('payment-methods/', PaymentMethodsView.as_view(), name='ref-payment-methods'),
+    path('country-codes/', CountryCodesView.as_view(), name='ref-country-codes'),
 ]

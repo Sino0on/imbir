@@ -116,3 +116,36 @@ class PaymentMethodsView(APIView):
             (ClinicProfile.objects.filter(is_published=True), 'payment_methods'),
         )
         return Response({'data': data})
+
+
+import os
+import json
+from django.conf import settings
+
+COUNTRY_CODES = []
+json_path = os.path.join(settings.BASE_DIR, 'references', 'country_codes.json')
+if os.path.exists(json_path):
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            COUNTRY_CODES = json.load(f)
+    except Exception:
+        pass
+
+_COUNTRY_CODES_RESPONSE = inline_serializer('CountryCodeList', fields={
+    'data': serializers.ListField(
+        child=inline_serializer('CountryCodeItem', fields={
+            'code': serializers.CharField(),
+            'country': serializers.CharField(),
+            'flag': serializers.CharField(),
+            'iso': serializers.CharField(),
+        })
+    )
+})
+
+
+@extend_schema(responses={200: _COUNTRY_CODES_RESPONSE}, tags=['References'], summary='Список телефонных кодов стран')
+class CountryCodesView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        return Response({'data': COUNTRY_CODES})

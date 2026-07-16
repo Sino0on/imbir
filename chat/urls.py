@@ -1,9 +1,16 @@
 from django.urls import path
-from .views import RoomListCreateView, RoomMessagesView, AIChatHistoryView, AIChatSendView
+from .views import (
+    RoomListCreateView,
+    RoomMessagesView,
+    AIChatHistoryView,
+    AIChatSendView,
+    UnreadMessagesCountView,
+)
 
 urlpatterns = [
     # Комнаты
     path('rooms/', RoomListCreateView.as_view()),
+    path('rooms/unread-count/', UnreadMessagesCountView.as_view()),
     path('rooms/<int:pk>/messages/', RoomMessagesView.as_view()),
 
     # ИИ чат (комната 0)

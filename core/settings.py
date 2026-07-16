@@ -61,6 +61,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'core.middleware.CityFromIPMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -299,4 +300,7 @@ NIKITA_SMS_URL = config('NIKITA_SMS_URL', default='https://smspro.nikita.kg/api/
 NIKITA_SMS_LOGIN = config('NIKITA_SMS_LOGIN', default='')
 NIKITA_SMS_PASSWORD = config('NIKITA_SMS_PASSWORD', default='')
 NIKITA_SMS_SENDER = config('NIKITA_SMS_SENDER', default='Imbir')
+
+# Geolocation Settings
+DEFAULT_CITY = 'Бишкек'
 

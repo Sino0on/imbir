@@ -3,6 +3,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from doctors.search_views import GlobalSearchView, GlobalSearchSuggestView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -27,6 +28,11 @@ urlpatterns = [
     path('api/notifications/', include('notifications.urls')),
     path('api/upload/', include('upload.urls')),
     path('api/chat/', include('chat.urls')),
+
+    # Search
+    path('api/search/', GlobalSearchView.as_view(), name='global-search'),
+    path('api/search/suggest/', GlobalSearchSuggestView.as_view(), name='global-search-suggest'),
+
 ]
 
 if settings.DEBUG:

@@ -156,3 +156,227 @@ class DoctorInterviewsAPITests(APITestCase):
         self.assertEqual(interviews[1]['title'], 'Medium')
         self.assertEqual(interviews[2]['title'], 'Low')
 
+
+class GlobalSearchTests(APITestCase):
+    def setUp(self):
+        # Create doctors
+        self.doc_user = User.objects.create_user(
+            email='doc_search@example.com',
+            password='password123',
+            first_name='Андрей',
+            last_name='Иванов',
+            role=User.Role.DOCTOR
+        )
+        self.doctor = DoctorProfile.objects.create(
+            user=self.doc_user,
+            is_published=True,
+            primary_specializations=["Кардиолог"]
+        )
+
+        # Create clinics
+        self.clinic_user = User.objects.create_user(
+            email='clinic_search@example.com',
+            password='password123',
+            first_name='Clinic',
+            last_name='Search',
+            role=User.Role.CLINIC
+        )
+        from users.models import ClinicProfile
+        self.clinic = ClinicProfile.objects.create(
+            user=self.clinic_user,
+            name='Клиника Кардиологии',
+            is_published=True
+        )
+
+        # Create services
+        from services.models import Service
+        self.service = Service.objects.create(
+            name='УЗИ сердца (ЭхоКГ)',
+            price=2500.00,
+            category='diagnostics',
+            is_active=True
+        )
+        self.service.doctors.add(self.doctor)
+
+        self.suggest_url = '/api/search/suggest/'
+        self.extended_url = '/api/search/'
+
+    def test_search_suggest_success(self):
+        response = self.client.get(self.suggest_url, {'q': 'Кардиоло'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.assertIn('doctors', response.data)
+        self.assertIn('clinics', response.data)
+        self.assertIn('services', response.data)
+
+        # Doctor matched on specialization
+        self.assertEqual(len(response.data['doctors']), 1)
+        self.assertEqual(response.data['doctors'][0]['full_name'], 'Андрей Иванов')
+        self.assertEqual(response.data['doctors'][0]['specialty'], 'Кардиолог')
+
+        # Clinic matched on name
+        self.assertEqual(len(response.data['clinics']), 1)
+        self.assertEqual(response.data['clinics'][0]['name'], 'Клиника Кардиологии')
+
+    def test_search_extended_success(self):
+        response = self.client.get(self.extended_url, {'q': 'сердца'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertIn('doctors', response.data)
+        self.assertIn('clinics', response.data)
+        self.assertIn('services', response.data)
+
+        # Service matched on name
+        self.assertEqual(len(response.data['services']), 1)
+        self.assertEqual(response.data['services'][0]['name'], 'УЗИ сердца (ЭхоКГ)')
+
+    def test_empty_query(self):
+        response = self.client.get(self.suggest_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['doctors']), 0)
+
+
+from unittest.mock import patch
+
+class GeolocationMiddlewareTests(APITestCase):
+    def setUp(self):
+        # Create doctors in different cities
+        self.doc_user_1 = User.objects.create_user(
+            email='doc_bishkek@example.com',
+            password='password123',
+            first_name='Асан',
+            last_name='Бишкекский',
+            role=User.Role.DOCTOR
+        )
+        self.doc_1 = DoctorProfile.objects.create(
+            user=self.doc_user_1,
+            is_published=True,
+            city='Бишкек'
+        )
+
+        self.doc_user_2 = User.objects.create_user(
+            email='doc_almaty@example.com',
+            password='password123',
+            first_name='Алихан',
+            last_name='Алматинский',
+            role=User.Role.DOCTOR
+        )
+        self.doc_2 = DoctorProfile.objects.create(
+            user=self.doc_user_2,
+            is_published=True,
+            city='Алматы'
+        )
+
+        self.doctors_list_url = '/api/doctors/'
+
+    def test_default_city_filtering_without_params(self):
+        # By default, middleware sets city to DEFAULT_CITY ('Бишкек')
+        # So calling list view without params should return only doctors from Бишкек
+        response = self.client.get(self.doctors_list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # StandardPagination wraps data under 'data'
+        results = response.data['data']
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['id'], self.doc_user_1.id)
+
+    def test_override_city_via_query_param(self):
+        # Query specifically for Алматы
+        response = self.client.get(self.doctors_list_url, {'city': 'Алматы'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['data']
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['id'], self.doc_user_2.id)
+
+    @patch('core.middleware.get_city_from_ip')
+    def test_ip_geolocation_filtering(self, mock_get_city):
+        # Mock geolocation to return 'Алматы' for a simulated external IP
+        mock_get_city.return_value = 'Алматы'
+        
+        # Simulate request with standard X-Forwarded-For header
+        response = self.client.get(self.doctors_list_url, HTTP_X_FORWARDED_FOR='123.45.67.89')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['data']
+        self.assertEqual(results[0]['id'], self.doc_user_2.id)
+
+
+class DoctorAndClinicFilterTests(APITestCase):
+    def setUp(self):
+        # Create doctors with different experience
+        self.doc_user_1 = User.objects.create_user(
+            email='doc1@example.com', password='password123', first_name='Doc', last_name='One', role=User.Role.DOCTOR
+        )
+        self.doc_1 = DoctorProfile.objects.create(
+            user=self.doc_user_1, is_published=True, experience_years=3, consultation_price=1000, city='Бишкек'
+        )
+
+        self.doc_user_2 = User.objects.create_user(
+            email='doc2@example.com', password='password123', first_name='Doc', last_name='Two', role=User.Role.DOCTOR
+        )
+        self.doc_2 = DoctorProfile.objects.create(
+            user=self.doc_user_2, is_published=True, experience_years=10, consultation_price=2000, city='Бишкек'
+        )
+
+        # Create clinics with different experience and services
+        self.clinic_user_1 = User.objects.create_user(
+            email='clinic1@example.com', password='password123', first_name='Clinic', last_name='One', role=User.Role.CLINIC
+        )
+        from users.models import ClinicProfile
+        self.clinic_1 = ClinicProfile.objects.create(
+            user=self.clinic_user_1, name='Clinic One', is_published=True, experience_years=2, city='Бишкек'
+        )
+
+        self.clinic_user_2 = User.objects.create_user(
+            email='clinic2@example.com', password='password123', first_name='Clinic', last_name='Two', role=User.Role.CLINIC
+        )
+        self.clinic_2 = ClinicProfile.objects.create(
+            user=self.clinic_user_2, name='Clinic Two', is_published=True, experience_years=15, city='Бишкек'
+        )
+
+        # Add services to clinics
+        from services.models import Service
+        self.service_1 = Service.objects.create(
+            name='Service One', price=500.00, category='diagnostics', is_active=True, clinic=self.clinic_1
+        )
+        self.service_2 = Service.objects.create(
+            name='Service Two', price=1500.00, category='diagnostics', is_active=True, clinic=self.clinic_2
+        )
+
+        self.doctors_url = '/api/doctors/'
+        self.clinics_url = '/api/clinics/'
+
+    def test_doctor_experience_filters(self):
+        # 1. min_experience
+        response = self.client.get(self.doctors_url, {'min_experience': 5, 'city': 'Бишкек'})
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['id'], self.doc_user_2.id)
+
+        # 2. max_experience
+        response = self.client.get(self.doctors_url, {'max_experience': 5, 'city': 'Бишкек'})
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['id'], self.doc_user_1.id)
+
+    def test_clinic_experience_filters(self):
+        # 1. min_experience
+        response = self.client.get(self.clinics_url, {'min_experience': 5, 'city': 'Бишкек'})
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['id'], self.clinic_user_2.id)
+
+        # 2. max_experience
+        response = self.client.get(self.clinics_url, {'max_experience': 5, 'city': 'Бишкек'})
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['id'], self.clinic_user_1.id)
+
+    def test_clinic_price_range_filters(self):
+        # Filter clinics having service price <= 1000
+        response = self.client.get(self.clinics_url, {'max_price': 1000, 'city': 'Бишкек'})
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['id'], self.clinic_user_1.id)
+
+        # Filter clinics having service price >= 1000
+        response = self.client.get(self.clinics_url, {'min_price': 1000, 'city': 'Бишкек'})
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['id'], self.clinic_user_2.id)
+
+
+
+

@@ -52,6 +52,8 @@ class DoctorListView(ListAPIView):
             )
 
         city = params.get('city', '').strip()
+        if not city and hasattr(self.request, 'city'):
+            city = self.request.city
         if city:
             qs = qs.filter(city__icontains=city)
 
@@ -80,6 +82,20 @@ class DoctorListView(ListAPIView):
         if min_rating:
             try:
                 qs = qs.filter(rating__gte=float(min_rating))
+            except ValueError:
+                pass
+
+        min_experience = params.get('min_experience')
+        if min_experience:
+            try:
+                qs = qs.filter(experience_years__gte=int(min_experience))
+            except ValueError:
+                pass
+
+        max_experience = params.get('max_experience')
+        if max_experience:
+            try:
+                qs = qs.filter(experience_years__lte=int(max_experience))
             except ValueError:
                 pass
 

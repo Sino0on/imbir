@@ -173,3 +173,20 @@ class AppointmentCancelSerializer(serializers.ModelSerializer):
         if self.instance.status == Appointment.Status.COMPLETED:
             raise serializers.ValidationError('Нельзя отменить завершённую запись.')
         return value
+
+
+class AppointmentRescheduleSerializer(serializers.Serializer):
+    date = serializers.DateField(required=True)
+    time = serializers.TimeField(required=True)
+
+    def validate(self, data):
+        appointment = self.context.get('appointment')
+        if not appointment:
+            raise serializers.ValidationError('Запись не найдена.')
+
+        if appointment.status == Appointment.Status.CANCELLED:
+            raise serializers.ValidationError('Нельзя перенести отменённую запись.')
+        if appointment.status == Appointment.Status.COMPLETED:
+            raise serializers.ValidationError('Нельзя перенести завершённую запись.')
+
+        return data
