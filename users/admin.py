@@ -6,6 +6,7 @@ from doctors.models import Interview
 from .models import (
     ClinicBranch, ClinicDocument, ClinicInvite, ClinicPhoto, ClinicProfile,
     DoctorClinicLink, DoctorDocument, DoctorProfile, PatientProfile, User,
+    PasswordResetCode, PhoneVerificationCode,
 )
 
 
@@ -174,6 +175,46 @@ class DoctorClinicLinkAdmin(admin.ModelAdmin):
     list_display = ('doctor', 'clinic', 'branch', 'is_active', 'created_at')
     list_filter = ('is_active', 'clinic')
     search_fields = ('doctor__user__email', 'clinic__name')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(DoctorDocument)
+class DoctorDocumentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'doctor', 'file', 'uploaded_at')
+    list_filter = ('uploaded_at',)
+    search_fields = ('doctor__user__email', 'doctor__user__first_name', 'doctor__user__last_name')
+    readonly_fields = ('uploaded_at',)
+
+
+@admin.register(ClinicPhoto)
+class ClinicPhotoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'clinic', 'image', 'uploaded_at')
+    list_filter = ('uploaded_at',)
+    search_fields = ('clinic__name',)
+    readonly_fields = ('uploaded_at',)
+
+
+@admin.register(ClinicDocument)
+class ClinicDocumentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'clinic', 'file', 'uploaded_at')
+    list_filter = ('uploaded_at',)
+    search_fields = ('clinic__name',)
+    readonly_fields = ('uploaded_at',)
+
+
+@admin.register(PasswordResetCode)
+class PasswordResetCodeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'email', 'phone', 'code', 'is_used', 'created_at')
+    list_filter = ('is_used', 'created_at')
+    search_fields = ('email', 'phone', 'code')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(PhoneVerificationCode)
+class PhoneVerificationCodeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'phone', 'code', 'is_used', 'created_at')
+    list_filter = ('is_used', 'created_at')
+    search_fields = ('phone', 'code')
     readonly_fields = ('created_at',)
 
 

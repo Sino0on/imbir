@@ -7,6 +7,11 @@ from rest_framework.permissions import AllowAny
 from users.models import DoctorProfile, ClinicProfile
 
 
+# Тестовый мусор, попавший в прод. Реальная чистка — через админку;
+# здесь отсекаем на уровне API, чтобы не показывать пользователям.
+_JUNK_VALUES = {'das', 'test', 'тест', 'therapist', 'string', 'qwe', 'asd'}
+
+
 def _flat_json_field(*pairs):
     """Collect unique non-empty strings from JSONField list-columns across multiple querysets."""
     values = set()
@@ -14,7 +19,21 @@ def _flat_json_field(*pairs):
         for row in qs.values_list(field, flat=True):
             if row:
                 values.update(v for v in row if v)
-    return sorted(values)
+    return _clean_values(values)
+
+
+def _clean_values(values):
+    """Отсекает тестовый мусор и дедуплицирует значения без учёта регистра."""
+    canonical = {}
+    for v in values:
+        v = (v or '').strip()
+        if not v:
+            continue
+        key = v.casefold()
+        if key in _JUNK_VALUES:
+            continue
+        canonical.setdefault(key, v)
+    return sorted(canonical.values(), key=str.casefold)
 
 
 _REF_RESPONSE = inline_serializer('ReferenceList', fields={
@@ -45,14 +64,26 @@ class SpecializationsView(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request):
+        # ?type=clinic — специализации только клиник (отраслевые формы),
+        # ?type=doctor — только врачей (профессиональные формы),
+        # без параметра — объединение обоих (обратная совместимость).
+        ref_type = request.query_params.get('type', '').strip().lower()
         doctor_qs = DoctorProfile.objects.filter(is_published=True)
         clinic_qs = ClinicProfile.objects.filter(is_published=True)
-        data = _flat_json_field(
-            (doctor_qs, 'primary_specializations'),
-            (doctor_qs, 'narrow_specializations'),
-            (clinic_qs, 'primary_specializations'),
-            (clinic_qs, 'narrow_specializations'),
-        )
+
+        pairs = []
+        if ref_type != 'clinic':
+            pairs += [
+                (doctor_qs, 'primary_specializations'),
+                (doctor_qs, 'narrow_specializations'),
+            ]
+        if ref_type != 'doctor':
+            pairs += [
+                (clinic_qs, 'primary_specializations'),
+                (clinic_qs, 'narrow_specializations'),
+            ]
+
+        data = _flat_json_field(*pairs)
         return Response({'data': data})
 
 
@@ -138,6 +169,7 @@ _COUNTRY_CODES_RESPONSE = inline_serializer('CountryCodeList', fields={
             'country': serializers.CharField(),
             'flag': serializers.CharField(),
             'iso': serializers.CharField(),
+            'length': serializers.IntegerField(),
         })
     )
 })

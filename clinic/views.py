@@ -187,6 +187,10 @@ class ClinicDoctorListView(ListCreateAPIView):
 class ClinicDoctorUnlinkView(DestroyAPIView):
     permission_classes = (IsClinic,)
     serializer_class = ClinicDoctorSerializer
+    # Список врачей отдаёт id = doctor.user.id, поэтому и открепляем по user-id,
+    # а не по pk связи DoctorClinicLink.
+    lookup_field = 'doctor__user_id'
+    lookup_url_kwarg = 'pk'
 
     def get_queryset(self):
         clinic = ClinicProfile.objects.get(user=self.request.user)

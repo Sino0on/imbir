@@ -1,16 +1,9 @@
-import json
-from django.db.models import Q
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny
 
 from users.models import ClinicProfile
 from core.pagination import StandardPagination
 from .serializers import ClinicListSerializer, ClinicDetailSerializer
-
-
-def _json_escape(value: str) -> str:
-    # SQLite JSONField stores Cyrillic as unicode-escape sequences
-    return json.dumps(value, ensure_ascii=True)[1:-1]
 
 
 class ClinicListView(ListAPIView):
@@ -40,11 +33,20 @@ class ClinicListView(ListAPIView):
 
         specialization = params.get('specialization', '').strip()
         if specialization:
-            escaped = _json_escape(specialization)
-            qs = qs.filter(
-                Q(primary_specializations__icontains=escaped)
-                | Q(narrow_specializations__icontains=escaped)
-            )
+            # JSONField-запросы к спискам несовместимы между SQLite и Postgres
+            # (native jsonb vs текст с \uXXXX), поэтому фильтруем по элементам в Python.
+            target = specialization.casefold()
+            matched_ids = [
+                pk
+                for pk, primary, narrow in qs.values_list(
+                    'pk', 'primary_specializations', 'narrow_specializations'
+                )
+                if any(
+                    target == str(s).casefold()
+                    for s in (primary or []) + (narrow or [])
+                )
+            ]
+            qs = qs.filter(pk__in=matched_ids)
 
         min_rating = params.get('min_rating')
         if min_rating:

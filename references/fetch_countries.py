@@ -1,5 +1,6 @@
 import json
 import urllib.request
+import phonenumbers
 
 
 def get_flag_emoji(country_code):
@@ -31,6 +32,8 @@ def fetch_and_generate():
         translations = item.get("translations", {})
         rus = translations.get("rus", {})
         country_name = rus.get("common") or rus.get("official") or item.get("name", {}).get("common")
+        if iso == "KG":
+            country_name = "Кыргызстан"
 
         # Get Dial Code
         idd = item.get("idd", {})
@@ -38,14 +41,22 @@ def fetch_and_generate():
         suffixes = idd.get("suffixes", [])
 
         # Construct full dial code
-        if root:
+        if iso == "AX":
+            dial_code = "+358"
+        elif iso == "VA":
+            dial_code = "+39"
+        elif iso == "EH":
+            dial_code = "+212"
+        elif iso == "SJ":
+            dial_code = "+47"
+        elif root:
             if len(suffixes) == 1:
                 dial_code = f"{root}{suffixes[0]}"
             elif len(suffixes) > 1:
                 # If there are multiple suffixes (e.g. USA has many suffixes for territories, but root is +1)
                 # We can just use root, or if root is +1, or root+suffix
-                if root == "+1":
-                    dial_code = "+1"
+                if root in ("+1", "+7"):
+                    dial_code = root
                 else:
                     dial_code = f"{root}{suffixes[0]}"
             else:
@@ -55,11 +66,23 @@ def fetch_and_generate():
 
         flag = item.get("flag") or get_flag_emoji(iso)
 
+        # Get phone number length
+        length = 9
+        try:
+            meta = phonenumbers.PhoneMetadata.metadata_for_region(iso)
+            if meta and meta.mobile and meta.mobile.possible_length:
+                length = list(meta.mobile.possible_length)[-1]
+            elif meta and meta.general_desc and meta.general_desc.possible_length:
+                length = list(meta.general_desc.possible_length)[-1]
+        except Exception:
+            pass
+
         result.append({
             "code": dial_code,
             "country": country_name,
             "flag": flag,
-            "iso": iso
+            "iso": iso,
+            "length": length
         })
 
     # Sort countries by Russian name

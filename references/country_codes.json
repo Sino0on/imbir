@@ -3,1488 +3,1736 @@
     "code": "+61",
     "country": "Австралия",
     "flag": "🇦🇺",
-    "iso": "AU"
+    "iso": "AU",
+    "length": 9
   },
   {
     "code": "+43",
     "country": "Австрия",
     "flag": "🇦🇹",
-    "iso": "AT"
+    "iso": "AT",
+    "length": 13
   },
   {
     "code": "+994",
     "country": "Азербайджан",
     "flag": "🇦🇿",
-    "iso": "AZ"
+    "iso": "AZ",
+    "length": 9
   },
   {
-    "code": "+35818",
+    "code": "+358",
     "country": "Аландские острова",
     "flag": "🇦🇽",
-    "iso": "AX"
+    "iso": "AX",
+    "length": 10
   },
   {
     "code": "+355",
     "country": "Албания",
     "flag": "🇦🇱",
-    "iso": "AL"
+    "iso": "AL",
+    "length": 9
   },
   {
     "code": "+213",
     "country": "Алжир",
     "flag": "🇩🇿",
-    "iso": "DZ"
+    "iso": "DZ",
+    "length": 9
   },
   {
     "code": "+1684",
     "country": "Американское Самоа",
     "flag": "🇦🇸",
-    "iso": "AS"
+    "iso": "AS",
+    "length": 10
   },
   {
     "code": "+1264",
     "country": "Ангилья",
     "flag": "🇦🇮",
-    "iso": "AI"
+    "iso": "AI",
+    "length": 10
   },
   {
     "code": "+244",
     "country": "Ангола",
     "flag": "🇦🇴",
-    "iso": "AO"
+    "iso": "AO",
+    "length": 9
   },
   {
     "code": "+376",
     "country": "Андорра",
     "flag": "🇦🇩",
-    "iso": "AD"
+    "iso": "AD",
+    "length": 9
   },
   {
     "code": "+1268",
     "country": "Антигуа и Барбуда",
     "flag": "🇦🇬",
-    "iso": "AG"
+    "iso": "AG",
+    "length": 10
   },
   {
     "code": "+54",
     "country": "Аргентина",
     "flag": "🇦🇷",
-    "iso": "AR"
+    "iso": "AR",
+    "length": 11
   },
   {
     "code": "+374",
     "country": "Армения",
     "flag": "🇦🇲",
-    "iso": "AM"
+    "iso": "AM",
+    "length": 8
   },
   {
     "code": "+297",
     "country": "Аруба",
     "flag": "🇦🇼",
-    "iso": "AW"
+    "iso": "AW",
+    "length": 7
   },
   {
     "code": "+93",
     "country": "Афганистан",
     "flag": "🇦🇫",
-    "iso": "AF"
+    "iso": "AF",
+    "length": 9
   },
   {
     "code": "+1242",
     "country": "Багамские Острова",
     "flag": "🇧🇸",
-    "iso": "BS"
+    "iso": "BS",
+    "length": 10
   },
   {
     "code": "+880",
     "country": "Бангладеш",
     "flag": "🇧🇩",
-    "iso": "BD"
+    "iso": "BD",
+    "length": 10
   },
   {
     "code": "+1246",
     "country": "Барбадос",
     "flag": "🇧🇧",
-    "iso": "BB"
+    "iso": "BB",
+    "length": 10
   },
   {
     "code": "+973",
     "country": "Бахрейн",
     "flag": "🇧🇭",
-    "iso": "BH"
+    "iso": "BH",
+    "length": 8
   },
   {
     "code": "+375",
     "country": "Беларусь",
     "flag": "🇧🇾",
-    "iso": "BY"
+    "iso": "BY",
+    "length": 9
   },
   {
     "code": "+501",
     "country": "Белиз",
     "flag": "🇧🇿",
-    "iso": "BZ"
+    "iso": "BZ",
+    "length": 7
   },
   {
     "code": "+32",
     "country": "Бельгия",
     "flag": "🇧🇪",
-    "iso": "BE"
+    "iso": "BE",
+    "length": 9
   },
   {
     "code": "+229",
     "country": "Бенин",
     "flag": "🇧🇯",
-    "iso": "BJ"
+    "iso": "BJ",
+    "length": 10
   },
   {
     "code": "+1441",
     "country": "Бермудские Острова",
     "flag": "🇧🇲",
-    "iso": "BM"
+    "iso": "BM",
+    "length": 10
   },
   {
     "code": "+359",
     "country": "Болгария",
     "flag": "🇧🇬",
-    "iso": "BG"
+    "iso": "BG",
+    "length": 9
   },
   {
     "code": "+591",
     "country": "Боливия",
     "flag": "🇧🇴",
-    "iso": "BO"
+    "iso": "BO",
+    "length": 8
   },
   {
     "code": "+387",
     "country": "Босния и Герцеговина",
     "flag": "🇧🇦",
-    "iso": "BA"
+    "iso": "BA",
+    "length": 9
   },
   {
     "code": "+267",
     "country": "Ботсвана",
     "flag": "🇧🇼",
-    "iso": "BW"
+    "iso": "BW",
+    "length": 8
   },
   {
     "code": "+55",
     "country": "Бразилия",
     "flag": "🇧🇷",
-    "iso": "BR"
+    "iso": "BR",
+    "length": 11
   },
   {
     "code": "+246",
     "country": "Британская территория в Индийском океане",
     "flag": "🇮🇴",
-    "iso": "IO"
+    "iso": "IO",
+    "length": 7
   },
   {
     "code": "+1284",
     "country": "Британские Виргинские острова",
     "flag": "🇻🇬",
-    "iso": "VG"
+    "iso": "VG",
+    "length": 10
   },
   {
     "code": "+673",
     "country": "Бруней",
     "flag": "🇧🇳",
-    "iso": "BN"
+    "iso": "BN",
+    "length": 7
   },
   {
     "code": "+226",
     "country": "Буркина-Фасо",
     "flag": "🇧🇫",
-    "iso": "BF"
+    "iso": "BF",
+    "length": 8
   },
   {
     "code": "+257",
     "country": "Бурунди",
     "flag": "🇧🇮",
-    "iso": "BI"
+    "iso": "BI",
+    "length": 8
   },
   {
     "code": "+975",
     "country": "Бутан",
     "flag": "🇧🇹",
-    "iso": "BT"
+    "iso": "BT",
+    "length": 8
   },
   {
     "code": "+678",
     "country": "Вануату",
     "flag": "🇻🇺",
-    "iso": "VU"
+    "iso": "VU",
+    "length": 7
   },
   {
-    "code": "+3906698",
+    "code": "+39",
     "country": "Ватикан",
     "flag": "🇻🇦",
-    "iso": "VA"
+    "iso": "VA",
+    "length": 10
   },
   {
     "code": "+44",
     "country": "Великобритания",
     "flag": "🇬🇧",
-    "iso": "GB"
+    "iso": "GB",
+    "length": 10
   },
   {
     "code": "+36",
     "country": "Венгрия",
     "flag": "🇭🇺",
-    "iso": "HU"
+    "iso": "HU",
+    "length": 9
   },
   {
     "code": "+58",
     "country": "Венесуэла",
     "flag": "🇻🇪",
-    "iso": "VE"
+    "iso": "VE",
+    "length": 10
   },
   {
     "code": "+1340",
     "country": "Виргинские Острова",
     "flag": "🇻🇮",
-    "iso": "VI"
+    "iso": "VI",
+    "length": 10
   },
   {
     "code": "+268",
     "country": "Внешние малые острова США",
     "flag": "🇺🇲",
-    "iso": "UM"
+    "iso": "UM",
+    "length": 9
   },
   {
     "code": "+670",
     "country": "Восточный Тимор",
     "flag": "🇹🇱",
-    "iso": "TL"
+    "iso": "TL",
+    "length": 8
   },
   {
     "code": "+84",
     "country": "Вьетнам",
     "flag": "🇻🇳",
-    "iso": "VN"
+    "iso": "VN",
+    "length": 9
   },
   {
     "code": "+241",
     "country": "Габон",
     "flag": "🇬🇦",
-    "iso": "GA"
+    "iso": "GA",
+    "length": 8
   },
   {
     "code": "+509",
     "country": "Гаити",
     "flag": "🇭🇹",
-    "iso": "HT"
+    "iso": "HT",
+    "length": 8
   },
   {
     "code": "+592",
     "country": "Гайана",
     "flag": "🇬🇾",
-    "iso": "GY"
+    "iso": "GY",
+    "length": 7
   },
   {
     "code": "+220",
     "country": "Гамбия",
     "flag": "🇬🇲",
-    "iso": "GM"
+    "iso": "GM",
+    "length": 7
   },
   {
     "code": "+233",
     "country": "Гана",
     "flag": "🇬🇭",
-    "iso": "GH"
+    "iso": "GH",
+    "length": 9
   },
   {
     "code": "+590",
     "country": "Гваделупа",
     "flag": "🇬🇵",
-    "iso": "GP"
+    "iso": "GP",
+    "length": 9
   },
   {
     "code": "+502",
     "country": "Гватемала",
     "flag": "🇬🇹",
-    "iso": "GT"
+    "iso": "GT",
+    "length": 8
   },
   {
     "code": "+224",
     "country": "Гвинея",
     "flag": "🇬🇳",
-    "iso": "GN"
+    "iso": "GN",
+    "length": 9
   },
   {
     "code": "+245",
     "country": "Гвинея-Бисау",
     "flag": "🇬🇼",
-    "iso": "GW"
+    "iso": "GW",
+    "length": 9
   },
   {
     "code": "+49",
     "country": "Германия",
     "flag": "🇩🇪",
-    "iso": "DE"
+    "iso": "DE",
+    "length": 11
   },
   {
     "code": "+44",
     "country": "Гернси",
     "flag": "🇬🇬",
-    "iso": "GG"
+    "iso": "GG",
+    "length": 10
   },
   {
     "code": "+350",
     "country": "Гибралтар",
     "flag": "🇬🇮",
-    "iso": "GI"
+    "iso": "GI",
+    "length": 8
   },
   {
     "code": "+504",
     "country": "Гондурас",
     "flag": "🇭🇳",
-    "iso": "HN"
+    "iso": "HN",
+    "length": 8
   },
   {
     "code": "+852",
     "country": "Гонконг",
     "flag": "🇭🇰",
-    "iso": "HK"
+    "iso": "HK",
+    "length": 8
   },
   {
     "code": "+1473",
     "country": "Гренада",
     "flag": "🇬🇩",
-    "iso": "GD"
+    "iso": "GD",
+    "length": 10
   },
   {
     "code": "+299",
     "country": "Гренландия",
     "flag": "🇬🇱",
-    "iso": "GL"
+    "iso": "GL",
+    "length": 6
   },
   {
     "code": "+30",
     "country": "Греция",
     "flag": "🇬🇷",
-    "iso": "GR"
+    "iso": "GR",
+    "length": 10
   },
   {
     "code": "+995",
     "country": "Грузия",
     "flag": "🇬🇪",
-    "iso": "GE"
+    "iso": "GE",
+    "length": 9
   },
   {
     "code": "+1671",
     "country": "Гуам",
     "flag": "🇬🇺",
-    "iso": "GU"
+    "iso": "GU",
+    "length": 10
   },
   {
     "code": "+45",
     "country": "Дания",
     "flag": "🇩🇰",
-    "iso": "DK"
+    "iso": "DK",
+    "length": 8
   },
   {
     "code": "+243",
     "country": "Демократическая Республика Конго",
     "flag": "🇨🇩",
-    "iso": "CD"
+    "iso": "CD",
+    "length": 9
   },
   {
     "code": "+44",
     "country": "Джерси",
     "flag": "🇯🇪",
-    "iso": "JE"
+    "iso": "JE",
+    "length": 10
   },
   {
     "code": "+253",
     "country": "Джибути",
     "flag": "🇩🇯",
-    "iso": "DJ"
+    "iso": "DJ",
+    "length": 8
   },
   {
     "code": "+1767",
     "country": "Доминика",
     "flag": "🇩🇲",
-    "iso": "DM"
+    "iso": "DM",
+    "length": 10
   },
   {
     "code": "+1",
     "country": "Доминиканская Республика",
     "flag": "🇩🇴",
-    "iso": "DO"
+    "iso": "DO",
+    "length": 10
   },
   {
     "code": "+20",
     "country": "Египет",
     "flag": "🇪🇬",
-    "iso": "EG"
+    "iso": "EG",
+    "length": 10
   },
   {
     "code": "+260",
     "country": "Замбия",
     "flag": "🇿🇲",
-    "iso": "ZM"
+    "iso": "ZM",
+    "length": 9
   },
   {
-    "code": "+2125288",
+    "code": "+212",
     "country": "Западная Сахара",
     "flag": "🇪🇭",
-    "iso": "EH"
+    "iso": "EH",
+    "length": 9
   },
   {
     "code": "+263",
     "country": "Зимбабве",
     "flag": "🇿🇼",
-    "iso": "ZW"
+    "iso": "ZW",
+    "length": 9
   },
   {
     "code": "+972",
     "country": "Израиль",
     "flag": "🇮🇱",
-    "iso": "IL"
+    "iso": "IL",
+    "length": 9
   },
   {
     "code": "+91",
     "country": "Индия",
     "flag": "🇮🇳",
-    "iso": "IN"
+    "iso": "IN",
+    "length": 10
   },
   {
     "code": "+62",
     "country": "Индонезия",
     "flag": "🇮🇩",
-    "iso": "ID"
+    "iso": "ID",
+    "length": 12
   },
   {
     "code": "+962",
     "country": "Иордания",
     "flag": "🇯🇴",
-    "iso": "JO"
+    "iso": "JO",
+    "length": 9
   },
   {
     "code": "+964",
     "country": "Ирак",
     "flag": "🇮🇶",
-    "iso": "IQ"
+    "iso": "IQ",
+    "length": 10
   },
   {
     "code": "+98",
     "country": "Иран",
     "flag": "🇮🇷",
-    "iso": "IR"
+    "iso": "IR",
+    "length": 10
   },
   {
     "code": "+353",
     "country": "Ирландия",
     "flag": "🇮🇪",
-    "iso": "IE"
+    "iso": "IE",
+    "length": 9
   },
   {
     "code": "+354",
     "country": "Исландия",
     "flag": "🇮🇸",
-    "iso": "IS"
+    "iso": "IS",
+    "length": 9
   },
   {
     "code": "+34",
     "country": "Испания",
     "flag": "🇪🇸",
-    "iso": "ES"
+    "iso": "ES",
+    "length": 9
   },
   {
     "code": "+39",
     "country": "Италия",
     "flag": "🇮🇹",
-    "iso": "IT"
+    "iso": "IT",
+    "length": 10
   },
   {
     "code": "+967",
     "country": "Йемен",
     "flag": "🇾🇪",
-    "iso": "YE"
+    "iso": "YE",
+    "length": 9
   },
   {
     "code": "+238",
     "country": "Кабо-Верде",
     "flag": "🇨🇻",
-    "iso": "CV"
+    "iso": "CV",
+    "length": 7
   },
   {
-    "code": "+76",
+    "code": "+7",
     "country": "Казахстан",
     "flag": "🇰🇿",
-    "iso": "KZ"
+    "iso": "KZ",
+    "length": 10
   },
   {
     "code": "+1345",
     "country": "Каймановы острова",
     "flag": "🇰🇾",
-    "iso": "KY"
+    "iso": "KY",
+    "length": 10
   },
   {
     "code": "+855",
     "country": "Камбоджа",
     "flag": "🇰🇭",
-    "iso": "KH"
+    "iso": "KH",
+    "length": 9
   },
   {
     "code": "+237",
     "country": "Камерун",
     "flag": "🇨🇲",
-    "iso": "CM"
+    "iso": "CM",
+    "length": 9
   },
   {
     "code": "+1",
     "country": "Канада",
     "flag": "🇨🇦",
-    "iso": "CA"
+    "iso": "CA",
+    "length": 10
   },
   {
     "code": "+599",
     "country": "Карибские Нидерланды",
     "flag": "🇧🇶",
-    "iso": "BQ"
+    "iso": "BQ",
+    "length": 7
   },
   {
     "code": "+974",
     "country": "Катар",
     "flag": "🇶🇦",
-    "iso": "QA"
+    "iso": "QA",
+    "length": 8
   },
   {
     "code": "+254",
     "country": "Кения",
     "flag": "🇰🇪",
-    "iso": "KE"
+    "iso": "KE",
+    "length": 9
   },
   {
     "code": "+357",
     "country": "Кипр",
     "flag": "🇨🇾",
-    "iso": "CY"
-  },
-  {
-    "code": "+996",
-    "country": "Киргизия",
-    "flag": "🇰🇬",
-    "iso": "KG"
+    "iso": "CY",
+    "length": 8
   },
   {
     "code": "+686",
     "country": "Кирибати",
     "flag": "🇰🇮",
-    "iso": "KI"
+    "iso": "KI",
+    "length": 8
   },
   {
     "code": "+86",
     "country": "Китай",
     "flag": "🇨🇳",
-    "iso": "CN"
+    "iso": "CN",
+    "length": 11
   },
   {
     "code": "+61",
     "country": "Кокосовые острова",
     "flag": "🇨🇨",
-    "iso": "CC"
+    "iso": "CC",
+    "length": 9
   },
   {
     "code": "+57",
     "country": "Колумбия",
     "flag": "🇨🇴",
-    "iso": "CO"
+    "iso": "CO",
+    "length": 10
   },
   {
     "code": "+269",
     "country": "Коморы",
     "flag": "🇰🇲",
-    "iso": "KM"
+    "iso": "KM",
+    "length": 7
   },
   {
     "code": "+506",
     "country": "Коста-Рика",
     "flag": "🇨🇷",
-    "iso": "CR"
+    "iso": "CR",
+    "length": 8
   },
   {
     "code": "+225",
     "country": "Кот-д’Ивуар",
     "flag": "🇨🇮",
-    "iso": "CI"
+    "iso": "CI",
+    "length": 10
   },
   {
     "code": "+53",
     "country": "Куба",
     "flag": "🇨🇺",
-    "iso": "CU"
+    "iso": "CU",
+    "length": 8
   },
   {
     "code": "+965",
     "country": "Кувейт",
     "flag": "🇰🇼",
-    "iso": "KW"
+    "iso": "KW",
+    "length": 8
+  },
+  {
+    "code": "+996",
+    "country": "Кыргызстан",
+    "flag": "🇰🇬",
+    "iso": "KG",
+    "length": 9
   },
   {
     "code": "+599",
     "country": "Кюрасао",
     "flag": "🇨🇼",
-    "iso": "CW"
+    "iso": "CW",
+    "length": 8
   },
   {
     "code": "+856",
     "country": "Лаос",
     "flag": "🇱🇦",
-    "iso": "LA"
+    "iso": "LA",
+    "length": 10
   },
   {
     "code": "+371",
     "country": "Латвия",
     "flag": "🇱🇻",
-    "iso": "LV"
+    "iso": "LV",
+    "length": 8
   },
   {
     "code": "+266",
     "country": "Лесото",
     "flag": "🇱🇸",
-    "iso": "LS"
+    "iso": "LS",
+    "length": 8
   },
   {
     "code": "+231",
     "country": "Либерия",
     "flag": "🇱🇷",
-    "iso": "LR"
+    "iso": "LR",
+    "length": 9
   },
   {
     "code": "+961",
     "country": "Ливан",
     "flag": "🇱🇧",
-    "iso": "LB"
+    "iso": "LB",
+    "length": 8
   },
   {
     "code": "+218",
     "country": "Ливия",
     "flag": "🇱🇾",
-    "iso": "LY"
+    "iso": "LY",
+    "length": 9
   },
   {
     "code": "+370",
     "country": "Литва",
     "flag": "🇱🇹",
-    "iso": "LT"
+    "iso": "LT",
+    "length": 8
   },
   {
     "code": "+423",
     "country": "Лихтенштейн",
     "flag": "🇱🇮",
-    "iso": "LI"
+    "iso": "LI",
+    "length": 9
   },
   {
     "code": "+352",
     "country": "Люксембург",
     "flag": "🇱🇺",
-    "iso": "LU"
+    "iso": "LU",
+    "length": 9
   },
   {
     "code": "+230",
     "country": "Маврикий",
     "flag": "🇲🇺",
-    "iso": "MU"
+    "iso": "MU",
+    "length": 8
   },
   {
     "code": "+222",
     "country": "Мавритания",
     "flag": "🇲🇷",
-    "iso": "MR"
+    "iso": "MR",
+    "length": 8
   },
   {
     "code": "+261",
     "country": "Мадагаскар",
     "flag": "🇲🇬",
-    "iso": "MG"
+    "iso": "MG",
+    "length": 9
   },
   {
     "code": "+262",
     "country": "Майотта",
     "flag": "🇾🇹",
-    "iso": "YT"
+    "iso": "YT",
+    "length": 9
   },
   {
     "code": "+853",
     "country": "Макао",
     "flag": "🇲🇴",
-    "iso": "MO"
+    "iso": "MO",
+    "length": 8
   },
   {
     "code": "+265",
     "country": "Малави",
     "flag": "🇲🇼",
-    "iso": "MW"
+    "iso": "MW",
+    "length": 9
   },
   {
     "code": "+60",
     "country": "Малайзия",
     "flag": "🇲🇾",
-    "iso": "MY"
+    "iso": "MY",
+    "length": 10
   },
   {
     "code": "+223",
     "country": "Мали",
     "flag": "🇲🇱",
-    "iso": "ML"
+    "iso": "ML",
+    "length": 8
   },
   {
     "code": "+960",
     "country": "Мальдивы",
     "flag": "🇲🇻",
-    "iso": "MV"
+    "iso": "MV",
+    "length": 7
   },
   {
     "code": "+356",
     "country": "Мальта",
     "flag": "🇲🇹",
-    "iso": "MT"
+    "iso": "MT",
+    "length": 8
   },
   {
     "code": "+212",
     "country": "Марокко",
     "flag": "🇲🇦",
-    "iso": "MA"
+    "iso": "MA",
+    "length": 9
   },
   {
     "code": "+596",
     "country": "Мартиника",
     "flag": "🇲🇶",
-    "iso": "MQ"
+    "iso": "MQ",
+    "length": 9
   },
   {
     "code": "+692",
     "country": "Маршалловы Острова",
     "flag": "🇲🇭",
-    "iso": "MH"
+    "iso": "MH",
+    "length": 7
   },
   {
     "code": "+52",
     "country": "Мексика",
     "flag": "🇲🇽",
-    "iso": "MX"
+    "iso": "MX",
+    "length": 10
   },
   {
     "code": "+258",
     "country": "Мозамбик",
     "flag": "🇲🇿",
-    "iso": "MZ"
+    "iso": "MZ",
+    "length": 9
   },
   {
     "code": "+373",
     "country": "Молдавия",
     "flag": "🇲🇩",
-    "iso": "MD"
+    "iso": "MD",
+    "length": 8
   },
   {
     "code": "+377",
     "country": "Монако",
     "flag": "🇲🇨",
-    "iso": "MC"
+    "iso": "MC",
+    "length": 9
   },
   {
     "code": "+976",
     "country": "Монголия",
     "flag": "🇲🇳",
-    "iso": "MN"
+    "iso": "MN",
+    "length": 8
   },
   {
     "code": "+1664",
     "country": "Монтсеррат",
     "flag": "🇲🇸",
-    "iso": "MS"
+    "iso": "MS",
+    "length": 10
   },
   {
     "code": "+95",
     "country": "Мьянма",
     "flag": "🇲🇲",
-    "iso": "MM"
+    "iso": "MM",
+    "length": 10
   },
   {
     "code": "+264",
     "country": "Намибия",
     "flag": "🇳🇦",
-    "iso": "NA"
+    "iso": "NA",
+    "length": 9
   },
   {
     "code": "+674",
     "country": "Науру",
     "flag": "🇳🇷",
-    "iso": "NR"
+    "iso": "NR",
+    "length": 7
   },
   {
     "code": "+977",
     "country": "Непал",
     "flag": "🇳🇵",
-    "iso": "NP"
+    "iso": "NP",
+    "length": 10
   },
   {
     "code": "+227",
     "country": "Нигер",
     "flag": "🇳🇪",
-    "iso": "NE"
+    "iso": "NE",
+    "length": 8
   },
   {
     "code": "+234",
     "country": "Нигерия",
     "flag": "🇳🇬",
-    "iso": "NG"
+    "iso": "NG",
+    "length": 10
   },
   {
     "code": "+31",
     "country": "Нидерланды",
     "flag": "🇳🇱",
-    "iso": "NL"
+    "iso": "NL",
+    "length": 11
   },
   {
     "code": "+505",
     "country": "Никарагуа",
     "flag": "🇳🇮",
-    "iso": "NI"
+    "iso": "NI",
+    "length": 8
   },
   {
     "code": "+683",
     "country": "Ниуэ",
     "flag": "🇳🇺",
-    "iso": "NU"
+    "iso": "NU",
+    "length": 7
   },
   {
     "code": "+64",
     "country": "Новая Зеландия",
     "flag": "🇳🇿",
-    "iso": "NZ"
+    "iso": "NZ",
+    "length": 10
   },
   {
     "code": "+687",
     "country": "Новая Каледония",
     "flag": "🇳🇨",
-    "iso": "NC"
+    "iso": "NC",
+    "length": 6
   },
   {
     "code": "+47",
     "country": "Норвегия",
     "flag": "🇳🇴",
-    "iso": "NO"
+    "iso": "NO",
+    "length": 8
   },
   {
     "code": "+672",
     "country": "Норфолк",
     "flag": "🇳🇫",
-    "iso": "NF"
+    "iso": "NF",
+    "length": 6
   },
   {
     "code": "+971",
     "country": "Объединённые Арабские Эмираты",
     "flag": "🇦🇪",
-    "iso": "AE"
+    "iso": "AE",
+    "length": 9
   },
   {
     "code": "+968",
     "country": "Оман",
     "flag": "🇴🇲",
-    "iso": "OM"
+    "iso": "OM",
+    "length": 8
   },
   {
     "code": "+47",
     "country": "Остров Буве",
     "flag": "🇧🇻",
-    "iso": "BV"
+    "iso": "BV",
+    "length": 9
   },
   {
     "code": "+44",
     "country": "Остров Мэн",
     "flag": "🇮🇲",
-    "iso": "IM"
+    "iso": "IM",
+    "length": 10
   },
   {
     "code": "+61",
     "country": "Остров Рождества",
     "flag": "🇨🇽",
-    "iso": "CX"
+    "iso": "CX",
+    "length": 9
   },
   {
     "code": "+682",
     "country": "Острова Кука",
     "flag": "🇨🇰",
-    "iso": "CK"
+    "iso": "CK",
+    "length": 5
   },
   {
     "code": "+64",
     "country": "Острова Питкэрн",
     "flag": "🇵🇳",
-    "iso": "PN"
+    "iso": "PN",
+    "length": 9
   },
   {
     "code": "+290",
     "country": "Острова Святой Елены, Вознесения и Тристан-да-Кунья",
     "flag": "🇸🇭",
-    "iso": "SH"
+    "iso": "SH",
+    "length": 5
   },
   {
     "code": "+92",
     "country": "Пакистан",
     "flag": "🇵🇰",
-    "iso": "PK"
+    "iso": "PK",
+    "length": 10
   },
   {
     "code": "+680",
     "country": "Палау",
     "flag": "🇵🇼",
-    "iso": "PW"
+    "iso": "PW",
+    "length": 7
   },
   {
     "code": "+970",
     "country": "Палестина",
     "flag": "🇵🇸",
-    "iso": "PS"
+    "iso": "PS",
+    "length": 9
   },
   {
     "code": "+507",
     "country": "Панама",
     "flag": "🇵🇦",
-    "iso": "PA"
+    "iso": "PA",
+    "length": 8
   },
   {
     "code": "+675",
     "country": "Папуа — Новая Гвинея",
     "flag": "🇵🇬",
-    "iso": "PG"
+    "iso": "PG",
+    "length": 8
   },
   {
     "code": "+595",
     "country": "Парагвай",
     "flag": "🇵🇾",
-    "iso": "PY"
+    "iso": "PY",
+    "length": 9
   },
   {
     "code": "+51",
     "country": "Перу",
     "flag": "🇵🇪",
-    "iso": "PE"
+    "iso": "PE",
+    "length": 9
   },
   {
     "code": "+48",
     "country": "Польша",
     "flag": "🇵🇱",
-    "iso": "PL"
+    "iso": "PL",
+    "length": 9
   },
   {
     "code": "+351",
     "country": "Португалия",
     "flag": "🇵🇹",
-    "iso": "PT"
+    "iso": "PT",
+    "length": 9
   },
   {
     "code": "+1",
     "country": "Пуэрто-Рико",
     "flag": "🇵🇷",
-    "iso": "PR"
+    "iso": "PR",
+    "length": 10
   },
   {
     "code": "+242",
     "country": "Республика Конго",
     "flag": "🇨🇬",
-    "iso": "CG"
+    "iso": "CG",
+    "length": 9
   },
   {
     "code": "+383",
     "country": "Республика Косово",
     "flag": "🇽🇰",
-    "iso": "XK"
+    "iso": "XK",
+    "length": 8
   },
   {
     "code": "+262",
     "country": "Реюньон",
     "flag": "🇷🇪",
-    "iso": "RE"
+    "iso": "RE",
+    "length": 9
   },
   {
-    "code": "+73",
+    "code": "+7",
     "country": "Россия",
     "flag": "🇷🇺",
-    "iso": "RU"
+    "iso": "RU",
+    "length": 10
   },
   {
     "code": "+250",
     "country": "Руанда",
     "flag": "🇷🇼",
-    "iso": "RW"
+    "iso": "RW",
+    "length": 9
   },
   {
     "code": "+40",
     "country": "Румыния",
     "flag": "🇷🇴",
-    "iso": "RO"
+    "iso": "RO",
+    "length": 9
   },
   {
     "code": "+503",
     "country": "Сальвадор",
     "flag": "🇸🇻",
-    "iso": "SV"
+    "iso": "SV",
+    "length": 8
   },
   {
     "code": "+685",
     "country": "Самоа",
     "flag": "🇼🇸",
-    "iso": "WS"
+    "iso": "WS",
+    "length": 10
   },
   {
     "code": "+378",
     "country": "Сан-Марино",
     "flag": "🇸🇲",
-    "iso": "SM"
+    "iso": "SM",
+    "length": 8
   },
   {
     "code": "+239",
     "country": "Сан-Томе и Принсипи",
     "flag": "🇸🇹",
-    "iso": "ST"
+    "iso": "ST",
+    "length": 7
   },
   {
     "code": "+966",
     "country": "Саудовская Аравия",
     "flag": "🇸🇦",
-    "iso": "SA"
+    "iso": "SA",
+    "length": 9
   },
   {
     "code": "+268",
     "country": "Свазиленд",
     "flag": "🇸🇿",
-    "iso": "SZ"
+    "iso": "SZ",
+    "length": 8
   },
   {
     "code": "+850",
     "country": "Северная Корея",
     "flag": "🇰🇵",
-    "iso": "KP"
+    "iso": "KP",
+    "length": 10
   },
   {
     "code": "+389",
     "country": "Северная Македония",
     "flag": "🇲🇰",
-    "iso": "MK"
+    "iso": "MK",
+    "length": 8
   },
   {
     "code": "+1670",
     "country": "Северные Марианские острова",
     "flag": "🇲🇵",
-    "iso": "MP"
+    "iso": "MP",
+    "length": 10
   },
   {
     "code": "+248",
     "country": "Сейшельские Острова",
     "flag": "🇸🇨",
-    "iso": "SC"
+    "iso": "SC",
+    "length": 7
   },
   {
     "code": "+590",
     "country": "Сен-Бартелеми",
     "flag": "🇧🇱",
-    "iso": "BL"
+    "iso": "BL",
+    "length": 9
   },
   {
     "code": "+590",
     "country": "Сен-Мартен",
     "flag": "🇲🇫",
-    "iso": "MF"
+    "iso": "MF",
+    "length": 9
   },
   {
     "code": "+508",
     "country": "Сен-Пьер и Микелон",
     "flag": "🇵🇲",
-    "iso": "PM"
+    "iso": "PM",
+    "length": 9
   },
   {
     "code": "+221",
     "country": "Сенегал",
     "flag": "🇸🇳",
-    "iso": "SN"
+    "iso": "SN",
+    "length": 9
   },
   {
     "code": "+1784",
     "country": "Сент-Винсент и Гренадины",
     "flag": "🇻🇨",
-    "iso": "VC"
+    "iso": "VC",
+    "length": 10
   },
   {
     "code": "+1869",
     "country": "Сент-Китс и Невис",
     "flag": "🇰🇳",
-    "iso": "KN"
+    "iso": "KN",
+    "length": 10
   },
   {
     "code": "+1758",
     "country": "Сент-Люсия",
     "flag": "🇱🇨",
-    "iso": "LC"
+    "iso": "LC",
+    "length": 10
   },
   {
     "code": "+381",
     "country": "Сербия",
     "flag": "🇷🇸",
-    "iso": "RS"
+    "iso": "RS",
+    "length": 10
   },
   {
     "code": "+65",
     "country": "Сингапур",
     "flag": "🇸🇬",
-    "iso": "SG"
+    "iso": "SG",
+    "length": 8
   },
   {
     "code": "+1721",
     "country": "Синт-Мартен",
     "flag": "🇸🇽",
-    "iso": "SX"
+    "iso": "SX",
+    "length": 10
   },
   {
     "code": "+963",
     "country": "Сирия",
     "flag": "🇸🇾",
-    "iso": "SY"
+    "iso": "SY",
+    "length": 9
   },
   {
     "code": "+421",
     "country": "Словакия",
     "flag": "🇸🇰",
-    "iso": "SK"
+    "iso": "SK",
+    "length": 9
   },
   {
     "code": "+386",
     "country": "Словения",
     "flag": "🇸🇮",
-    "iso": "SI"
+    "iso": "SI",
+    "length": 8
   },
   {
     "code": "+1",
     "country": "Соединённые Штаты Америки",
     "flag": "🇺🇸",
-    "iso": "US"
+    "iso": "US",
+    "length": 10
   },
   {
     "code": "+677",
     "country": "Соломоновы Острова",
     "flag": "🇸🇧",
-    "iso": "SB"
+    "iso": "SB",
+    "length": 7
   },
   {
     "code": "+252",
     "country": "Сомали",
     "flag": "🇸🇴",
-    "iso": "SO"
+    "iso": "SO",
+    "length": 9
   },
   {
     "code": "+249",
     "country": "Судан",
     "flag": "🇸🇩",
-    "iso": "SD"
+    "iso": "SD",
+    "length": 9
   },
   {
     "code": "+597",
     "country": "Суринам",
     "flag": "🇸🇷",
-    "iso": "SR"
+    "iso": "SR",
+    "length": 7
   },
   {
     "code": "+232",
     "country": "Сьерра-Леоне",
     "flag": "🇸🇱",
-    "iso": "SL"
+    "iso": "SL",
+    "length": 8
   },
   {
     "code": "+992",
     "country": "Таджикистан",
     "flag": "🇹🇯",
-    "iso": "TJ"
+    "iso": "TJ",
+    "length": 9
   },
   {
     "code": "+66",
     "country": "Таиланд",
     "flag": "🇹🇭",
-    "iso": "TH"
+    "iso": "TH",
+    "length": 9
   },
   {
     "code": "+886",
     "country": "Тайвань",
     "flag": "🇹🇼",
-    "iso": "TW"
+    "iso": "TW",
+    "length": 9
   },
   {
     "code": "+255",
     "country": "Танзания",
     "flag": "🇹🇿",
-    "iso": "TZ"
+    "iso": "TZ",
+    "length": 9
   },
   {
     "code": "+1649",
     "country": "Теркс и Кайкос",
     "flag": "🇹🇨",
-    "iso": "TC"
+    "iso": "TC",
+    "length": 10
   },
   {
     "code": "+228",
     "country": "Того",
     "flag": "🇹🇬",
-    "iso": "TG"
+    "iso": "TG",
+    "length": 8
   },
   {
     "code": "+690",
     "country": "Токелау",
     "flag": "🇹🇰",
-    "iso": "TK"
+    "iso": "TK",
+    "length": 7
   },
   {
     "code": "+676",
     "country": "Тонга",
     "flag": "🇹🇴",
-    "iso": "TO"
+    "iso": "TO",
+    "length": 7
   },
   {
     "code": "+1868",
     "country": "Тринидад и Тобаго",
     "flag": "🇹🇹",
-    "iso": "TT"
+    "iso": "TT",
+    "length": 10
   },
   {
     "code": "+688",
     "country": "Тувалу",
     "flag": "🇹🇻",
-    "iso": "TV"
+    "iso": "TV",
+    "length": 7
   },
   {
     "code": "+216",
     "country": "Тунис",
     "flag": "🇹🇳",
-    "iso": "TN"
+    "iso": "TN",
+    "length": 8
   },
   {
     "code": "+993",
     "country": "Туркмения",
     "flag": "🇹🇲",
-    "iso": "TM"
+    "iso": "TM",
+    "length": 8
   },
   {
     "code": "+90",
     "country": "Турция",
     "flag": "🇹🇷",
-    "iso": "TR"
+    "iso": "TR",
+    "length": 10
   },
   {
     "code": "+256",
     "country": "Уганда",
     "flag": "🇺🇬",
-    "iso": "UG"
+    "iso": "UG",
+    "length": 9
   },
   {
     "code": "+998",
     "country": "Узбекистан",
     "flag": "🇺🇿",
-    "iso": "UZ"
+    "iso": "UZ",
+    "length": 9
   },
   {
     "code": "+380",
     "country": "Украина",
     "flag": "🇺🇦",
-    "iso": "UA"
+    "iso": "UA",
+    "length": 9
   },
   {
     "code": "+681",
     "country": "Уоллис и Футуна",
     "flag": "🇼🇫",
-    "iso": "WF"
+    "iso": "WF",
+    "length": 6
   },
   {
     "code": "+598",
     "country": "Уругвай",
     "flag": "🇺🇾",
-    "iso": "UY"
+    "iso": "UY",
+    "length": 8
   },
   {
     "code": "+298",
     "country": "Фарерские острова",
     "flag": "🇫🇴",
-    "iso": "FO"
+    "iso": "FO",
+    "length": 6
   },
   {
     "code": "+691",
     "country": "Федеративные Штаты Микронезии",
     "flag": "🇫🇲",
-    "iso": "FM"
+    "iso": "FM",
+    "length": 7
   },
   {
     "code": "+679",
     "country": "Фиджи",
     "flag": "🇫🇯",
-    "iso": "FJ"
+    "iso": "FJ",
+    "length": 7
   },
   {
     "code": "+63",
     "country": "Филиппины",
     "flag": "🇵🇭",
-    "iso": "PH"
+    "iso": "PH",
+    "length": 10
   },
   {
     "code": "+358",
     "country": "Финляндия",
     "flag": "🇫🇮",
-    "iso": "FI"
+    "iso": "FI",
+    "length": 10
   },
   {
     "code": "+500",
     "country": "Фолклендские острова",
     "flag": "🇫🇰",
-    "iso": "FK"
+    "iso": "FK",
+    "length": 5
   },
   {
     "code": "+33",
     "country": "Франция",
     "flag": "🇫🇷",
-    "iso": "FR"
+    "iso": "FR",
+    "length": 9
   },
   {
     "code": "+594",
     "country": "Французская Гвиана",
     "flag": "🇬🇫",
-    "iso": "GF"
+    "iso": "GF",
+    "length": 9
   },
   {
     "code": "+689",
     "country": "Французская Полинезия",
     "flag": "🇵🇫",
-    "iso": "PF"
+    "iso": "PF",
+    "length": 8
   },
   {
     "code": "+262",
     "country": "Французские Южные и Антарктические территории",
     "flag": "🇹🇫",
-    "iso": "TF"
+    "iso": "TF",
+    "length": 9
   },
   {
     "code": "+385",
     "country": "Хорватия",
     "flag": "🇭🇷",
-    "iso": "HR"
+    "iso": "HR",
+    "length": 9
   },
   {
     "code": "+236",
     "country": "Центральноафриканская Республика",
     "flag": "🇨🇫",
-    "iso": "CF"
+    "iso": "CF",
+    "length": 8
   },
   {
     "code": "+235",
     "country": "Чад",
     "flag": "🇹🇩",
-    "iso": "TD"
+    "iso": "TD",
+    "length": 8
   },
   {
     "code": "+382",
     "country": "Черногория",
     "flag": "🇲🇪",
-    "iso": "ME"
+    "iso": "ME",
+    "length": 8
   },
   {
     "code": "+420",
     "country": "Чехия",
     "flag": "🇨🇿",
-    "iso": "CZ"
+    "iso": "CZ",
+    "length": 9
   },
   {
     "code": "+56",
     "country": "Чили",
     "flag": "🇨🇱",
-    "iso": "CL"
+    "iso": "CL",
+    "length": 9
   },
   {
     "code": "+41",
     "country": "Швейцария",
     "flag": "🇨🇭",
-    "iso": "CH"
+    "iso": "CH",
+    "length": 9
   },
   {
     "code": "+46",
     "country": "Швеция",
     "flag": "🇸🇪",
-    "iso": "SE"
+    "iso": "SE",
+    "length": 9
   },
   {
-    "code": "+4779",
+    "code": "+47",
     "country": "Шпицберген и Ян-Майен",
     "flag": "🇸🇯",
-    "iso": "SJ"
+    "iso": "SJ",
+    "length": 8
   },
   {
     "code": "+94",
     "country": "Шри-Ланка",
     "flag": "🇱🇰",
-    "iso": "LK"
+    "iso": "LK",
+    "length": 9
   },
   {
     "code": "+593",
     "country": "Эквадор",
     "flag": "🇪🇨",
-    "iso": "EC"
+    "iso": "EC",
+    "length": 9
   },
   {
     "code": "+240",
     "country": "Экваториальная Гвинея",
     "flag": "🇬🇶",
-    "iso": "GQ"
+    "iso": "GQ",
+    "length": 9
   },
   {
     "code": "+291",
     "country": "Эритрея",
     "flag": "🇪🇷",
-    "iso": "ER"
+    "iso": "ER",
+    "length": 7
   },
   {
     "code": "+372",
     "country": "Эстония",
     "flag": "🇪🇪",
-    "iso": "EE"
+    "iso": "EE",
+    "length": 8
   },
   {
     "code": "+251",
     "country": "Эфиопия",
     "flag": "🇪🇹",
-    "iso": "ET"
+    "iso": "ET",
+    "length": 9
   },
   {
     "code": "+500",
     "country": "Южная Георгия и Южные Сандвичевы острова",
     "flag": "🇬🇸",
-    "iso": "GS"
+    "iso": "GS",
+    "length": 9
   },
   {
     "code": "+82",
     "country": "Южная Корея",
     "flag": "🇰🇷",
-    "iso": "KR"
+    "iso": "KR",
+    "length": 10
   },
   {
     "code": "+27",
     "country": "Южно-Африканская Республика",
     "flag": "🇿🇦",
-    "iso": "ZA"
+    "iso": "ZA",
+    "length": 9
   },
   {
     "code": "+211",
     "country": "Южный Судан",
     "flag": "🇸🇸",
-    "iso": "SS"
+    "iso": "SS",
+    "length": 9
   },
   {
     "code": "+1876",
     "country": "Ямайка",
     "flag": "🇯🇲",
-    "iso": "JM"
+    "iso": "JM",
+    "length": 10
   },
   {
     "code": "+81",
     "country": "Япония",
     "flag": "🇯🇵",
-    "iso": "JP"
+    "iso": "JP",
+    "length": 10
   }
 ]

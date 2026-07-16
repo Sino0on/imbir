@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny
 
@@ -20,6 +21,14 @@ class ServiceListView(ListAPIView):
         )
 
         params = self.request.query_params
+
+        search = params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search)
+                | Q(description__icontains=search)
+                | Q(category__icontains=search)
+            )
 
         category = params.get('category', '').strip()
         if category:
@@ -56,7 +65,13 @@ class ServiceListView(ListAPIView):
         min_rating = params.get('min_rating')
         if min_rating:
             try:
-                qs = qs.filter(clinic__rating__gte=float(min_rating))
+                value = float(min_rating)
+                # Рейтинг услуги в выдаче = рейтинг клиники, а при её отсутствии —
+                # рейтинг первого врача. Фильтр повторяет ту же семантику.
+                qs = qs.filter(
+                    Q(clinic__isnull=False, clinic__rating__gte=value)
+                    | Q(clinic__isnull=True, doctors__rating__gte=value)
+                ).distinct()
             except ValueError:
                 pass
 

@@ -19,4 +19,6 @@ urlpatterns = [
     path('conditions/', ConditionsView.as_view(), name='ref-conditions'),
     path('payment-methods/', PaymentMethodsView.as_view(), name='ref-payment-methods'),
     path('country-codes/', CountryCodesView.as_view(), name='ref-country-codes'),
+    # Алиас: фронт обращается к countries/
+    path('countries/', CountryCodesView.as_view(), name='ref-countries'),
 ]

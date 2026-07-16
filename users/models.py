@@ -165,7 +165,7 @@ class DoctorDocument(models.Model):
 
     class Meta:
         verbose_name = 'Документ врача'
-        verbose_name_plural = 'Документы врача'
+        verbose_name_plural = '↳ Документы врача'
 
 
 class ClinicProfile(models.Model):
@@ -241,7 +241,7 @@ class ClinicPhoto(models.Model):
 
     class Meta:
         verbose_name = 'Фото клиники'
-        verbose_name_plural = 'Фото клиник'
+        verbose_name_plural = '↳ Фото клиник'
 
 
 class ClinicDocument(models.Model):
@@ -251,7 +251,7 @@ class ClinicDocument(models.Model):
 
     class Meta:
         verbose_name = 'Документ клиники'
-        verbose_name_plural = 'Документы клиник'
+        verbose_name_plural = '↳ Документы клиник'
 
 
 
@@ -282,7 +282,7 @@ class ClinicInvite(models.Model):
 
     class Meta:
         verbose_name = 'Инвайт клиники'
-        verbose_name_plural = 'Инвайты клиник'
+        verbose_name_plural = '↳ Инвайты клиник'
 
     def __str__(self):
         return f'Инвайт {self.id} ({self.clinic.name})'
@@ -305,7 +305,7 @@ class DoctorClinicLink(models.Model):
 
     class Meta:
         verbose_name = 'Связь врача с клиникой'
-        verbose_name_plural = 'Связи врачей с клиниками'
+        verbose_name_plural = '↳ Связи врачей с клиниками'
         unique_together = [('doctor', 'clinic')]
 
     def __str__(self):
@@ -321,7 +321,7 @@ class PasswordResetCode(models.Model):
 
     class Meta:
         verbose_name = 'Код сброса пароля'
-        verbose_name_plural = 'Коды сброса пароля'
+        verbose_name_plural = '↳ Коды сброса пароля'
 
     def __str__(self):
         identity = self.email or self.phone or 'unknown'
@@ -339,7 +339,7 @@ class PhoneVerificationCode(models.Model):
 
     class Meta:
         verbose_name = 'Код подтверждения телефона'
-        verbose_name_plural = 'Коды подтверждения телефонов'
+        verbose_name_plural = '↳ Коды подтверждения телефонов'
 
     def __str__(self):
         return f'{self.phone} -> {self.code}'
