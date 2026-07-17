@@ -14,6 +14,7 @@ class Service(models.Model):
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    tags = models.ManyToManyField('references.Tag', related_name='services', blank=True)
 
     class Meta:
         verbose_name = 'Услуга'

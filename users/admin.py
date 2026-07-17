@@ -67,7 +67,7 @@ class DoctorProfileAdmin(admin.ModelAdmin):
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'user__patronymic', 'license_number', 'city')
     readonly_fields = ('rating', 'reviews_count', 'profile_views', 'created_at', 'updated_at')
     inlines = (DoctorDocumentInline, DoctorInterviewInline)
-    filter_horizontal = ('services',)
+    filter_horizontal = ('services', 'tags')
     list_per_page = 500
 
     fieldsets = (
@@ -76,7 +76,7 @@ class DoctorProfileAdmin(admin.ModelAdmin):
         ('Расписание', {'fields': ('schedule', 'lunch_break', 'emergency_24_7')}),
         ('Юридические данные', {'fields': ('legal_name', 'reg_number', 'license_number',
                                             'license_date', 'license_authority')}),
-        ('Специализация', {'fields': ('primary_specializations', 'narrow_specializations', 'additional_services', 'services')}),
+        ('Специализация', {'fields': ('primary_specializations', 'narrow_specializations', 'additional_services', 'services', 'tags')}),
         ('Условия', {'fields': ('equipment', 'patient_conditions', 'payment_methods')}),
         ('Публичный профиль', {'fields': ('about', 'experience_years', 'is_online_available',
                                           'consultation_price', 'is_published')}),
@@ -127,6 +127,7 @@ class ClinicProfileAdmin(admin.ModelAdmin):
     search_fields = ('name', 'email', 'license_number', 'user__email')
     readonly_fields = ('rating', 'reviews_count', 'doctors_count', 'profile_views', 'created_at', 'updated_at')
     inlines = (ClinicBranchInline, ClinicPhotoInline, ClinicDocumentInline)
+    filter_horizontal = ('tags',)
     list_per_page = 25
 
     fieldsets = (
@@ -136,7 +137,7 @@ class ClinicProfileAdmin(admin.ModelAdmin):
         ('Расписание', {'fields': ('schedule', 'lunch_break', 'emergency_24_7')}),
         ('Юридические данные', {'fields': ('legal_name', 'reg_number', 'license_number',
                                             'license_date', 'license_authority')}),
-        ('Специализация', {'fields': ('primary_specializations', 'narrow_specializations', 'additional_services')}),
+        ('Специализация', {'fields': ('primary_specializations', 'narrow_specializations', 'additional_services', 'tags')}),
         ('Условия', {'fields': ('equipment', 'patient_conditions', 'payment_methods')}),
         ('Публичный профиль', {'fields': ('experience_years', 'is_published')}),
         ('Статистика', {'fields': ('rating', 'reviews_count', 'doctors_count', 'profile_views',

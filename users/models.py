@@ -129,6 +129,7 @@ class DoctorProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
     services = models.ManyToManyField('services.Service', related_name='doctors', blank=True)
+    tags = models.ManyToManyField('references.Tag', related_name='doctors', blank=True)
 
     class Meta:
         verbose_name = 'Профиль врача'
@@ -225,6 +226,8 @@ class ClinicProfile(models.Model):
     profile_views = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    tags = models.ManyToManyField('references.Tag', related_name='clinics', blank=True)
 
     class Meta:
         verbose_name = 'Профиль клиники'

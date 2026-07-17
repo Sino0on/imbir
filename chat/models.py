@@ -40,6 +40,9 @@ class AIMessage(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_messages')
     role = models.CharField(max_length=10, choices=Role.choices)
     content = models.TextField()
+    # Рекомендованные сущности: {"doctors": [ids], "clinics": [ids], "services": [ids]}.
+    # Храним только id — карточки пересобираются при выдаче из свежих данных.
+    recommendations = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

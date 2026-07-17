@@ -19,7 +19,32 @@ AI_SYSTEM_PROMPT = (
     'Если ситуация требует срочной медицинской помощи — обязательно скажи об этом. '
     'Не ставь окончательных диагнозов — рекомендуй обратиться к специалисту при необходимости.'
 )
+
+# Инструкция про формат ответа и когда рекомендовать врачей/клиники/услуги.
+AI_RECOMMENDATION_INSTRUCTIONS = (
+    'Всегда отвечай СТРОГО в формате JSON со следующими полями:\n'
+    '- "content" (string): твой ответ пользователю на русском языке.\n'
+    '- "recommend" (boolean): true ТОЛЬКО когда из разговора уже понятна '
+    'потребность пользователя и уместно порекомендовать специалиста, клинику или услугу. '
+    'На приветствия, уточняющие и общие вопросы ставь false — не рекомендуй на каждое сообщение.\n'
+    '- "entity_types" (array of strings): какие типы рекомендовать, подмножество '
+    'из ["doctors", "clinics", "services"]. Пустой массив, если recommend=false.\n'
+    '- "tags" (array of strings): подходящие теги СТРОГО из списка ниже, дословно. '
+    'Не придумывай новых тегов. Пустой массив, если recommend=false.\n'
+    'Если подходящих тегов в списке нет — ставь recommend=false.\n'
+    'Доступные теги: {tags}'
+)
 MAX_HISTORY = 20
+
+
+def _build_system_messages():
+    from references.models import Tag
+    tag_names = list(Tag.objects.values_list('name', flat=True))
+    tags_str = ', '.join(tag_names) if tag_names else '(список пуст)'
+    return [
+        {'role': 'system', 'content': AI_SYSTEM_PROMPT},
+        {'role': 'system', 'content': AI_RECOMMENDATION_INSTRUCTIONS.format(tags=tags_str)},
+    ]
 
 
 # ── Комнаты ──────────────────────────────────────────────────────────────────
@@ -111,7 +136,7 @@ class AIChatHistoryView(APIView):
 
     def get(self, request):
         messages = AIMessage.objects.filter(user=request.user)
-        return Response(AIMessageSerializer(messages, many=True).data)
+        return Response(AIMessageSerializer(messages, many=True, context={'request': request}).data)
 
     def delete(self, request):
         AIMessage.objects.filter(user=request.user).delete()
@@ -139,17 +164,55 @@ class AIChatSendView(APIView):
         history = list(
             AIMessage.objects.filter(user=request.user).order_by('-created_at')[:MAX_HISTORY]
         )
-        openai_messages = [{'role': 'system', 'content': AI_SYSTEM_PROMPT}]
+        openai_messages = _build_system_messages()
         openai_messages += [{'role': m.role, 'content': m.content} for m in reversed(history)]
 
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        completion = client.chat.completions.create(model='gpt-4o-mini', messages=openai_messages)
-        reply = completion.choices[0].message.content
+        completion = client.chat.completions.create(
+            model='gpt-4o-mini',
+            messages=openai_messages,
+            response_format={'type': 'json_object'},
+        )
+        raw = completion.choices[0].message.content
+
+        content, recommend, entity_types, tags = self._parse_ai_reply(raw)
+
+        recommendations_ids = {}
+        if recommend and tags:
+            from .recommendations import query_recommendations
+            recommendations_ids = query_recommendations(tags, entity_types)
 
         ai_message = AIMessage.objects.create(
-            user=request.user, role=AIMessage.Role.ASSISTANT, content=reply
+            user=request.user,
+            role=AIMessage.Role.ASSISTANT,
+            content=content,
+            recommendations=recommendations_ids,
         )
-        return Response(AIMessageSerializer(ai_message).data, status=status.HTTP_201_CREATED)
+        return Response(
+            AIMessageSerializer(ai_message, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @staticmethod
+    def _parse_ai_reply(raw):
+        """Разбирает JSON-ответ модели. При сбое — трактуем весь текст как content без рекомендаций."""
+        import json
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return (raw or '').strip(), False, [], []
+
+        content = (data.get('content') or '').strip() or (raw or '').strip()
+        recommend = bool(data.get('recommend'))
+        entity_types = data.get('entity_types') or []
+        tags = data.get('tags') or []
+        if not isinstance(entity_types, list):
+            entity_types = []
+        if not isinstance(tags, list):
+            tags = []
+        # оставляем только валидные типы сущностей
+        entity_types = [t for t in entity_types if t in ('doctors', 'clinics', 'services')]
+        return content, recommend, entity_types, tags
 
 
 @extend_schema(
