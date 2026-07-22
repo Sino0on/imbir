@@ -10,6 +10,14 @@ class Appointment(models.Model):
         CANCELLED = 'cancelled', 'Отменён'
         COMPLETED = 'completed', 'Завершён'
 
+    class ConsultationStatus(models.TextChoices):
+        """Статус видео-консультации LiveKit — независим от Status (статус самой записи)."""
+        CREATED = 'created', 'Создана'
+        WAITING = 'waiting', 'Ожидание участников'
+        ACTIVE = 'active', 'Идёт консультация'
+        FINISHED = 'finished', 'Завершена'
+        CANCELLED = 'cancelled', 'Отменена'
+
     # Авторизованный пациент (null — гостевая запись)
     patient = models.ForeignKey(
         User, on_delete=models.SET_NULL,
@@ -43,6 +51,29 @@ class Appointment(models.Model):
     diagnosis = models.TextField(blank=True, null=True)
     recommendations = models.TextField(blank=True, null=True)
     doctor_notes = models.TextField(blank=True, null=True)
+
+    # Заглушка оплаты: система оплаты ещё не интегрирована, поэтому по умолчанию
+    # запись считается оплаченной. Когда появится реальная оплата — выставлять
+    # False при создании и True по вебхуку/колбэку платёжной системы.
+    is_paid = models.BooleanField(default=True, verbose_name='Оплачено')
+
+    # --- LiveKit ---
+    room_name = models.CharField(max_length=255, blank=True, default='', db_index=True)
+    livekit_room_created = models.BooleanField(default=False)
+    doctor_joined = models.BooleanField(default=False)
+    patient_joined = models.BooleanField(default=False)
+    consultation_status = models.CharField(
+        max_length=20,
+        choices=ConsultationStatus.choices,
+        default=ConsultationStatus.CREATED,
+    )
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    # --- LiveKit Egress (запись консультации) ---
+    egress_id = models.CharField(max_length=255, blank=True, default='')
+    egress_status = models.CharField(max_length=32, blank=True, default='')
+    recording_url = models.TextField(blank=True, default='')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

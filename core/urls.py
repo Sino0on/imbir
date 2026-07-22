@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/notifications/', include('notifications.urls')),
     path('api/upload/', include('upload.urls')),
     path('api/chat/', include('chat.urls')),
+    path('api/livekit/', include('livekit_integration.urls')),
 
     # Search
     path('api/search/', GlobalSearchView.as_view(), name='global-search'),

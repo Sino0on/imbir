@@ -11,13 +11,23 @@ class AppointmentAdmin(admin.ModelAdmin):
     list_filter = ('status', 'is_online', 'date')
     search_fields = ('guest_name', 'guest_phone', 'guest_email',
                      'patient__email', 'patient__first_name', 'patient__last_name')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = (
+        'created_at', 'updated_at',
+        'room_name', 'livekit_room_created', 'doctor_joined', 'patient_joined',
+        'consultation_status', 'started_at', 'ended_at',
+        'egress_id', 'egress_status', 'recording_url',
+    )
     date_hierarchy = 'date'
     list_per_page = 30
 
     fieldsets = (
         ('Пациент', {'fields': ('patient', 'guest_name', 'guest_phone', 'guest_email')}),
-        ('Запись', {'fields': ('doctor', 'clinic', 'service', 'date', 'time', 'is_online', 'status')}),
+        ('Запись', {'fields': ('doctor', 'clinic', 'service', 'date', 'time', 'is_online', 'status', 'is_paid')}),
+        ('LiveKit — консультация', {'fields': (
+            'room_name', 'livekit_room_created', 'doctor_joined', 'patient_joined',
+            'consultation_status', 'started_at', 'ended_at',
+        )}),
+        ('LiveKit — запись', {'fields': ('egress_id', 'egress_status', 'recording_url')}),
         ('Дополнительно', {'fields': ('notes', 'created_at', 'updated_at')}),
     )
 

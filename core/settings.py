@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'upload',
     'chat',
     'channels',
+    'livekit_integration',
 ]
 
 ASGI_APPLICATION = 'core.asgi.application'
@@ -185,6 +186,33 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+# Celery
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default=config('REDIS_URL', default='redis://127.0.0.1:6379/0'))
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default=CELERY_BROKER_URL)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# LiveKit
+LIVEKIT_URL = config('LIVEKIT_URL', default='')
+LIVEKIT_API_KEY = config('LIVEKIT_API_KEY', default='')
+LIVEKIT_API_SECRET = config('LIVEKIT_API_SECRET', default='')
+# Токен на подключение к комнате действует ограниченное время.
+LIVEKIT_TOKEN_TTL_MINUTES = config('LIVEKIT_TOKEN_TTL_MINUTES', default=15, cast=int)
+# Насколько раньше/позже времени приёма разрешено подключаться к комнате.
+LIVEKIT_JOIN_WINDOW_MINUTES = config('LIVEKIT_JOIN_WINDOW_MINUTES', default=15, cast=int)
+# Автоматически запускать запись консультации, когда подключились оба участника.
+LIVEKIT_RECORDING_ENABLED = config('LIVEKIT_RECORDING_ENABLED', default=True, cast=bool)
+# Локальный путь (внутри контейнера egress) для сохранения файлов записи, если S3 не сконфигурирован.
+LIVEKIT_RECORDING_LOCAL_PATH = config('LIVEKIT_RECORDING_LOCAL_PATH', default='/out/{room_name}-{time}.mp4')
+
+LIVEKIT_S3_ACCESS_KEY = config('LIVEKIT_S3_ACCESS_KEY', default='')
+LIVEKIT_S3_SECRET_KEY = config('LIVEKIT_S3_SECRET_KEY', default='')
+LIVEKIT_S3_BUCKET = config('LIVEKIT_S3_BUCKET', default='')
+LIVEKIT_S3_REGION = config('LIVEKIT_S3_REGION', default='')
+LIVEKIT_S3_ENDPOINT = config('LIVEKIT_S3_ENDPOINT', default='')
+
 OPENAI_API_KEY = config('OPENAI_API_KEY', default=None)
 
 # Google Calendar API (OAuth2, для генерации Google Meet ссылок)
@@ -308,4 +336,37 @@ NIKITA_SMS_SENDER = config('NIKITA_SMS_SENDER', default='Imbir')
 
 # Geolocation Settings
 DEFAULT_CITY = 'Бишкек'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {name} — {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'livekit_integration': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
 
