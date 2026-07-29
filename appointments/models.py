@@ -75,6 +75,10 @@ class Appointment(models.Model):
     egress_status = models.CharField(max_length=32, blank=True, default='')
     recording_url = models.TextField(blank=True, default='')
 
+    # --- AI-резюме консультации (расшифровка записи → саммари в чат) ---
+    ai_summary = models.TextField(blank=True, default='')
+    ai_summary_generated_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

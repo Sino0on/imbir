@@ -8,6 +8,7 @@ from users.models import PatientProfile
 class PatientProfileSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
+    patronymic = serializers.CharField(source='user.patronymic', required=False, allow_blank=True, allow_null=True)
     phone = serializers.CharField(source='user.phone', required=False, allow_blank=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     avatar = serializers.SerializerMethodField()
@@ -16,7 +17,7 @@ class PatientProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientProfile
         fields = (
-            'first_name', 'last_name', 'email', 'phone',
+            'first_name', 'last_name', 'patronymic', 'email', 'phone',
             'avatar', 'avatar_upload',
             'blood_type', 'allergies',
             'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relation',

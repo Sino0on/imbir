@@ -37,6 +37,7 @@ def verify_and_parse(body: bytes, auth_header: str):
 
 def dispatch(event) -> None:
     handler = _HANDLERS.get(event.event)
+    logger.info(f"LiveKit webhook: событие {event.event}")
     if handler is None:
         logger.info('LiveKit webhook: событие "%s" не обрабатывается, пропущено', event.event)
         return

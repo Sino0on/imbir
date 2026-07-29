@@ -95,3 +95,107 @@ class AppointmentRescheduleTests(APITestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Нельзя перенести завершённую запись.', str(response.data))
+
+
+class ConsultationSummaryTaskTests(APITestCase):
+    """generate_consultation_summary: должен ждать готовности записи и не падать без неё."""
+
+    def setUp(self):
+        self.patient = User.objects.create_user(
+            email='summary-patient@example.com', password='password123',
+            first_name='Ivan', role=User.Role.PATIENT,
+        )
+        self.doctor_user = User.objects.create_user(
+            email='summary-doctor@example.com', password='password123',
+            first_name='Doc', role=User.Role.DOCTOR,
+        )
+        self.doctor = DoctorProfile.objects.create(user=self.doctor_user, is_published=True, city='Бишкек')
+        self.appointment = Appointment.objects.create(
+            patient=self.patient, doctor=self.doctor,
+            date=datetime.date(2026, 7, 30), time=datetime.time(10, 0),
+            is_online=True,
+        )
+
+    def test_no_recording_skips_summary(self):
+        from appointments.tasks import generate_consultation_summary
+
+        with patch('appointments.ai_summary.generate_and_deliver_summary') as mock_gen:
+            generate_consultation_summary.run(self.appointment.id)
+        mock_gen.assert_not_called()
+
+    def test_egress_failed_skips_summary(self):
+        from appointments.tasks import generate_consultation_summary
+
+        self.appointment.egress_id = 'EG_123'
+        self.appointment.egress_status = 'EGRESS_FAILED'
+        self.appointment.save(update_fields=['egress_id', 'egress_status'])
+
+        with patch('appointments.ai_summary.generate_and_deliver_summary') as mock_gen:
+            generate_consultation_summary.run(self.appointment.id)
+        mock_gen.assert_not_called()
+
+    def test_recording_not_ready_retries(self):
+        from appointments.tasks import generate_consultation_summary
+
+        self.appointment.egress_id = 'EG_123'
+        self.appointment.egress_status = 'EGRESS_ACTIVE'
+        self.appointment.save(update_fields=['egress_id', 'egress_status'])
+
+        with patch.object(generate_consultation_summary, 'retry', side_effect=Exception('retried')) as mock_retry:
+            with self.assertRaises(Exception):
+                generate_consultation_summary.run(self.appointment.id)
+        mock_retry.assert_called_once()
+
+    def test_recording_ready_generates_summary(self):
+        from appointments.tasks import generate_consultation_summary
+
+        self.appointment.egress_id = 'EG_123'
+        self.appointment.egress_status = 'EGRESS_COMPLETE'
+        self.appointment.recording_url = 'https://example.com/rec.mp4'
+        self.appointment.save(update_fields=['egress_id', 'egress_status', 'recording_url'])
+
+        with patch('appointments.ai_summary.generate_and_deliver_summary') as mock_gen:
+            generate_consultation_summary.run(self.appointment.id)
+        mock_gen.assert_called_once()
+
+
+class ConsultationSummaryDeliveryTests(APITestCase):
+    """send_summary_to_chat: резюме должно попадать в комнату врач-пациент как системное сообщение."""
+
+    def setUp(self):
+        self.patient = User.objects.create_user(
+            email='delivery-patient@example.com', password='password123',
+            first_name='Ivan', role=User.Role.PATIENT,
+        )
+        self.doctor_user = User.objects.create_user(
+            email='delivery-doctor@example.com', password='password123',
+            first_name='Doc', role=User.Role.DOCTOR,
+        )
+        self.doctor = DoctorProfile.objects.create(user=self.doctor_user, is_published=True, city='Бишкек')
+        self.appointment = Appointment.objects.create(
+            patient=self.patient, doctor=self.doctor,
+            date=datetime.date(2026, 7, 30), time=datetime.time(10, 0),
+            is_online=True,
+        )
+
+    def test_send_summary_creates_system_message_in_shared_room(self):
+        from appointments.ai_summary import send_summary_to_chat
+        from chat.models import ChatRoom
+
+        send_summary_to_chat(self.appointment, 'Тестовое резюме консультации.')
+
+        room = ChatRoom.objects.get(participants=self.patient)
+        self.assertTrue(room.participants.filter(id=self.doctor_user.id).exists())
+        msg = room.messages.last()
+        self.assertIsNone(msg.sender)
+        self.assertIn('Тестовое резюме консультации.', msg.content)
+
+    def test_send_summary_without_patient_is_noop(self):
+        from appointments.ai_summary import send_summary_to_chat
+        from chat.models import ChatRoom
+
+        self.appointment.patient = None
+        self.appointment.save(update_fields=['patient'])
+
+        send_summary_to_chat(self.appointment, 'резюме')
+        self.assertEqual(ChatRoom.objects.count(), 0)

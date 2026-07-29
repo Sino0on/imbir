@@ -1,5 +1,6 @@
 """Бизнес-логика LiveKit: комнаты, выдача токенов, обработка событий вебхука, запись."""
 import logging
+import os
 
 from django.conf import settings
 from django.utils import timezone
@@ -272,6 +273,42 @@ def handle_egress_updated(event) -> None:
 
     if update_fields:
         appointment.save(update_fields=update_fields + ['updated_at'])
+
+
+def fetch_recording_bytes(appointment: Appointment) -> tuple[bytes, str]:
+    """Скачивает файл записи консультации. Возвращает (содержимое, имя_файла).
+
+    location (appointment.recording_url) — то, что LiveKit Egress вернул в file_results:
+    полный URL (S3 upload может отдавать пресайн-ссылку), ключ в S3-бакете или локальный
+    путь на диске egress-воркера (см. LIVEKIT_RECORDING_LOCAL_PATH).
+    """
+    location = appointment.recording_url
+    if not location:
+        raise ValueError(f'consultation={appointment.id}: recording_url пуст')
+
+    if location.startswith('http://') or location.startswith('https://'):
+        import requests
+        resp = requests.get(location, timeout=120)
+        resp.raise_for_status()
+        return resp.content, os.path.basename(location.split('?', 1)[0])
+
+    if settings.LIVEKIT_S3_BUCKET:
+        import boto3
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=settings.LIVEKIT_S3_ACCESS_KEY,
+            aws_secret_access_key=settings.LIVEKIT_S3_SECRET_KEY,
+            region_name=settings.LIVEKIT_S3_REGION or None,
+            endpoint_url=settings.LIVEKIT_S3_ENDPOINT or None,
+        )
+        key = location.lstrip('/')
+        if key.startswith(f'{settings.LIVEKIT_S3_BUCKET}/'):
+            key = key[len(settings.LIVEKIT_S3_BUCKET) + 1:]
+        obj = s3.get_object(Bucket=settings.LIVEKIT_S3_BUCKET, Key=key)
+        return obj['Body'].read(), os.path.basename(key)
+
+    with open(location, 'rb') as f:
+        return f.read(), os.path.basename(location)
 
 
 # --- Подготовка к AI-обработке ----------------------------------------------
