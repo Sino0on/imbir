@@ -18,7 +18,7 @@ class AppointmentAdmin(admin.ModelAdmin):
         'egress_id', 'egress_status', 'recording_url',
     )
     date_hierarchy = 'date'
-    list_per_page = 30
+    list_per_page = 500
 
     fieldsets = (
         ('Пациент', {'fields': ('patient', 'guest_name', 'guest_phone', 'guest_email')}),
