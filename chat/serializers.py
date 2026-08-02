@@ -46,8 +46,8 @@ class RecoDoctorSerializer(serializers.Serializer):
     is_online_available = serializers.BooleanField()
 
     def get_specialty(self, obj):
-        specs = obj.primary_specializations
-        return specs[0] if specs else ''
+        spec = obj.primary_specializations.first()
+        return spec.name if spec else ''
 
     def get_photo(self, obj):
         if not obj.photo:

@@ -3,6 +3,8 @@ from rest_framework import serializers
 from appointments.models import Appointment
 from reviews.models import Review
 from services.models import Service
+from references.models import Specialization
+from references.serializers import SpecializationSerializer
 from users.models import ClinicBranch, ClinicInvite, ClinicProfile, DoctorClinicLink
 from users.serializers import HybridImageField
 
@@ -46,6 +48,16 @@ class ClinicOwnProfileSerializer(serializers.ModelSerializer):
     branches = ClinicBranchUpdateSerializer(many=True, read_only=True)
     photos = serializers.SerializerMethodField()
     documents = serializers.SerializerMethodField()
+    primary_specializations = SpecializationSerializer(many=True, read_only=True)
+    primary_specialization_ids = serializers.PrimaryKeyRelatedField(
+        source='primary_specializations', many=True, write_only=True, required=False, default=list,
+        queryset=Specialization.objects.all(),
+    )
+    narrow_specializations = SpecializationSerializer(many=True, read_only=True)
+    narrow_specialization_ids = serializers.PrimaryKeyRelatedField(
+        source='narrow_specializations', many=True, write_only=True, required=False, default=list,
+        queryset=Specialization.objects.all(),
+    )
 
     class Meta:
         model = ClinicProfile
@@ -56,7 +68,8 @@ class ClinicOwnProfileSerializer(serializers.ModelSerializer):
             'schedule', 'lunch_break', 'emergency_24_7',
             'legal_name', 'reg_number', 'license_number', 'license_date', 'license_authority',
             'documents',
-            'primary_specializations', 'narrow_specializations', 'additional_services',
+            'primary_specializations', 'primary_specialization_ids',
+            'narrow_specializations', 'narrow_specialization_ids', 'additional_services',
             'equipment', 'patient_conditions', 'payment_methods',
             'experience_years', 'rating', 'reviews_count', 'doctors_count',
             'is_published', 'profile_views',
@@ -134,8 +147,8 @@ class ClinicDoctorSerializer(serializers.ModelSerializer):
         fields = ('id', 'full_name', 'specialty', 'photo', 'rating', 'appointments_total', 'is_active')
 
     def get_specialty(self, obj):
-        specs = obj.doctor.primary_specializations
-        return specs[0] if specs else ''
+        spec = obj.doctor.primary_specializations.first()
+        return spec.name if spec else ''
 
     def get_photo(self, obj):
         if not obj.doctor.photo:

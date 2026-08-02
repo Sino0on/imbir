@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from references.serializers import SpecializationSerializer
 from users.models import ClinicBranch, ClinicProfile
 
 
@@ -11,6 +12,7 @@ class ClinicBranchSerializer(serializers.ModelSerializer):
 class ClinicListSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='user.id')
     logo = serializers.SerializerMethodField()
+    primary_specializations = SpecializationSerializer(many=True, read_only=True)
 
     class Meta:
         model = ClinicProfile
@@ -35,6 +37,8 @@ class ClinicDetailSerializer(serializers.ModelSerializer):
     doctors = serializers.SerializerMethodField()
     services = serializers.SerializerMethodField()
     branches = ClinicBranchSerializer(many=True, read_only=True)
+    primary_specializations = SpecializationSerializer(many=True, read_only=True)
+    narrow_specializations = SpecializationSerializer(many=True, read_only=True)
 
     class Meta:
         model = ClinicProfile
@@ -84,12 +88,12 @@ class ClinicDetailSerializer(serializers.ModelSerializer):
                     request.build_absolute_uri(doc.photo.url)
                     if request else doc.photo.url
                 )
-            specs = doc.primary_specializations
+            spec = doc.primary_specializations.first()
             result.append({
                 'id': doc.user_id,
                 'full_name': doc.user.full_name,
                 'photo': photo_url,
-                'specialty': specs[0] if specs else '',
+                'specialty': spec.name if spec else '',
                 'rating': float(doc.rating),
                 'experience_years': doc.experience_years,
             })

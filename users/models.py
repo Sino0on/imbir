@@ -91,8 +91,12 @@ class DoctorProfile(models.Model):
     license_authority = models.CharField(max_length=255, blank=True)
 
     # Step 5 — специализация
-    primary_specializations = models.JSONField(default=list)
-    narrow_specializations = models.JSONField(default=list)
+    primary_specializations = models.ManyToManyField(
+        'references.Specialization', related_name='doctors_primary', blank=True,
+    )
+    narrow_specializations = models.ManyToManyField(
+        'references.Specialization', related_name='doctors_narrow', blank=True,
+    )
     additional_services = models.TextField(blank=True)
 
     # Step 6 — оборудование и условия
@@ -201,8 +205,12 @@ class ClinicProfile(models.Model):
     license_authority = models.CharField(max_length=255, blank=True)
 
     # Step 5 — специализации
-    primary_specializations = models.JSONField(default=list)
-    narrow_specializations = models.JSONField(default=list)
+    primary_specializations = models.ManyToManyField(
+        'references.Specialization', related_name='clinics_primary', blank=True,
+    )
+    narrow_specializations = models.ManyToManyField(
+        'references.Specialization', related_name='clinics_narrow', blank=True,
+    )
     additional_services = models.TextField(blank=True)
 
     # Step 6 — оборудование и условия

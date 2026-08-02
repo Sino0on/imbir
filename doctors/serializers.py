@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from references.serializers import SpecializationSerializer
 from users.models import DoctorProfile
 from .models import Interview
 
@@ -20,6 +21,8 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
     workplaces = serializers.SerializerMethodField()
     clinic = serializers.SerializerMethodField()
     interviews = InterviewSerializer(many=True, read_only=True)
+    primary_specializations = SpecializationSerializer(many=True, read_only=True)
+    narrow_specializations = SpecializationSerializer(many=True, read_only=True)
 
     class Meta:
         model = DoctorProfile
@@ -38,8 +41,8 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
         return obj.user.full_name
 
     def get_specialty(self, obj):
-        specs = obj.primary_specializations
-        return specs[0] if specs else ''
+        spec = obj.primary_specializations.first()
+        return spec.name if spec else ''
 
     def get_photo(self, obj):
         if not obj.photo:
@@ -117,8 +120,8 @@ class DoctorListSerializer(serializers.ModelSerializer):
         return obj.user.full_name
 
     def get_specialty(self, obj):
-        specs = obj.primary_specializations
-        return specs[0] if specs else ''
+        spec = obj.primary_specializations.first()
+        return spec.name if spec else ''
 
     def get_photo(self, obj):
         if not obj.photo:

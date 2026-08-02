@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer, OpenApiParameter
 from rest_framework import status
 from rest_framework.generics import DestroyAPIView, ListAPIView, RetrieveUpdateAPIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -72,12 +72,26 @@ class PatientReviewListView(ListAPIView):
         )
 
 
+_FavoritesResponseSerializer = inline_serializer('FavoritesResponse', fields={
+    'data': FavoritesListSerializer(),
+})
+
+
 @extend_schema_view(
-    get=extend_schema(responses={200: FavoritesListSerializer}, tags=['Profile'], summary='Получить список избранного'),
-    post=extend_schema(request=FavoriteActionSerializer, responses={201: FavoritesListSerializer}, tags=['Profile'], summary='Добавить врача, клинику или услугу в избранное'),
+    get=extend_schema(responses={200: _FavoritesResponseSerializer}, tags=['Profile'], summary='Получить список избранного'),
+    post=extend_schema(request=FavoriteActionSerializer, responses={201: _FavoritesResponseSerializer}, tags=['Profile'], summary='Добавить врача, клинику или услугу в избранное'),
     delete=extend_schema(
-        parameters=[],
-        request=FavoriteActionSerializer,
+        parameters=[
+            OpenApiParameter(
+                name='target_type', type=str, location=OpenApiParameter.QUERY, required=True,
+                enum=['doctor', 'clinic', 'service'], description='Тип объекта',
+            ),
+            OpenApiParameter(
+                name='target_id', type=int, location=OpenApiParameter.QUERY, required=True,
+                description='ID врача, клиники или услуги',
+            ),
+        ],
+        request=None,
         responses={204: None},
         tags=['Profile'],
         summary='Удалить врача, клинику или услугу из избранного'
@@ -118,7 +132,7 @@ class FavoriteListCreateView(APIView):
             user.favorite_services.add(service)
 
         full_serializer = FavoritesListSerializer(user, context={'request': request})
-        return Response(full_serializer.data, status=status.HTTP_201_CREATED)
+        return Response({'data': full_serializer.data}, status=status.HTTP_201_CREATED)
 
     def delete(self, request):
         target_type = request.query_params.get('target_type') or request.data.get('target_type')

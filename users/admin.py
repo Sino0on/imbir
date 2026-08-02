@@ -67,7 +67,7 @@ class DoctorProfileAdmin(admin.ModelAdmin):
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'user__patronymic', 'license_number', 'city')
     readonly_fields = ('rating', 'reviews_count', 'profile_views', 'created_at', 'updated_at')
     inlines = (DoctorDocumentInline, DoctorInterviewInline)
-    filter_horizontal = ('services', 'tags')
+    filter_horizontal = ('services', 'tags', 'primary_specializations', 'narrow_specializations')
     list_per_page = 500
 
     fieldsets = (
@@ -127,7 +127,7 @@ class ClinicProfileAdmin(admin.ModelAdmin):
     search_fields = ('name', 'email', 'license_number', 'user__email')
     readonly_fields = ('rating', 'reviews_count', 'doctors_count', 'profile_views', 'created_at', 'updated_at')
     inlines = (ClinicBranchInline, ClinicPhotoInline, ClinicDocumentInline)
-    filter_horizontal = ('tags',)
+    filter_horizontal = ('tags', 'primary_specializations', 'narrow_specializations')
     list_per_page = 25
 
     fieldsets = (

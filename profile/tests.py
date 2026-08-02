@@ -1,7 +1,7 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from users.models import DoctorProfile, ClinicProfile
+from users.models import DoctorProfile, ClinicProfile, DoctorClinicLink
 from services.models import Service
 
 User = get_user_model()
@@ -45,12 +45,19 @@ class ProfileFavoritesTests(APITestCase):
             is_published=True
         )
 
+        DoctorClinicLink.objects.create(
+            doctor=self.doctor_profile,
+            clinic=self.clinic_profile,
+            is_active=True
+        )
+
         # Create service
         self.service = Service.objects.create(
             name='Ультразвук',
             price=1500.00,
             category='diagnostics',
-            is_active=True
+            is_active=True,
+            clinic=self.clinic_profile,
         )
 
         self.favorites_url = '/api/profile/favorites/'
@@ -72,20 +79,28 @@ class ProfileFavoritesTests(APITestCase):
         # 2. Add doctor
         response = self.client.post(self.favorites_url, {'target_type': 'doctor', 'target_id': self.doctor_user.id})
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(len(response.data['doctors']), 1)
-        self.assertEqual(response.data['doctors'][0]['id'], self.doctor_user.id)
+        self.assertEqual(len(response.data['data']['doctors']), 1)
+        self.assertEqual(response.data['data']['doctors'][0]['id'], self.doctor_user.id)
+        self.assertEqual(
+            response.data['data']['doctors'][0]['clinic'],
+            {'id': self.clinic_user.id, 'name': 'Clinic One'}
+        )
 
         # 3. Add clinic
         response = self.client.post(self.favorites_url, {'target_type': 'clinic', 'target_id': self.clinic_user.id})
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(len(response.data['clinics']), 1)
-        self.assertEqual(response.data['clinics'][0]['id'], self.clinic_user.id)
+        self.assertEqual(len(response.data['data']['clinics']), 1)
+        self.assertEqual(response.data['data']['clinics'][0]['id'], self.clinic_user.id)
 
         # 4. Add service
         response = self.client.post(self.favorites_url, {'target_type': 'service', 'target_id': self.service.id})
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(len(response.data['services']), 1)
-        self.assertEqual(response.data['services'][0]['id'], self.service.id)
+        self.assertEqual(len(response.data['data']['services']), 1)
+        self.assertEqual(response.data['data']['services'][0]['id'], self.service.id)
+        self.assertEqual(
+            response.data['data']['services'][0]['clinic'],
+            {'id': self.clinic_user.id, 'name': 'Clinic One'}
+        )
 
         # 5. Retrieve list again and verify M2M
         response = self.client.get(self.favorites_url)

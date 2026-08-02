@@ -4,6 +4,7 @@ from rest_framework import status
 from django.contrib.auth import get_user_model
 from users.models import DoctorProfile
 from doctors.models import Interview
+from references.models import Specialization
 
 User = get_user_model()
 
@@ -170,8 +171,8 @@ class GlobalSearchTests(APITestCase):
         self.doctor = DoctorProfile.objects.create(
             user=self.doc_user,
             is_published=True,
-            primary_specializations=["Кардиолог"]
         )
+        self.doctor.primary_specializations.set([Specialization.objects.create(name="Кардиолог")])
 
         # Create clinics
         self.clinic_user = User.objects.create_user(

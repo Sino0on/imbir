@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import extend_schema_field, inline_serializer
 from appointments.models import Appointment
 from reviews.models import Review
 from users.models import PatientProfile
@@ -102,25 +102,39 @@ class PatientAppointmentSerializer(serializers.ModelSerializer):
 from users.models import DoctorProfile, ClinicProfile
 from services.models import Service
 
+_FavoriteTargetClinicSerializer = inline_serializer('FavoriteTargetClinic', fields={
+    'id': serializers.IntegerField(),
+    'name': serializers.CharField(),
+})
+
+
 class FavoriteDoctorSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='user.id')
     full_name = serializers.CharField(source='user.full_name')
     specialty = serializers.SerializerMethodField()
     photo = serializers.SerializerMethodField()
+    clinic = serializers.SerializerMethodField()
 
     class Meta:
         model = DoctorProfile
-        fields = ('id', 'full_name', 'specialty', 'photo', 'rating', 'experience_years')
+        fields = ('id', 'full_name', 'specialty', 'photo', 'rating', 'experience_years', 'clinic')
 
     def get_specialty(self, obj):
-        specs = obj.primary_specializations
-        return specs[0] if specs else ''
+        spec = obj.primary_specializations.first()
+        return spec.name if spec else ''
 
     def get_photo(self, obj):
         if not obj.photo:
             return None
         request = self.context.get('request')
         return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
+
+    @extend_schema_field(_FavoriteTargetClinicSerializer)
+    def get_clinic(self, obj):
+        link = obj.clinic_links.filter(is_active=True).select_related('clinic').first()
+        if not link:
+            return None
+        return {'id': link.clinic.user_id, 'name': link.clinic.name}
 
 
 class FavoriteClinicSerializer(serializers.ModelSerializer):
@@ -139,9 +153,17 @@ class FavoriteClinicSerializer(serializers.ModelSerializer):
 
 
 class FavoriteServiceSerializer(serializers.ModelSerializer):
+    clinic = serializers.SerializerMethodField()
+
     class Meta:
         model = Service
-        fields = ('id', 'name', 'category', 'price')
+        fields = ('id', 'name', 'category', 'price', 'clinic')
+
+    @extend_schema_field(_FavoriteTargetClinicSerializer)
+    def get_clinic(self, obj):
+        if not obj.clinic:
+            return None
+        return {'id': obj.clinic.user_id, 'name': obj.clinic.name}
 
 
 class FavoritesListSerializer(serializers.Serializer):

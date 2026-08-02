@@ -141,13 +141,19 @@ class Command(BaseCommand):
         doc_count = clinic_count = svc_count = 0
 
         for doctor in DoctorProfile.objects.all():
-            tags = tags_for(doctor.primary_specializations, doctor.narrow_specializations)
+            tags = tags_for(
+                doctor.primary_specializations.values_list('name', flat=True),
+                doctor.narrow_specializations.values_list('name', flat=True),
+            )
             if tags:
                 doctor.tags.set(tags)
                 doc_count += 1
 
         for clinic in ClinicProfile.objects.all():
-            tags = tags_for(clinic.primary_specializations, clinic.narrow_specializations)
+            tags = tags_for(
+                clinic.primary_specializations.values_list('name', flat=True),
+                clinic.narrow_specializations.values_list('name', flat=True),
+            )
             if tags:
                 clinic.tags.set(tags)
                 clinic_count += 1

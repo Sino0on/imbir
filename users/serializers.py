@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import ClinicBranch, ClinicInvite, DoctorClinicLink, User, DoctorProfile, ClinicProfile, PasswordResetCode, PhoneVerificationCode
+from references.models import Specialization
 from users.utils import get_relative_path_from_url
 
 class HybridImageField(serializers.ImageField):
@@ -149,8 +150,8 @@ class DoctorStep4Serializer(serializers.Serializer):
 
 
 class DoctorStep5Serializer(serializers.Serializer):
-    primary_specializations = serializers.ListField(child=serializers.CharField(), required=False, default=list)
-    narrow_specializations = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+    primary_specializations = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
+    narrow_specializations = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
     additional_services = serializers.CharField(required=False, allow_blank=True, default='')
 
 
@@ -272,7 +273,7 @@ class DoctorRegisterSerializer(serializers.Serializer):
                 role=User.Role.DOCTOR,
             )
 
-            DoctorProfile.objects.create(
+            doctor_profile = DoctorProfile.objects.create(
                 user=user,
                 gender=s1.get('gender', ''),
                 birth_date=s1.get('birth_date'),
@@ -292,8 +293,6 @@ class DoctorRegisterSerializer(serializers.Serializer):
                 license_number=s4.get('license_number', ''),
                 license_date=s4.get('license_date'),
                 license_authority=s4.get('license_authority', ''),
-                primary_specializations=s5.get('primary_specializations', []),
-                narrow_specializations=s5.get('narrow_specializations', []),
                 additional_services=s5.get('additional_services', ''),
                 equipment=s6.get('equipment', []),
                 patient_conditions=s6.get('patient_conditions', []),
@@ -302,6 +301,12 @@ class DoctorRegisterSerializer(serializers.Serializer):
                 agree_privacy=s7.get('agree_privacy', False),
                 agree_data_processing=s7.get('agree_data_processing', False),
                 agree_publishing=s7.get('agree_publishing', False),
+            )
+            doctor_profile.primary_specializations.set(
+                Specialization.objects.filter(id__in=s5.get('primary_specializations', []))
+            )
+            doctor_profile.narrow_specializations.set(
+                Specialization.objects.filter(id__in=s5.get('narrow_specializations', []))
             )
 
             if invite:
@@ -396,7 +401,7 @@ class ClinicRegisterSerializer(serializers.Serializer):
                 role=User.Role.CLINIC,
             )
 
-            ClinicProfile.objects.create(
+            clinic_profile = ClinicProfile.objects.create(
                 user=user,
                 # Step 1
                 name=s1['name'],
@@ -423,8 +428,6 @@ class ClinicRegisterSerializer(serializers.Serializer):
                 license_date=s4.get('license_date') or None,
                 license_authority=s4.get('license_authority', ''),
                 # Step 5
-                primary_specializations=s5.get('primary_specializations', []),
-                narrow_specializations=s5.get('narrow_specializations', []),
                 additional_services=s5.get('additional_services', ''),
                 # Step 6
                 equipment=s6.get('equipment', []),
@@ -435,6 +438,12 @@ class ClinicRegisterSerializer(serializers.Serializer):
                 agree_privacy=s7.get('agree_privacy', False),
                 agree_data_processing=s7.get('agree_data_processing', False),
                 agree_publishing=s7.get('agree_publishing', False),
+            )
+            clinic_profile.primary_specializations.set(
+                Specialization.objects.filter(id__in=s5.get('primary_specializations', []))
+            )
+            clinic_profile.narrow_specializations.set(
+                Specialization.objects.filter(id__in=s5.get('narrow_specializations', []))
             )
 
             # Документы из step4

@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     CitiesView,
     SpecializationsView,
+    ServiceCategoriesView,
     ClinicTypesView,
     LanguagesView,
     EquipmentView,
@@ -13,6 +14,7 @@ from .views import (
 urlpatterns = [
     path('cities/', CitiesView.as_view(), name='ref-cities'),
     path('specializations/', SpecializationsView.as_view(), name='ref-specializations'),
+    path('service-categories/', ServiceCategoriesView.as_view(), name='ref-service-categories'),
     path('clinic-types/', ClinicTypesView.as_view(), name='ref-clinic-types'),
     path('languages/', LanguagesView.as_view(), name='ref-languages'),
     path('equipment/', EquipmentView.as_view(), name='ref-equipment'),

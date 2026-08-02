@@ -1,4 +1,3 @@
-import json
 from django.db.models import Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -19,11 +18,6 @@ from doctors.search_serializers import (
 from doctors.serializers import DoctorListSerializer
 from clinics.serializers import ClinicListSerializer
 from services.serializers import ServiceListSerializer
-
-
-def _json_escape(value: str) -> str:
-    # SQLite JSONField stores Cyrillic as unicode-escape sequences
-    return json.dumps(value, ensure_ascii=True)[1:-1]
 
 
 class GlobalSearchSuggestView(APIView):
@@ -49,18 +43,16 @@ class GlobalSearchSuggestView(APIView):
                 "services": []
             })
 
-        escaped_query = _json_escape(query)
-
         # Search doctors
         doctors = DoctorProfile.objects.filter(
-            user__is_active=True, 
+            user__is_active=True,
             is_published=True
         ).select_related('user').filter(
             Q(user__first_name__icontains=query)
             | Q(user__last_name__icontains=query)
-            | Q(primary_specializations__icontains=escaped_query)
-            | Q(narrow_specializations__icontains=escaped_query)
-        )[:5]
+            | Q(primary_specializations__name__icontains=query)
+            | Q(narrow_specializations__name__icontains=query)
+        ).distinct()[:5]
 
         # Search clinics
         clinics = ClinicProfile.objects.filter(
@@ -109,18 +101,16 @@ class GlobalSearchView(APIView):
                 "services": []
             })
 
-        escaped_query = _json_escape(query)
-
         # Search doctors
         doctors = DoctorProfile.objects.filter(
-            user__is_active=True, 
+            user__is_active=True,
             is_published=True
         ).select_related('user').filter(
             Q(user__first_name__icontains=query)
             | Q(user__last_name__icontains=query)
-            | Q(primary_specializations__icontains=escaped_query)
-            | Q(narrow_specializations__icontains=escaped_query)
-        )[:20]
+            | Q(primary_specializations__name__icontains=query)
+            | Q(narrow_specializations__name__icontains=query)
+        ).distinct()[:20]
 
         # Search clinics
         clinics = ClinicProfile.objects.filter(

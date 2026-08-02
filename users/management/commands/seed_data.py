@@ -289,12 +289,22 @@ class Command(BaseCommand):
                 user.set_password(DOCTOR_PASSWORD)
                 user.save()
 
-            profile, _ = DoctorProfile.objects.get_or_create(user=user, defaults=item["profile"])
+            profile_data = dict(item["profile"])
+            primary_specs = profile_data.pop("primary_specializations", [])
+            narrow_specs = profile_data.pop("narrow_specializations", [])
+
+            profile, _ = DoctorProfile.objects.get_or_create(user=user, defaults=profile_data)
+            profile.primary_specializations.set(self._get_specializations(primary_specs))
+            profile.narrow_specializations.set(self._get_specializations(narrow_specs))
             users.append(user)
             profiles.append(profile)
 
         self.stdout.write(f"  Создано врачей: {len(users)}")
         return users, profiles
+
+    def _get_specializations(self, names):
+        from references.models import Specialization
+        return [Specialization.objects.get_or_create(name=name)[0] for name in names]
 
     # ------------------------------------------------------------------
     def _create_clinics(self):
@@ -413,7 +423,13 @@ class Command(BaseCommand):
                 user.set_password(CLINIC_PASSWORD)
                 user.save()
 
-            profile, _ = ClinicProfile.objects.get_or_create(user=user, defaults=item["profile"])
+            profile_data = dict(item["profile"])
+            primary_specs = profile_data.pop("primary_specializations", [])
+            narrow_specs = profile_data.pop("narrow_specializations", [])
+
+            profile, _ = ClinicProfile.objects.get_or_create(user=user, defaults=profile_data)
+            profile.primary_specializations.set(self._get_specializations(primary_specs))
+            profile.narrow_specializations.set(self._get_specializations(narrow_specs))
             users.append(user)
             profiles.append(profile)
 

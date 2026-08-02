@@ -13,7 +13,12 @@ from .serializers import DoctorListSerializer, DoctorDetailSerializer
     parameters=[
         OpenApiParameter(name='search', type=str, description='Поиск по имени и специализации'),
         OpenApiParameter(name='city', type=str, description='Фильтр по городу'),
-        OpenApiParameter(name='specialization', type=str, description='Фильтр по специализации (точное вхождение)'),
+        OpenApiParameter(
+            name='specialization', type=str,
+            description='Фильтр по специализации. Несколько значений — через запятую '
+                        '(?specialization=Кардиолог,Терапевт) или повтором параметра; '
+                        'врач попадает в выдачу, если совпадает хотя бы одна.',
+        ),
         OpenApiParameter(name='min_price', type=int, description='Минимальная цена приёма'),
         OpenApiParameter(name='max_price', type=int, description='Максимальная цена приёма'),
         OpenApiParameter(name='min_rating', type=float, description='Минимальный рейтинг (0–5)'),
@@ -41,15 +46,14 @@ class DoctorListView(ListAPIView):
 
         params = self.request.query_params
 
-        # PostgreSQL хранит JSONField как нативный UTF-8 — передаём строку как есть
         search = params.get('search', '').strip()
         if search:
             qs = qs.filter(
                 Q(user__first_name__icontains=search)
                 | Q(user__last_name__icontains=search)
-                | Q(primary_specializations__icontains=search)
-                | Q(narrow_specializations__icontains=search)
-            )
+                | Q(primary_specializations__name__icontains=search)
+                | Q(narrow_specializations__name__icontains=search)
+            ).distinct()
 
         city = params.get('city', '').strip()
         if not city and hasattr(self.request, 'city'):
@@ -57,12 +61,19 @@ class DoctorListView(ListAPIView):
         if city:
             qs = qs.filter(city__icontains=city)
 
-        specialization = params.get('specialization', '').strip()
-        if specialization:
-            qs = qs.filter(
-                Q(primary_specializations__icontains=specialization)
-                | Q(narrow_specializations__icontains=specialization)
-            )
+        specialization_values = []
+        for raw in params.getlist('specialization'):
+            specialization_values.extend(v.strip() for v in raw.split(',') if v.strip())
+        specialization_values = list(dict.fromkeys(specialization_values))
+
+        if specialization_values:
+            spec_filter = Q()
+            for value in specialization_values:
+                spec_filter |= (
+                    Q(primary_specializations__name__icontains=value)
+                    | Q(narrow_specializations__name__icontains=value)
+                )
+            qs = qs.filter(spec_filter).distinct()
 
         min_price = params.get('min_price')
         if min_price:

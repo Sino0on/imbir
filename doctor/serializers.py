@@ -2,6 +2,8 @@ from rest_framework import serializers
 from appointments.models import Appointment
 from reviews.models import Review
 from services.models import Service
+from references.models import Specialization
+from references.serializers import SpecializationSerializer
 from users.models import DoctorProfile, User
 from doctors.serializers import InterviewSerializer
 from doctors.models import Interview
@@ -18,6 +20,16 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
     photo = HybridImageField(required=False, allow_null=True)
     documents = serializers.SerializerMethodField()
     interviews = InterviewSerializer(many=True, read_only=True)
+    primary_specializations = SpecializationSerializer(many=True, read_only=True)
+    primary_specialization_ids = serializers.PrimaryKeyRelatedField(
+        source='primary_specializations', many=True, write_only=True, required=False, default=list,
+        queryset=Specialization.objects.all(),
+    )
+    narrow_specializations = SpecializationSerializer(many=True, read_only=True)
+    narrow_specialization_ids = serializers.PrimaryKeyRelatedField(
+        source='narrow_specializations', many=True, write_only=True, required=False, default=list,
+        queryset=Specialization.objects.all(),
+    )
 
     class Meta:
         model = DoctorProfile
@@ -34,7 +46,8 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
             # Документы
             'documents',
             # Специализация
-            'primary_specializations', 'narrow_specializations', 'additional_services',
+            'primary_specializations', 'primary_specialization_ids',
+            'narrow_specializations', 'narrow_specialization_ids', 'additional_services',
             # Оборудование и условия
             'equipment', 'patient_conditions', 'payment_methods',
             # Публичный профиль
@@ -65,9 +78,17 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
         if user_data:
             user.save(update_fields=list(user_data.keys()))
 
+        primary_specializations = validated_data.pop('primary_specializations', None)
+        narrow_specializations = validated_data.pop('narrow_specializations', None)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+
+        if primary_specializations is not None:
+            instance.primary_specializations.set(primary_specializations)
+        if narrow_specializations is not None:
+            instance.narrow_specializations.set(narrow_specializations)
         return instance
 
 

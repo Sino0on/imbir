@@ -1,3 +1,4 @@
+from django.db.models import Q
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers
 from rest_framework.views import APIView
@@ -5,6 +6,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 
 from users.models import DoctorProfile, ClinicProfile
+from services.models import Service
+from .models import Specialization
+from .serializers import SpecializationSerializer
 
 
 # Тестовый мусор, попавший в прод. Реальная чистка — через админку;
@@ -59,32 +63,30 @@ class CitiesView(APIView):
         return Response({'data': sorted(cities)})
 
 
-@extend_schema(**_REF_SCHEMA, summary='Список специализаций')
+_SPEC_RESPONSE = inline_serializer('SpecializationList', fields={
+    'data': SpecializationSerializer(many=True),
+})
+
+
+@extend_schema(responses={200: _SPEC_RESPONSE}, tags=['References'], summary='Список специализаций')
 class SpecializationsView(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request):
-        # ?type=clinic — специализации только клиник (отраслевые формы),
-        # ?type=doctor — только врачей (профессиональные формы),
+        # ?type=clinic — специализации, встречающиеся у клиник,
+        # ?type=doctor — только у врачей,
         # без параметра — объединение обоих (обратная совместимость).
         ref_type = request.query_params.get('type', '').strip().lower()
-        doctor_qs = DoctorProfile.objects.filter(is_published=True)
-        clinic_qs = ClinicProfile.objects.filter(is_published=True)
 
-        pairs = []
+        filters = Q()
         if ref_type != 'clinic':
-            pairs += [
-                (doctor_qs, 'primary_specializations'),
-                (doctor_qs, 'narrow_specializations'),
-            ]
+            filters |= Q(doctors_primary__is_published=True) | Q(doctors_narrow__is_published=True)
         if ref_type != 'doctor':
-            pairs += [
-                (clinic_qs, 'primary_specializations'),
-                (clinic_qs, 'narrow_specializations'),
-            ]
+            filters |= Q(clinics_primary__is_published=True) | Q(clinics_narrow__is_published=True)
 
-        data = _flat_json_field(*pairs)
-        return Response({'data': data})
+        specializations = Specialization.objects.filter(filters).distinct().order_by('name')
+        serializer = SpecializationSerializer(specializations, many=True, context={'request': request})
+        return Response({'data': serializer.data})
 
 
 @extend_schema(**_REF_SCHEMA, summary='Типы клиник')
@@ -100,6 +102,21 @@ class ClinicTypesView(APIView):
             .order_by('clinic_type')
         )
         return Response({'data': types})
+
+
+@extend_schema(**_REF_SCHEMA, summary='Список категорий услуг')
+class ServiceCategoriesView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        categories = list(
+            Service.objects.filter(is_active=True)
+            .exclude(category='')
+            .values_list('category', flat=True)
+            .distinct()
+            .order_by('category')
+        )
+        return Response({'data': categories})
 
 
 @extend_schema(**_REF_SCHEMA, summary='Список языков')

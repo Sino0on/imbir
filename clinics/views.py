@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny
 
@@ -33,20 +34,10 @@ class ClinicListView(ListAPIView):
 
         specialization = params.get('specialization', '').strip()
         if specialization:
-            # JSONField-запросы к спискам несовместимы между SQLite и Postgres
-            # (native jsonb vs текст с \uXXXX), поэтому фильтруем по элементам в Python.
-            target = specialization.casefold()
-            matched_ids = [
-                pk
-                for pk, primary, narrow in qs.values_list(
-                    'pk', 'primary_specializations', 'narrow_specializations'
-                )
-                if any(
-                    target == str(s).casefold()
-                    for s in (primary or []) + (narrow or [])
-                )
-            ]
-            qs = qs.filter(pk__in=matched_ids)
+            qs = qs.filter(
+                Q(primary_specializations__name__iexact=specialization)
+                | Q(narrow_specializations__name__iexact=specialization)
+            ).distinct()
 
         min_rating = params.get('min_rating')
         if min_rating:
