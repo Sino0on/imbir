@@ -5,7 +5,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('references', '0002_add_specialization'),
-        ('users', '0009_clinicprofile_tags_doctorprofile_tags'),
+        ('users', '0006_clinicprofile_tags_doctorprofile_tags'),
     ]
 
     operations = [
