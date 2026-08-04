@@ -6,7 +6,8 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from users.models import DoctorProfile
 from core.pagination import StandardPagination
-from .serializers import DoctorListSerializer, DoctorDetailSerializer
+from .models import Interview
+from .serializers import DoctorListSerializer, DoctorDetailSerializer, PublicInterviewSerializer
 
 
 @extend_schema(
@@ -147,6 +148,22 @@ class DoctorDetailView(RetrieveAPIView):
                 user__is_active=True, is_published=True
             ),
             user__id=self.kwargs['pk'],
+        )
+
+
+@extend_schema(tags=['Doctors Catalog'], summary='Список видео-интервью врачей')
+class InterviewListView(ListAPIView):
+    permission_classes = (AllowAny,)
+    serializer_class = PublicInterviewSerializer
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        return (
+            Interview.objects
+            .filter(doctor__user__is_active=True, doctor__is_published=True)
+            .select_related('doctor__user')
+            .prefetch_related('doctor__primary_specializations')
+            .order_by('-priority', 'id')
         )
 
 

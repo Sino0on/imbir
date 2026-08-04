@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from doctors.search_views import GlobalSearchView, GlobalSearchSuggestView
+from doctors.views import InterviewListView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -33,6 +34,9 @@ urlpatterns = [
     # Search
     path('api/search/', GlobalSearchView.as_view(), name='global-search'),
     path('api/search/suggest/', GlobalSearchSuggestView.as_view(), name='global-search-suggest'),
+
+    # Video interviews (public aggregate across doctors)
+    path('api/interviews/', InterviewListView.as_view(), name='interview-list'),
 
 ]
 

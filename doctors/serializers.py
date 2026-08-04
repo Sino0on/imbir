@@ -10,6 +10,30 @@ class InterviewSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'video_url', 'priority')
 
 
+class PublicInterviewSerializer(serializers.ModelSerializer):
+    doctor_id = serializers.IntegerField(source='doctor.user_id')
+    doctor_name = serializers.CharField(source='doctor.user.full_name')
+    doctor_specialty = serializers.SerializerMethodField()
+    doctor_photo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Interview
+        fields = (
+            'id', 'title', 'video_url', 'priority',
+            'doctor_id', 'doctor_name', 'doctor_specialty', 'doctor_photo',
+        )
+
+    def get_doctor_specialty(self, obj):
+        spec = obj.doctor.primary_specializations.first()
+        return spec.name if spec else ''
+
+    def get_doctor_photo(self, obj):
+        if not obj.doctor.photo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.doctor.photo.url) if request else obj.doctor.photo.url
+
+
 class DoctorDetailSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='user.id')
     full_name = serializers.SerializerMethodField()
