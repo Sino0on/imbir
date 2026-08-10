@@ -7,6 +7,7 @@ from .client import get_webhook_receiver
 logger = logging.getLogger(__name__)
 
 _HANDLERS = {
+    'room_started': services.handle_room_started,
     'participant_joined': services.handle_participant_joined,
     'participant_left': services.handle_participant_left,
     'room_finished': services.handle_room_finished,

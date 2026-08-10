@@ -156,6 +156,16 @@ def handle_participant_left(event) -> None:
         finish_consultation(appointment)
 
 
+def handle_room_started(event) -> None:
+    appointment = _get_appointment_by_room(event.room.name)
+    if appointment is None:
+        return
+    logger.info(
+        'LiveKit: получено событие room_started consultation=%s sid=%s',
+        appointment.id, event.room.sid,
+    )
+
+
 def handle_room_finished(event) -> None:
     appointment = _get_appointment_by_room(event.room.name)
     if appointment is None:
@@ -211,7 +221,7 @@ def start_recording(appointment: Appointment) -> None:
     request = api.RoomCompositeEgressRequest(
         room_name=appointment.room_name,
         layout='speaker',
-        file_outputs=[_build_file_output(appointment)],
+        file=_build_file_output(appointment),
     )
 
     try:
