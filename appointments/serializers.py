@@ -120,7 +120,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'guest_name', 'guest_phone', 'guest_email',
             'doctor', 'clinic', 'service',
             'date', 'time', 'is_online', 'google_meet_link',
-            'status', 'notes',
+            'status', 'notes', 'ai_summary',
             'created_at',
         )
 

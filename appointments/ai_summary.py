@@ -83,7 +83,7 @@ def generate_and_deliver_summary(appointment) -> None:
         'AI-резюме consultation=%s: расшифровка готова (%d симв.)',
         appointment.id, len(transcript),
     )
-
+    logger.info(f'{transcript[:1000]}...')  # Логируем первые 1000 символов расшифровки
     summary = summarize_transcript(transcript)
     logger.info('AI-резюме consultation=%s: резюме сформировано', appointment.id)
 
