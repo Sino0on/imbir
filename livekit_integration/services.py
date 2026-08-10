@@ -326,7 +326,8 @@ def fetch_recording_bytes(appointment: Appointment) -> tuple[bytes, str]:
 def dispatch_summary_task(appointment: Appointment) -> None:
     """Точка входа для дальнейшей AI-обработки: ставим Celery-задачу в очередь.
 
-    Сама задача пока — заглушка (см. appointments/tasks.py).
+    Задача ждёт готовности записи и строит резюме через appointments.ai_summary
+    (расшифровка Whisper → резюме GPT-4o-mini → доставка в чат).
     """
     from appointments.tasks import generate_consultation_summary
 
