@@ -289,21 +289,36 @@ def fetch_recording_bytes(appointment: Appointment) -> tuple[bytes, str]:
     """Скачивает файл записи консультации. Возвращает (содержимое, имя_файла).
 
     location (appointment.recording_url) — то, что LiveKit Egress вернул в file_results:
-    полный URL (S3 upload может отдавать пресайн-ссылку), ключ в S3-бакете или локальный
-    путь на диске egress-воркера (см. LIVEKIT_RECORDING_LOCAL_PATH).
+    URL до объекта в S3-совместимом хранилище (без подписи — это не presigned-ссылка,
+    просто адрес бакета+ключа) или локальный путь на диске egress-воркера
+    (см. LIVEKIT_RECORDING_LOCAL_PATH).
+
+    Если бакет у нас настроен (LIVEKIT_S3_BUCKET), он приватный, и скачивать нужно
+    только через авторизованный boto3-клиент — обычный requests.get() без подписи
+    получит 400/403 от хранилища, даже если location выглядит как обычный URL.
     """
     location = appointment.recording_url
     if not location:
         raise ValueError(f'consultation={appointment.id}: recording_url пуст')
 
-    if location.startswith('http://') or location.startswith('https://'):
-        import requests
-        resp = requests.get(location, timeout=120)
-        resp.raise_for_status()
-        return resp.content, os.path.basename(location.split('?', 1)[0])
-
     if settings.LIVEKIT_S3_BUCKET:
         import boto3
+
+        if location.startswith('http://') or location.startswith('https://'):
+            from urllib.parse import urlparse, unquote
+            key = unquote(urlparse(location).path)
+        else:
+            key = location
+
+        # LIVEKIT_RECORDING_LOCAL_PATH обычно начинается с "/" (например "/out/{...}"),
+        # и этот "/" — часть реального ключа объекта в бакете, его нельзя обрезать.
+        # Бакет из пути убираем только если он там явно присутствует (path-style адрес).
+        bucket = settings.LIVEKIT_S3_BUCKET
+        if key.startswith(f'/{bucket}/'):
+            key = key[len(bucket) + 1:]
+        elif key.startswith(f'{bucket}/'):
+            key = key[len(bucket):]
+
         s3 = boto3.client(
             's3',
             aws_access_key_id=settings.LIVEKIT_S3_ACCESS_KEY,
@@ -311,11 +326,14 @@ def fetch_recording_bytes(appointment: Appointment) -> tuple[bytes, str]:
             region_name=settings.LIVEKIT_S3_REGION or None,
             endpoint_url=settings.LIVEKIT_S3_ENDPOINT or None,
         )
-        key = location.lstrip('/')
-        if key.startswith(f'{settings.LIVEKIT_S3_BUCKET}/'):
-            key = key[len(settings.LIVEKIT_S3_BUCKET) + 1:]
         obj = s3.get_object(Bucket=settings.LIVEKIT_S3_BUCKET, Key=key)
         return obj['Body'].read(), os.path.basename(key)
+
+    if location.startswith('http://') or location.startswith('https://'):
+        import requests
+        resp = requests.get(location, timeout=120)
+        resp.raise_for_status()
+        return resp.content, os.path.basename(location.split('?', 1)[0])
 
     with open(location, 'rb') as f:
         return f.read(), os.path.basename(location)
