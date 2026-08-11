@@ -31,11 +31,13 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'author', 'target_type', 'target_id', 'appointment_id', 'reply', 'created_at')
 
     def get_author(self, obj):
-        return {
+        payload = {
             'id': obj.author.id,
             'full_name': obj.author.full_name,
-            'image_url': obj.author.image_url
         }
+        if obj.author.avatar:
+            payload['avatar_url'] = obj.author.avatar.url
+        return payload
 
     def get_target_id(self, obj):
         if obj.target_type == Review.TargetType.DOCTOR and obj.doctor:
