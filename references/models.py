@@ -35,3 +35,43 @@ class Specialization(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SiteSettings(models.Model):
+    """
+    Общесайтовые настройки (соцсети, контакты, юридические тексты) — то, что
+    нужно для футера и подобных мест. Синглтон: всегда ровно одна запись,
+    редактируется через админку без деплоя. Используйте SiteSettings.load().
+    """
+    facebook_url = models.URLField(blank=True)
+    instagram_url = models.URLField(blank=True)
+    twitter_url = models.URLField(blank=True, verbose_name='X (Twitter)')
+    linkedin_url = models.URLField(blank=True)
+
+    contact_email = models.EmailField(blank=True)
+    contact_phone = models.CharField(max_length=20, blank=True)
+    address = models.CharField(max_length=255, blank=True)
+
+    terms_text = models.TextField(blank=True, verbose_name='Условия и положения')
+    privacy_policy_text = models.TextField(blank=True, verbose_name='Политика конфиденциальности')
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Настройки сайта'
+        verbose_name_plural = 'Настройки сайта'
+
+    def __str__(self):
+        return 'Настройки сайта'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def load(cls) -> 'SiteSettings':
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

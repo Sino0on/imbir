@@ -7,8 +7,8 @@ from rest_framework.permissions import AllowAny
 
 from users.models import DoctorProfile, ClinicProfile
 from services.models import Service
-from .models import Specialization
-from .serializers import SpecializationSerializer
+from .models import Specialization, SiteSettings
+from .serializers import SpecializationSerializer, SiteSettingsSerializer
 
 
 # Тестовый мусор, попавший в прод. Реальная чистка — через админку;
@@ -198,3 +198,19 @@ class CountryCodesView(APIView):
 
     def get(self, request):
         return Response({'data': COUNTRY_CODES})
+
+
+_SITE_SETTINGS_RESPONSE = inline_serializer('SiteSettingsResponse', fields={
+    'data': SiteSettingsSerializer(),
+})
+
+
+@extend_schema(
+    responses={200: _SITE_SETTINGS_RESPONSE}, tags=['References'],
+    summary='Настройки сайта (соцсети, контакты, юридические тексты для футера)',
+)
+class SiteSettingsView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        return Response({'data': SiteSettingsSerializer(SiteSettings.load()).data})
