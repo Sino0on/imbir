@@ -128,6 +128,11 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Публичный домен бэкенда (со схемой, без слэша на конце) — нужен там, где строим
+# абсолютные ссылки на media вне HTTP-запроса (например, в Celery-задачах),
+# и request.build_absolute_uri() недоступен. Пример: https://api.imbir.sino0on.ru
+SITE_URL = config('SITE_URL', default='').rstrip('/')
+
 # За nginx (HTTPS → http на бэкенд) доверяем заголовку X-Forwarded-Proto,
 # чтобы request.build_absolute_uri() отдавал media/static по https.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

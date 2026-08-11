@@ -70,14 +70,19 @@ class Appointment(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
 
-    # --- LiveKit Egress (запись консультации) ---
-    egress_id = models.CharField(max_length=255, blank=True, default='')
-    egress_status = models.CharField(max_length=32, blank=True, default='')
-    recording_url = models.TextField(blank=True, default='')
+    # --- LiveKit Egress (запись консультации отдельными дорожками по ролям —
+    # так расшифровка потом однозначно относится к врачу или пациенту) ---
+    doctor_egress_id = models.CharField(max_length=255, blank=True, default='')
+    doctor_egress_status = models.CharField(max_length=32, blank=True, default='')
+    doctor_recording_url = models.TextField(blank=True, default='')
+    patient_egress_id = models.CharField(max_length=255, blank=True, default='')
+    patient_egress_status = models.CharField(max_length=32, blank=True, default='')
+    patient_recording_url = models.TextField(blank=True, default='')
 
-    # --- AI-резюме консультации (расшифровка записи → саммари в чат) ---
+    # --- AI-резюме консультации (расшифровка записей по ролям → саммари в чат + docx) ---
     ai_summary = models.TextField(blank=True, default='')
     ai_summary_generated_at = models.DateTimeField(null=True, blank=True)
+    ai_summary_docx_url = models.TextField(blank=True, default='')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

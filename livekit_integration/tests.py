@@ -28,17 +28,17 @@ class FetchRecordingBytesTests(TestCase):
 
     def test_empty_recording_url_raises(self):
         with self.assertRaises(ValueError):
-            fetch_recording_bytes(self.appointment)
+            fetch_recording_bytes(self.appointment, 'doctor')
 
     @override_settings(LIVEKIT_S3_BUCKET='')
     def test_local_path_reads_file(self):
-        with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as f:
-            f.write(b'fake-video-bytes')
+        with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as f:
+            f.write(b'fake-audio-bytes')
             path = f.name
         try:
-            self.appointment.recording_url = path
-            content, filename = fetch_recording_bytes(self.appointment)
-            self.assertEqual(content, b'fake-video-bytes')
+            self.appointment.doctor_recording_url = path
+            content, filename = fetch_recording_bytes(self.appointment, 'doctor')
+            self.assertEqual(content, b'fake-audio-bytes')
             self.assertEqual(filename, os.path.basename(path))
         finally:
             os.remove(path)

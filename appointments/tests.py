@@ -123,23 +123,34 @@ class ConsultationSummaryTaskTests(APITestCase):
             generate_consultation_summary.run(self.appointment.id)
         mock_gen.assert_not_called()
 
-    def test_egress_failed_skips_summary(self):
+    def test_both_roles_failed_skips_summary(self):
         from appointments.tasks import generate_consultation_summary
 
-        self.appointment.egress_id = 'EG_123'
-        self.appointment.egress_status = 'EGRESS_FAILED'
-        self.appointment.save(update_fields=['egress_id', 'egress_status'])
+        self.appointment.doctor_egress_id = 'EG_doc'
+        self.appointment.doctor_egress_status = 'EGRESS_FAILED'
+        self.appointment.patient_egress_id = 'EG_pat'
+        self.appointment.patient_egress_status = 'EGRESS_FAILED'
+        self.appointment.save(update_fields=[
+            'doctor_egress_id', 'doctor_egress_status', 'patient_egress_id', 'patient_egress_status',
+        ])
 
         with patch('appointments.ai_summary.generate_and_deliver_summary') as mock_gen:
             generate_consultation_summary.run(self.appointment.id)
         mock_gen.assert_not_called()
 
-    def test_recording_not_ready_retries(self):
+    def test_one_role_not_ready_retries(self):
+        """Врач уже готов, пациент ещё пишется — задача должна ждать обе стороны."""
         from appointments.tasks import generate_consultation_summary
 
-        self.appointment.egress_id = 'EG_123'
-        self.appointment.egress_status = 'EGRESS_ACTIVE'
-        self.appointment.save(update_fields=['egress_id', 'egress_status'])
+        self.appointment.doctor_egress_id = 'EG_doc'
+        self.appointment.doctor_egress_status = 'EGRESS_COMPLETE'
+        self.appointment.doctor_recording_url = 'https://example.com/doctor.ogg'
+        self.appointment.patient_egress_id = 'EG_pat'
+        self.appointment.patient_egress_status = 'EGRESS_ACTIVE'
+        self.appointment.save(update_fields=[
+            'doctor_egress_id', 'doctor_egress_status', 'doctor_recording_url',
+            'patient_egress_id', 'patient_egress_status',
+        ])
 
         with patch.object(generate_consultation_summary, 'retry', side_effect=Exception('retried')) as mock_retry:
             with self.assertRaises(Exception):
@@ -149,10 +160,32 @@ class ConsultationSummaryTaskTests(APITestCase):
     def test_recording_ready_generates_summary(self):
         from appointments.tasks import generate_consultation_summary
 
-        self.appointment.egress_id = 'EG_123'
-        self.appointment.egress_status = 'EGRESS_COMPLETE'
-        self.appointment.recording_url = 'https://example.com/rec.mp4'
-        self.appointment.save(update_fields=['egress_id', 'egress_status', 'recording_url'])
+        self.appointment.doctor_egress_id = 'EG_doc'
+        self.appointment.doctor_egress_status = 'EGRESS_COMPLETE'
+        self.appointment.doctor_recording_url = 'https://example.com/doctor.ogg'
+        self.appointment.patient_egress_id = 'EG_pat'
+        self.appointment.patient_egress_status = 'EGRESS_COMPLETE'
+        self.appointment.patient_recording_url = 'https://example.com/patient.ogg'
+        self.appointment.save(update_fields=[
+            'doctor_egress_id', 'doctor_egress_status', 'doctor_recording_url',
+            'patient_egress_id', 'patient_egress_status', 'patient_recording_url',
+        ])
+
+        with patch('appointments.ai_summary.generate_and_deliver_summary') as mock_gen:
+            generate_consultation_summary.run(self.appointment.id)
+        mock_gen.assert_called_once()
+
+    def test_patient_never_spoke_still_generates_summary(self):
+        """Пациент не публиковал микрофон (egress не запускался) — не ждём его вечно,
+        строим резюме по тому, что есть у врача."""
+        from appointments.tasks import generate_consultation_summary
+
+        self.appointment.doctor_egress_id = 'EG_doc'
+        self.appointment.doctor_egress_status = 'EGRESS_COMPLETE'
+        self.appointment.doctor_recording_url = 'https://example.com/doctor.ogg'
+        self.appointment.save(update_fields=[
+            'doctor_egress_id', 'doctor_egress_status', 'doctor_recording_url',
+        ])
 
         with patch('appointments.ai_summary.generate_and_deliver_summary') as mock_gen:
             generate_consultation_summary.run(self.appointment.id)

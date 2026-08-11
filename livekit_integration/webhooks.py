@@ -10,6 +10,7 @@ _HANDLERS = {
     'room_started': services.handle_room_started,
     'participant_joined': services.handle_participant_joined,
     'participant_left': services.handle_participant_left,
+    'track_published': services.handle_track_published,
     'room_finished': services.handle_room_finished,
     'egress_started': services.handle_egress_updated,
     'egress_updated': services.handle_egress_updated,

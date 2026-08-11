@@ -15,7 +15,9 @@ class AppointmentAdmin(admin.ModelAdmin):
         'created_at', 'updated_at',
         'room_name', 'livekit_room_created', 'doctor_joined', 'patient_joined',
         'consultation_status', 'started_at', 'ended_at',
-        'egress_id', 'egress_status', 'recording_url',
+        'doctor_egress_id', 'doctor_egress_status', 'doctor_recording_url',
+        'patient_egress_id', 'patient_egress_status', 'patient_recording_url',
+        'ai_summary', 'ai_summary_generated_at', 'ai_summary_docx_url',
     )
     date_hierarchy = 'date'
     list_per_page = 500
@@ -27,7 +29,11 @@ class AppointmentAdmin(admin.ModelAdmin):
             'room_name', 'livekit_room_created', 'doctor_joined', 'patient_joined',
             'consultation_status', 'started_at', 'ended_at',
         )}),
-        ('LiveKit — запись', {'fields': ('egress_id', 'egress_status', 'recording_url')}),
+        ('LiveKit — запись', {'fields': (
+            'doctor_egress_id', 'doctor_egress_status', 'doctor_recording_url',
+            'patient_egress_id', 'patient_egress_status', 'patient_recording_url',
+        )}),
+        ('AI-резюме', {'fields': ('ai_summary', 'ai_summary_generated_at', 'ai_summary_docx_url')}),
         ('Дополнительно', {'fields': ('notes', 'created_at', 'updated_at')}),
     )
 

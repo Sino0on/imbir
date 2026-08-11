@@ -34,3 +34,4 @@ tzdata==2026.2
 uritemplate==4.2.0
 daphne
 phonenumbers==9.0.34
+python-docx==1.1.2

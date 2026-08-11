@@ -119,12 +119,6 @@ def handle_participant_joined(event) -> None:
     if update_fields:
         appointment.save(update_fields=update_fields + ['updated_at'])
 
-    if (
-        appointment.doctor_joined and appointment.patient_joined
-        and settings.LIVEKIT_RECORDING_ENABLED and not appointment.egress_id
-    ):
-        start_recording(appointment)
-
 
 def handle_participant_left(event) -> None:
     appointment = _get_appointment_by_room(event.room.name)
@@ -156,6 +150,37 @@ def handle_participant_left(event) -> None:
         finish_consultation(appointment)
 
 
+def handle_track_published(event) -> None:
+    """Публикация микрофона участником — запускаем запись именно его дорожки.
+
+    Записываем врача и пациента отдельными аудиодорожками (не общую комнату),
+    чтобы потом однозначно знать, кто что сказал, без угадывания по смыслу.
+    """
+    if not settings.LIVEKIT_RECORDING_ENABLED:
+        return
+
+    track = event.track
+    if track.source != api.TrackSource.MICROPHONE:
+        return
+
+    appointment = _get_appointment_by_room(event.room.name)
+    if appointment is None:
+        return
+
+    role = role_from_identity(event.participant.identity)
+    if role not in (token_service.DOCTOR_ROLE, token_service.PATIENT_ROLE):
+        return
+
+    if getattr(appointment, f'{role}_egress_id'):
+        logger.info(
+            'LiveKit: запись для роли %s уже запущена consultation=%s',
+            role, appointment.id,
+        )
+        return
+
+    start_track_recording(appointment, role, track.sid)
+
+
 def handle_room_started(event) -> None:
     appointment = _get_appointment_by_room(event.room.name)
     if appointment is None:
@@ -183,22 +208,26 @@ def finish_consultation(appointment: Appointment) -> None:
     appointment.save(update_fields=['consultation_status', 'ended_at', 'updated_at'])
     logger.info('LiveKit: консультация завершена consultation=%s', appointment.id)
 
-    if appointment.egress_id and appointment.egress_status not in _EGRESS_TERMINAL_STATUSES:
-        stop_recording(appointment)
+    for role in (token_service.DOCTOR_ROLE, token_service.PATIENT_ROLE):
+        egress_id = getattr(appointment, f'{role}_egress_id')
+        egress_status = getattr(appointment, f'{role}_egress_status')
+        if egress_id and egress_status not in _EGRESS_TERMINAL_STATUSES:
+            stop_track_recording(appointment, role)
 
     dispatch_summary_task(appointment)
 
 
 # --- Запись (Egress) ---------------------------------------------------------
+#
+# Каждый участник пишется отдельной аудиодорожкой (TrackEgress), а не общей
+# комнатой (RoomCompositeEgress) — так расшифровка каждого файла достоверно
+# принадлежит конкретной роли, без угадывания "кто это сказал" по смыслу фразы.
 
-def _build_file_output(appointment: Appointment) -> 'api.EncodedFileOutput':
+def _build_track_output(appointment: Appointment, role: str) -> 'api.DirectFileOutput':
     filepath = settings.LIVEKIT_RECORDING_LOCAL_PATH.format(
-        room_name=appointment.room_name, time='{time}'
+        room_name=f'{appointment.room_name}-{role}', time='{time}'
     )
-    output = api.EncodedFileOutput(
-        file_type=api.EncodedFileType.MP4,
-        filepath=filepath,
-    )
+    output = api.DirectFileOutput(filepath=filepath)
     if settings.LIVEKIT_S3_BUCKET:
         output.s3.CopyFrom(api.S3Upload(
             access_key=settings.LIVEKIT_S3_ACCESS_KEY,
@@ -210,85 +239,107 @@ def _build_file_output(appointment: Appointment) -> 'api.EncodedFileOutput':
     return output
 
 
-def start_recording(appointment: Appointment) -> None:
-    if appointment.egress_id:
+def start_track_recording(appointment: Appointment, role: str, track_sid: str) -> None:
+    if getattr(appointment, f'{role}_egress_id'):
         logger.info(
-            'LiveKit: запись уже запущена consultation=%s egress_id=%s',
-            appointment.id, appointment.egress_id,
+            'LiveKit: запись роли %s уже запущена consultation=%s',
+            role, appointment.id,
         )
         return
 
-    request = api.RoomCompositeEgressRequest(
+    request = api.TrackEgressRequest(
         room_name=appointment.room_name,
-        layout='speaker',
-        file=_build_file_output(appointment),
+        track_id=track_sid,
+        file=_build_track_output(appointment, role),
     )
 
     try:
-        info = client.run_sync(lambda c: c.egress.start_room_composite_egress(request))
+        info = client.run_sync(lambda c: c.egress.start_track_egress(request))
     except Exception:
-        logger.exception('LiveKit: не удалось запустить запись consultation=%s', appointment.id)
+        logger.exception(
+            'LiveKit: не удалось запустить запись роли %s consultation=%s',
+            role, appointment.id,
+        )
         return
 
-    appointment.egress_id = info.egress_id
-    appointment.egress_status = api.EgressStatus.Name(info.status)
-    appointment.save(update_fields=['egress_id', 'egress_status', 'updated_at'])
+    setattr(appointment, f'{role}_egress_id', info.egress_id)
+    setattr(appointment, f'{role}_egress_status', api.EgressStatus.Name(info.status))
+    appointment.save(update_fields=[f'{role}_egress_id', f'{role}_egress_status', 'updated_at'])
     logger.info(
-        'LiveKit: запись запущена consultation=%s egress_id=%s',
-        appointment.id, appointment.egress_id,
+        'LiveKit: запись роли %s запущена consultation=%s egress_id=%s',
+        role, appointment.id, info.egress_id,
     )
 
 
-def stop_recording(appointment: Appointment) -> None:
-    if not appointment.egress_id:
+def stop_track_recording(appointment: Appointment, role: str) -> None:
+    egress_id = getattr(appointment, f'{role}_egress_id')
+    if not egress_id:
         return
     try:
-        client.run_sync(lambda c: c.egress.stop_egress(api.StopEgressRequest(egress_id=appointment.egress_id)))
-        logger.info('LiveKit: запись остановлена consultation=%s egress_id=%s', appointment.id, appointment.egress_id)
+        client.run_sync(lambda c: c.egress.stop_egress(api.StopEgressRequest(egress_id=egress_id)))
+        logger.info(
+            'LiveKit: запись роли %s остановлена consultation=%s egress_id=%s',
+            role, appointment.id, egress_id,
+        )
     except Exception:
-        logger.exception('LiveKit: не удалось остановить запись consultation=%s', appointment.id)
+        logger.exception(
+            'LiveKit: не удалось остановить запись роли %s consultation=%s',
+            role, appointment.id,
+        )
 
 
 def handle_egress_updated(event) -> None:
     """egress_started / egress_updated / egress_ended — все несут egress_info."""
+    from django.db.models import Q
+
     info = event.egress_info
     if not info or not info.egress_id:
         return
 
-    appointment = Appointment.objects.filter(egress_id=info.egress_id).order_by('-created_at').first()
+    appointment = (
+        Appointment.objects
+        .filter(Q(doctor_egress_id=info.egress_id) | Q(patient_egress_id=info.egress_id))
+        .order_by('-created_at')
+        .first()
+    )
     if appointment is None:
         logger.warning('LiveKit webhook: консультация для egress_id=%s не найдена', info.egress_id)
         return
 
+    role = (
+        token_service.DOCTOR_ROLE if appointment.doctor_egress_id == info.egress_id
+        else token_service.PATIENT_ROLE
+    )
+
     status_name = api.EgressStatus.Name(info.status)
     update_fields = []
-    if appointment.egress_status != status_name:
-        appointment.egress_status = status_name
-        update_fields.append('egress_status')
+    if getattr(appointment, f'{role}_egress_status') != status_name:
+        setattr(appointment, f'{role}_egress_status', status_name)
+        update_fields.append(f'{role}_egress_status')
 
     if status_name == 'EGRESS_COMPLETE' and info.file_results:
         recording_url = info.file_results[0].location
-        if recording_url and appointment.recording_url != recording_url:
-            appointment.recording_url = recording_url
-            update_fields.append('recording_url')
+        if recording_url and getattr(appointment, f'{role}_recording_url') != recording_url:
+            setattr(appointment, f'{role}_recording_url', recording_url)
+            update_fields.append(f'{role}_recording_url')
         logger.info(
-            'LiveKit: запись завершена consultation=%s egress_id=%s url=%s',
-            appointment.id, info.egress_id, recording_url,
+            'LiveKit: запись роли %s завершена consultation=%s egress_id=%s url=%s',
+            role, appointment.id, info.egress_id, recording_url,
         )
     elif status_name in ('EGRESS_FAILED', 'EGRESS_ABORTED'):
         logger.error(
-            'LiveKit: ошибка записи consultation=%s egress_id=%s error=%s',
-            appointment.id, info.egress_id, info.error,
+            'LiveKit: ошибка записи роли %s consultation=%s egress_id=%s error=%s',
+            role, appointment.id, info.egress_id, info.error,
         )
 
     if update_fields:
         appointment.save(update_fields=update_fields + ['updated_at'])
 
 
-def fetch_recording_bytes(appointment: Appointment) -> tuple[bytes, str]:
-    """Скачивает файл записи консультации. Возвращает (содержимое, имя_файла).
+def fetch_recording_bytes(appointment: Appointment, role: str) -> tuple[bytes, str]:
+    """Скачивает файл записи роли (doctor/patient). Возвращает (содержимое, имя_файла).
 
-    location (appointment.recording_url) — то, что LiveKit Egress вернул в file_results:
+    location ({role}_recording_url) — то, что LiveKit Egress вернул в file_results:
     URL до объекта в S3-совместимом хранилище (без подписи — это не presigned-ссылка,
     просто адрес бакета+ключа) или локальный путь на диске egress-воркера
     (см. LIVEKIT_RECORDING_LOCAL_PATH).
@@ -297,9 +348,9 @@ def fetch_recording_bytes(appointment: Appointment) -> tuple[bytes, str]:
     только через авторизованный boto3-клиент — обычный requests.get() без подписи
     получит 400/403 от хранилища, даже если location выглядит как обычный URL.
     """
-    location = appointment.recording_url
+    location = getattr(appointment, f'{role}_recording_url')
     if not location:
-        raise ValueError(f'consultation={appointment.id}: recording_url пуст')
+        raise ValueError(f'consultation={appointment.id}: {role}_recording_url пуст')
 
     if settings.LIVEKIT_S3_BUCKET:
         import boto3
