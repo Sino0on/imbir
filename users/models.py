@@ -63,7 +63,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     def image_url(self):
         if self.avatar:
             return self.avatar.url
-        return None
+        return ''
 
 
 class DoctorProfile(models.Model):
