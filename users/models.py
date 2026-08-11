@@ -60,6 +60,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         parts = [self.first_name, self.patronymic or '', self.last_name]
         return ' '.join(p for p in parts if p).strip()
 
+    def image_url(self):
+        if self.avatar:
+            return self.avatar.url
+        return None
+
 
 class DoctorProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='doctor_profile')

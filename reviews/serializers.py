@@ -34,6 +34,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         return {
             'id': obj.author.id,
             'full_name': obj.author.full_name,
+            'image_url': obj.author.image_url
         }
 
     def get_target_id(self, obj):
