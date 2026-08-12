@@ -1,14 +1,16 @@
-from django.db.models import Q
+from django.db.models import Avg, Count, Q
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 
-from users.models import DoctorProfile, ClinicProfile
+from users.models import DoctorProfile, ClinicProfile, User
 from services.models import Service
-from .models import Specialization, SiteSettings
-from .serializers import SpecializationSerializer, SiteSettingsSerializer
+from reviews.models import Review
+from .models import Specialization, SiteSettings, AccountStatus
+from .serializers import SpecializationSerializer, SiteSettingsSerializer, AccountStatusSerializer
 
 
 # Тестовый мусор, попавший в прод. Реальная чистка — через админку;
@@ -214,3 +216,62 @@ class SiteSettingsView(APIView):
 
     def get(self, request):
         return Response({'data': SiteSettingsSerializer(SiteSettings.load()).data})
+
+
+_USER_STATUS_RESPONSE = inline_serializer('UserAccountStatusResponse', fields={
+    'data': inline_serializer('UserAccountStatusData', fields={
+        'user_id': serializers.IntegerField(),
+        'reviews_count': serializers.IntegerField(),
+        'average_rating': serializers.FloatField(allow_null=True),
+        'percent': serializers.FloatField(allow_null=True),
+        'status': AccountStatusSerializer(allow_null=True),
+    }),
+})
+
+
+@extend_schema(
+    responses={200: _USER_STATUS_RESPONSE}, tags=['References'],
+    summary='Статус пользователя по среднему рейтингу оставленных им отзывов',
+    description=(
+        'Средний рейтинг звёзд по всем отзывам, написанным пользователем, переводится '
+        'в проценты (avg/5*100) и сопоставляется с ближайшим по убыванию порогом из '
+        'справочника AccountStatus.percent. Например, средний рейтинг 5.0 → 100% → '
+        'статус с percent=90 ("Витамин С" в текущем справочнике), а 25% → статус '
+        'с percent=10 ("Острый Скальпель"). Если у пользователя нет ни одного '
+        'отзыва — status будет null.'
+    ),
+)
+class UserAccountStatusView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request, user_id):
+        get_object_or_404(User, pk=user_id)
+
+        agg = Review.objects.filter(author_id=user_id).aggregate(
+            avg_rating=Avg('rating'), count=Count('id'),
+        )
+        reviews_count = agg['count'] or 0
+        avg_rating = agg['avg_rating']
+
+        if not reviews_count or avg_rating is None:
+            return Response({'data': {
+                'user_id': user_id,
+                'reviews_count': 0,
+                'average_rating': None,
+                'percent': None,
+                'status': None,
+            }})
+
+        percent = round(float(avg_rating) / 5 * 100, 2)
+        account_status = AccountStatus.objects.filter(percent__lte=percent).order_by('-percent').first()
+
+        return Response({'data': {
+            'user_id': user_id,
+            'reviews_count': reviews_count,
+            'average_rating': round(float(avg_rating), 2),
+            'percent': percent,
+            'status': (
+                AccountStatusSerializer(account_status, context={'request': request}).data
+                if account_status else None
+            ),
+        }})

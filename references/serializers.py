@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Specialization, SiteSettings
+from .models import Specialization, SiteSettings, AccountStatus
 
 
 class SpecializationSerializer(serializers.ModelSerializer):
@@ -25,3 +25,17 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
             'contact_email', 'contact_phone', 'address',
             'terms_text', 'privacy_policy_text',
         )
+
+
+class AccountStatusSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AccountStatus
+        fields = ('id', 'name', 'description', 'percent', 'image')
+
+    def get_image(self, obj):
+        if not obj.image:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if request else obj.image.url

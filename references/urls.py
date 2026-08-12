@@ -10,6 +10,7 @@ from .views import (
     PaymentMethodsView,
     CountryCodesView,
     SiteSettingsView,
+    UserAccountStatusView,
 )
 
 urlpatterns = [
@@ -25,4 +26,5 @@ urlpatterns = [
     # Алиас: фронт обращается к countries/
     path('countries/', CountryCodesView.as_view(), name='ref-countries'),
     path('site-settings/', SiteSettingsView.as_view(), name='ref-site-settings'),
+    path('user-status/<int:user_id>/', UserAccountStatusView.as_view(), name='ref-user-status'),
 ]
