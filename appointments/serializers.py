@@ -121,6 +121,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'doctor', 'clinic', 'service',
             'date', 'time', 'is_online', 'google_meet_link',
             'status', 'notes', 'ai_summary',
+            'ai_summary_docx_url', 'diagnosis', 'recommendations', 'doctor_notes',
             'created_at',
         )
 
