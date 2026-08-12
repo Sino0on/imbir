@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -75,3 +76,26 @@ class SiteSettings(models.Model):
     def load(cls) -> 'SiteSettings':
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class AccountStatus(models.Model):
+    """
+    Статус аккаунта пользователя: активен, заблокирован, удалён и т.д.
+    Используется для фильтрации пользователей в разных местах.
+    """
+    name = models.CharField(max_length=250, verbose_name='Название статуса')
+    image = models.ImageField(upload_to='account_statuses/', null=True, blank=True, verbose_name='Изображение') 
+    description = models.TextField(blank=True, null=True, verbose_name='Описание статуса')
+    percent = models.PositiveIntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name='Процент качества профиля',
+    )
+
+    class Meta:
+        verbose_name = 'Статус аккаунта'
+        verbose_name_plural = 'Статусы аккаунтов'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name

@@ -9,12 +9,18 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.exceptions import TokenError
 
 import random
-from .models import DoctorDocument, ClinicPhoto, ClinicDocument, PasswordResetCode, PhoneVerificationCode
+from .models import (
+    DoctorDocument, ClinicPhoto, ClinicDocument, PasswordResetCode, PhoneVerificationCode,
+    EmailVerificationCode, LoginCode,
+)
 from .serializers import (
     LoginSerializer, UserMeSerializer,
     ClientRegisterSerializer, DoctorRegisterSerializer, ClinicRegisterSerializer,
     PasswordResetVerifySerializer, PasswordResetConfirmSerializer,
     PhoneRegisterRequestSerializer, PhoneRegisterConfirmSerializer,
+    EmailRegisterRequestSerializer, EmailRegisterConfirmSerializer,
+    LoginOTPRequestSerializer, LoginOTPVerifySerializer,
+    VerifyEmailConfirmSerializer, VerifyPhoneConfirmSerializer,
 )
 from users.utils import save_hybrid_documents, send_sms_nikita
 
@@ -315,6 +321,167 @@ class PhoneRegisterConfirmView(APIView):
             'refresh': str(refresh),
             'user': UserMeSerializer(user, context={'request': request}).data,
         }, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    request=EmailRegisterRequestSerializer,
+    responses={200: inline_serializer('EmailRegisterRequestSuccess', fields={'detail': serializers.CharField()})},
+    tags=['auth'],
+)
+class EmailRegisterRequestView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = EmailRegisterRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        # Generate 4-digit code
+        code = f"{random.randint(1000, 9999)}"
+        EmailVerificationCode.objects.create(email=email, code=code)
+
+        subject = "Код подтверждения — Imbir"
+        message = f"Код подтверждения для регистрации в Imbir: {code}"
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL or 'noreply@imbir.kg', [email], fail_silently=True)
+
+        return Response({'detail': 'Код подтверждения отправлен на указанный email.'}, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    request=EmailRegisterConfirmSerializer,
+    responses={201: _TOKEN_RESPONSE},
+    tags=['auth'],
+)
+class EmailRegisterConfirmView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = EmailRegisterConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email']
+        password = serializer.validated_data['password']
+        first_name = serializer.validated_data['first_name']
+        last_name = serializer.validated_data['last_name']
+        verification = serializer.validated_data['verification']
+
+        user = User.objects.create_user(
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            role=User.Role.PATIENT,
+        )
+
+        verification.is_used = True
+        verification.save()
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserMeSerializer(user, context={'request': request}).data,
+        }, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    request=LoginOTPRequestSerializer,
+    responses={200: inline_serializer('LoginOTPRequestSuccess', fields={'detail': serializers.CharField()})},
+    tags=['auth'],
+)
+class LoginOTPRequestView(APIView):
+    """Запросить код входа без пароля — доступно любой существующей роли."""
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = LoginOTPRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        phone = serializer.validated_data['phone']
+
+        code = f"{random.randint(100000, 999999)}"
+
+        if email:
+            user = User.objects.filter(email=email).first()
+            if user:
+                LoginCode.objects.create(email=email, code=code)
+                subject = "Код входа — Imbir"
+                message = f"Код подтверждения для входа в Imbir: {code}"
+                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL or 'noreply@imbir.kg', [email], fail_silently=True)
+            return Response(
+                {'detail': 'Если пользователь существует, письмо с кодом входа отправлено.'},
+                status=status.HTTP_200_OK,
+            )
+
+        user = User.objects.filter(phone=phone).first()
+        if user:
+            LoginCode.objects.create(phone=phone, code=code)
+            message = f"Код подтверждения для входа в Imbir: {code}"
+            send_sms_nikita(phone, message)
+        return Response(
+            {'detail': 'Если пользователь существует, СМС с кодом входа отправлено.'},
+            status=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(request=LoginOTPVerifySerializer, responses={200: _TOKEN_RESPONSE}, tags=['auth'])
+class LoginOTPVerifyView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = LoginOTPVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserMeSerializer(user, context={'request': request}).data,
+        })
+
+
+@extend_schema(
+    request=VerifyEmailConfirmSerializer,
+    responses={200: inline_serializer('VerifyEmailConfirmSuccess', fields={'detail': serializers.CharField()})},
+    tags=['auth'],
+    summary='Подтвердить email кодом перед регистрацией врача/клиники (аккаунт не создаётся)',
+)
+class VerifyEmailConfirmView(APIView):
+    """Подтверждение email без создания аккаунта — шаг перед многошаговой
+    регистрацией врача/клиники. Код запрашивается через EmailRegisterRequestView
+    (тот же /api/auth/verify/email/request/ = /api/auth/register/email/request/)."""
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = VerifyEmailConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        verification = serializer.validated_data['verification']
+        verification.is_used = True
+        verification.save(update_fields=['is_used'])
+
+        return Response({'detail': 'Email подтверждён.'}, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    request=VerifyPhoneConfirmSerializer,
+    responses={200: inline_serializer('VerifyPhoneConfirmSuccess', fields={'detail': serializers.CharField()})},
+    tags=['auth'],
+    summary='Подтвердить телефон кодом перед регистрацией врача/клиники (аккаунт не создаётся)',
+)
+class VerifyPhoneConfirmView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = VerifyPhoneConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        verification = serializer.validated_data['verification']
+        verification.is_used = True
+        verification.save(update_fields=['is_used'])
+
+        return Response({'detail': 'Телефон подтверждён.'}, status=status.HTTP_200_OK)
 
 
 

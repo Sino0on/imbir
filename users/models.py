@@ -364,3 +364,40 @@ class PhoneVerificationCode(models.Model):
         return timezone.now() > self.created_at + timezone.timedelta(minutes=10)
 
 
+class EmailVerificationCode(models.Model):
+    email = models.EmailField()
+    code = models.CharField(max_length=4)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'Код подтверждения email'
+        verbose_name_plural = '↳ Коды подтверждения email'
+
+    def __str__(self):
+        return f'{self.email} -> {self.code}'
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(minutes=10)
+
+
+class LoginCode(models.Model):
+    """OTP для входа без пароля — по email или телефону, любая роль."""
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'Код входа (OTP)'
+        verbose_name_plural = '↳ Коды входа (OTP)'
+
+    def __str__(self):
+        identity = self.email or self.phone or 'unknown'
+        return f'{identity} -> {self.code}'
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(minutes=10)
+
+

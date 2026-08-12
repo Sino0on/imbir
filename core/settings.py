@@ -330,8 +330,26 @@ JAZZMIN_UI_TWEAKS = {
     },
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@imbir.kg'
+# Email (Gmail SMTP) — если EMAIL_HOST_USER/EMAIL_HOST_PASSWORD не заданы в .env,
+# письма просто печатаются в консоль/логи, как и SMS у Nikita без учётных данных.
+# EMAIL_HOST_PASSWORD — это app password Gmail (myaccount.google.com/apppasswords),
+# не обычный пароль от аккаунта: Google требует его при включённой 2FA.
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+    EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+    EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+    EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+    EMAIL_TIMEOUT = 10
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Gmail переписывает From на авторизованный адрес независимо от того, что здесь
+# указано, поэтому по умолчанию берём EMAIL_HOST_USER, а не произвольную строку.
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER or 'noreply@imbir.kg')
 
 # Nikita SMS settings
 NIKITA_SMS_URL = config('NIKITA_SMS_URL', default='https://smspro.nikita.kg/api/send')

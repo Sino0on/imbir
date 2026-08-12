@@ -6,7 +6,7 @@ from doctors.models import Interview
 from .models import (
     ClinicBranch, ClinicDocument, ClinicInvite, ClinicPhoto, ClinicProfile,
     DoctorClinicLink, DoctorDocument, DoctorProfile, PatientProfile, User,
-    PasswordResetCode, PhoneVerificationCode,
+    PasswordResetCode, PhoneVerificationCode, EmailVerificationCode, LoginCode,
 )
 
 
@@ -216,6 +216,22 @@ class PhoneVerificationCodeAdmin(admin.ModelAdmin):
     list_display = ('id', 'phone', 'code', 'is_used', 'created_at')
     list_filter = ('is_used', 'created_at')
     search_fields = ('phone', 'code')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(EmailVerificationCode)
+class EmailVerificationCodeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'email', 'code', 'is_used', 'created_at')
+    list_filter = ('is_used', 'created_at')
+    search_fields = ('email', 'code')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(LoginCode)
+class LoginCodeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'email', 'phone', 'code', 'is_used', 'created_at')
+    list_filter = ('is_used', 'created_at')
+    search_fields = ('email', 'phone', 'code')
     readonly_fields = ('created_at',)
 
 

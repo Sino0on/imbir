@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import ClinicBranch, ClinicInvite, DoctorClinicLink, User, DoctorProfile, ClinicProfile, PasswordResetCode, PhoneVerificationCode
+from django.utils import timezone
+from .models import (
+    ClinicBranch, ClinicInvite, DoctorClinicLink, User, DoctorProfile, ClinicProfile,
+    PasswordResetCode, PhoneVerificationCode, EmailVerificationCode, LoginCode,
+)
 from references.models import Specialization
 from users.utils import get_relative_path_from_url
 
@@ -178,6 +182,33 @@ def _parse_step(value, field_name):
         raise serializers.ValidationError({field_name: 'Ожидается JSON-строка'})
 
 
+# Сколько времени подтверждённый email/телефон считается действительным для
+# финальной отправки многошаговой анкеты врача/клиники (сама анкета может
+# заполняться значительно дольше, чем 10-минутный срок жизни самого кода).
+_CONTACT_VERIFICATION_WINDOW_HOURS = 24
+
+
+def _check_contact_verified(email, phone):
+    """Требует, чтобы email или телефон были недавно подтверждены кодом через
+    /api/auth/verify/email/ или /api/auth/verify/phone/ — иначе анкету
+    заполнить можно, но отправить нельзя."""
+    cutoff = timezone.now() - timezone.timedelta(hours=_CONTACT_VERIFICATION_WINDOW_HOURS)
+
+    email_verified = bool(email) and EmailVerificationCode.objects.filter(
+        email=email, is_used=True, created_at__gte=cutoff,
+    ).exists()
+    phone_verified = bool(phone) and PhoneVerificationCode.objects.filter(
+        phone=phone, is_used=True, created_at__gte=cutoff,
+    ).exists()
+
+    if not email_verified and not phone_verified:
+        raise serializers.ValidationError(
+            'Подтвердите email или телефон кодом перед регистрацией: '
+            'POST /api/auth/verify/email/request/ (или /verify/phone/request/), '
+            'затем /verify/email/confirm/ (или /verify/phone/confirm/).'
+        )
+
+
 class DoctorRegisterSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=8)
     step1 = serializers.CharField()
@@ -208,6 +239,8 @@ class DoctorRegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError({'step1': {'email': 'Email обязателен'}})
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError({'step1': {'email': 'Пользователь с таким email уже существует'}})
+
+        _check_contact_verified(email, s1.get('phone', ''))
 
         for field, msg in [
             ('agree_terms', 'Необходимо принять условия использования'),
@@ -359,6 +392,8 @@ class ClinicRegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError({'step2': {'email': 'Email обязателен'}})
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError({'step2': {'email': 'Пользователь с таким email уже существует'}})
+
+        _check_contact_verified(email, s2.get('phone', ''))
 
         if not s7.get('agree_terms'):
             raise serializers.ValidationError({'step7': 'Необходимо принять условия использования'})
@@ -572,6 +607,158 @@ class PhoneRegisterConfirmSerializer(serializers.Serializer):
 
         if User.objects.filter(phone=phone).exists():
             raise serializers.ValidationError({'phone': 'Пользователь с таким номером телефона уже зарегистрирован'})
+
+        data['verification'] = verification
+        return data
+
+
+class EmailRegisterRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError('Пользователь с таким email уже зарегистрирован')
+        return value
+
+
+class EmailRegisterConfirmSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=4, min_length=4)
+    password = serializers.CharField(write_only=True, min_length=8)
+    first_name = serializers.CharField(max_length=100)
+    last_name = serializers.CharField(max_length=100)
+
+    def validate(self, data):
+        email = data.get('email')
+        code = data.get('code')
+
+        verification = EmailVerificationCode.objects.filter(
+            email=email,
+            code=code,
+            is_used=False
+        ).order_by('-created_at').first()
+
+        if not verification:
+            raise serializers.ValidationError({'code': 'Неверный код подтверждения'})
+
+        if verification.is_expired():
+            raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
+
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError({'email': 'Пользователь с таким email уже зарегистрирован'})
+
+        data['verification'] = verification
+        return data
+
+
+class LoginOTPRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=False, allow_null=True)
+    phone = serializers.CharField(required=False, allow_null=True)
+
+    def validate(self, data):
+        email = (data.get('email') or '').strip() or None
+        phone = (data.get('phone') or '').strip() or None
+
+        if not email and not phone:
+            raise serializers.ValidationError('Необходимо передать email или phone')
+
+        data['email'] = email
+        data['phone'] = phone
+        return data
+
+
+class LoginOTPVerifySerializer(serializers.Serializer):
+    email = serializers.EmailField(required=False, allow_null=True)
+    phone = serializers.CharField(required=False, allow_null=True)
+    code = serializers.CharField(max_length=6, min_length=6)
+
+    def validate(self, data):
+        email = data.get('email')
+        phone = data.get('phone')
+        code = data.get('code')
+
+        if not email and not phone:
+            raise serializers.ValidationError('Необходимо передать email или phone')
+
+        filter_kwargs = {'code': code, 'is_used': False}
+        if email:
+            filter_kwargs['email'] = email
+        else:
+            filter_kwargs['phone'] = phone
+
+        login_code = LoginCode.objects.filter(**filter_kwargs).order_by('-created_at').first()
+
+        if not login_code:
+            raise serializers.ValidationError({'code': 'Неверный код подтверждения'})
+
+        if login_code.is_expired():
+            raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
+
+        try:
+            user = User.objects.get(email=email) if email else User.objects.get(phone=phone)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({'code': 'Пользователь не найден'})
+
+        if not user.is_active:
+            raise serializers.ValidationError('Аккаунт отключён')
+
+        login_code.is_used = True
+        login_code.save(update_fields=['is_used'])
+
+        data['user'] = user
+        return data
+
+
+class VerifyEmailConfirmSerializer(serializers.Serializer):
+    """Подтверждение владения email кодом — без создания аккаунта. Используется
+    как шаг ПЕРЕД отправкой многошаговой анкеты врача/клиники (см. DoctorRegisterSerializer/
+    ClinicRegisterSerializer._check_contact_verified). Код запрашивается тем же
+    /api/auth/verify/email/request/, что и для email-регистрации пациента."""
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=4, min_length=4)
+
+    def validate(self, data):
+        email = data.get('email')
+        code = data.get('code')
+
+        verification = EmailVerificationCode.objects.filter(
+            email=email,
+            code=code,
+            is_used=False
+        ).order_by('-created_at').first()
+
+        if not verification:
+            raise serializers.ValidationError({'code': 'Неверный код подтверждения'})
+
+        if verification.is_expired():
+            raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
+
+        data['verification'] = verification
+        return data
+
+
+class VerifyPhoneConfirmSerializer(serializers.Serializer):
+    """Подтверждение владения телефоном кодом — без создания аккаунта, для
+    анкеты врача/клиники. Код запрашивается тем же /api/auth/verify/phone/request/,
+    что и для phone-регистрации пациента."""
+    phone = serializers.CharField(max_length=20)
+    code = serializers.CharField(max_length=4, min_length=4)
+
+    def validate(self, data):
+        phone = data.get('phone')
+        code = data.get('code')
+
+        verification = PhoneVerificationCode.objects.filter(
+            phone=phone,
+            code=code,
+            is_used=False
+        ).order_by('-created_at').first()
+
+        if not verification:
+            raise serializers.ValidationError({'code': 'Неверный код подтверждения'})
+
+        if verification.is_expired():
+            raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
 
         data['verification'] = verification
         return data

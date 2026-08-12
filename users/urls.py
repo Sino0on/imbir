@@ -3,7 +3,10 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     LoginView, LogoutView, MeView, ClientRegisterView, DoctorRegisterView, ClinicRegisterView,
     PasswordResetRequestView, PasswordResetConfirmView, PasswordResetVerifyView,
-    PhoneRegisterRequestView, PhoneRegisterConfirmView
+    PhoneRegisterRequestView, PhoneRegisterConfirmView,
+    EmailRegisterRequestView, EmailRegisterConfirmView,
+    LoginOTPRequestView, LoginOTPVerifyView,
+    VerifyEmailConfirmView, VerifyPhoneConfirmView,
 )
 
 urlpatterns = [
@@ -19,4 +22,15 @@ urlpatterns = [
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='auth-password-reset-confirm'),
     path('register/phone/request/', PhoneRegisterRequestView.as_view(), name='auth-register-phone-request'),
     path('register/phone/confirm/', PhoneRegisterConfirmView.as_view(), name='auth-register-phone-confirm'),
+    path('register/email/request/', EmailRegisterRequestView.as_view(), name='auth-register-email-request'),
+    path('register/email/confirm/', EmailRegisterConfirmView.as_view(), name='auth-register-email-confirm'),
+    path('login/otp/request/', LoginOTPRequestView.as_view(), name='auth-login-otp-request'),
+    path('login/otp/verify/', LoginOTPVerifyView.as_view(), name='auth-login-otp-verify'),
+
+    # Подтверждение контакта для анкеты врача/клиники (без создания аккаунта) —
+    # отправка кода переиспользует те же вьюхи, что и email/phone-регистрация пациента.
+    path('verify/email/request/', EmailRegisterRequestView.as_view(), name='auth-verify-email-request'),
+    path('verify/email/confirm/', VerifyEmailConfirmView.as_view(), name='auth-verify-email-confirm'),
+    path('verify/phone/request/', PhoneRegisterRequestView.as_view(), name='auth-verify-phone-request'),
+    path('verify/phone/confirm/', VerifyPhoneConfirmView.as_view(), name='auth-verify-phone-confirm'),
 ]
