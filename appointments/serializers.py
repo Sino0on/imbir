@@ -41,15 +41,28 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
                 doctor = DoctorProfile.objects.select_related('user').get(user_id=doctor_id)
             except DoctorProfile.DoesNotExist:
                 raise serializers.ValidationError({'doctor_id': 'Врач не найден.'})
-            
+
             if not doctor.user.is_active or not doctor.is_published:
                 raise serializers.ValidationError({'doctor_id': 'Выбранный врач не принимает записи (не опубликован).'})
-                
+
             if data.get('is_online') and not doctor.is_online_available:
                 raise serializers.ValidationError(
                     {'is_online': 'Этот врач не проводит онлайн-консультации.'}
                 )
-                
+
+            service_id = data.get('service_id')
+            service = None
+            if service_id:
+                from services.models import Service
+                service = Service.objects.filter(id=service_id).first()
+
+            from .utils import find_overlapping_appointment
+            conflict = find_overlapping_appointment(doctor, data['date'], data['time'], service)
+            if conflict:
+                raise serializers.ValidationError(
+                    {'time': 'Врач уже занят в это время — выберите другой слот.'}
+                )
+
         if clinic_id:
             try:
                 clinic = ClinicProfile.objects.select_related('user').get(user_id=clinic_id)
@@ -161,18 +174,52 @@ class AppointmentSerializer(serializers.ModelSerializer):
         }
 
 
-class AppointmentCancelSerializer(serializers.ModelSerializer):
+# Из какого статуса в какие можно переходить. completed/cancelled — конечные,
+# дальше не меняются (переносить/отменять/завершать завершённую или отменённую
+# запись нельзя).
+_ALLOWED_STATUS_TRANSITIONS = {
+    Appointment.Status.PENDING: {
+        Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED, Appointment.Status.CANCELLED,
+    },
+    Appointment.Status.CONFIRMED: {
+        Appointment.Status.COMPLETED, Appointment.Status.CANCELLED,
+    },
+}
+
+# Пациент может только отменить свою запись — подтверждать/завершать приём
+# может только врач или клиника.
+_PATIENT_ALLOWED_STATUSES = {Appointment.Status.CANCELLED}
+
+
+class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = ('status',)
 
     def validate_status(self, value):
-        if value != Appointment.Status.CANCELLED:
-            raise serializers.ValidationError('Можно установить только статус cancelled.')
-        if self.instance.status == Appointment.Status.CANCELLED:
-            raise serializers.ValidationError('Запись уже отменена.')
-        if self.instance.status == Appointment.Status.COMPLETED:
-            raise serializers.ValidationError('Нельзя отменить завершённую запись.')
+        appointment = self.instance
+        current = appointment.status
+
+        if value == current:
+            raise serializers.ValidationError('Запись уже в этом статусе.')
+
+        allowed_next = _ALLOWED_STATUS_TRANSITIONS.get(current, set())
+        if value not in allowed_next:
+            raise serializers.ValidationError(
+                f'Нельзя перевести запись из статуса "{appointment.get_status_display()}" '
+                f'в "{Appointment.Status(value).label}".'
+            )
+
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        is_patient = (
+            bool(user) and user.is_authenticated
+            and appointment.patient_id is not None
+            and appointment.patient_id == user.id
+        )
+        if is_patient and value not in _PATIENT_ALLOWED_STATUSES:
+            raise serializers.ValidationError('Пациент может только отменить запись.')
+
         return value
 
 
@@ -189,5 +236,16 @@ class AppointmentRescheduleSerializer(serializers.Serializer):
             raise serializers.ValidationError('Нельзя перенести отменённую запись.')
         if appointment.status == Appointment.Status.COMPLETED:
             raise serializers.ValidationError('Нельзя перенести завершённую запись.')
+
+        if appointment.doctor:
+            from .utils import find_overlapping_appointment
+            conflict = find_overlapping_appointment(
+                appointment.doctor, data['date'], data['time'], appointment.service,
+                exclude_id=appointment.id,
+            )
+            if conflict:
+                raise serializers.ValidationError(
+                    {'time': 'Врач уже занят в это время — выберите другой слот.'}
+                )
 
         return data

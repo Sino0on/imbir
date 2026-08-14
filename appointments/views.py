@@ -10,7 +10,7 @@ from .models import Appointment
 from .serializers import (
     AppointmentCreateSerializer,
     AppointmentSerializer,
-    AppointmentCancelSerializer,
+    AppointmentStatusUpdateSerializer,
     AppointmentRescheduleSerializer,
 )
 from .utils import generate_meet_link
@@ -36,7 +36,7 @@ class AppointmentDetailView(RetrieveUpdateAPIView):
 
     def get_serializer_class(self):
         if self.request.method == 'PATCH':
-            return AppointmentCancelSerializer
+            return AppointmentStatusUpdateSerializer
         return AppointmentSerializer
 
     def get_object(self):

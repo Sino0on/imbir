@@ -232,3 +232,203 @@ class ConsultationSummaryDeliveryTests(APITestCase):
 
         send_summary_to_chat(self.appointment, 'резюме')
         self.assertEqual(ChatRoom.objects.count(), 0)
+
+
+class AppointmentStatusUpdateTests(APITestCase):
+    """PATCH /api/appointments/{id}/ — переходы статуса, не только отмена."""
+
+    def setUp(self):
+        self.patient = User.objects.create_user(
+            email='status-patient@example.com', password='password123',
+            first_name='Ivan', role=User.Role.PATIENT,
+        )
+        self.doctor_user = User.objects.create_user(
+            email='status-doctor@example.com', password='password123',
+            first_name='Doc', role=User.Role.DOCTOR,
+        )
+        self.doctor = DoctorProfile.objects.create(user=self.doctor_user, is_published=True, city='Бишкек')
+        self.appointment = Appointment.objects.create(
+            patient=self.patient, doctor=self.doctor,
+            date=datetime.date(2026, 8, 20), time=datetime.time(10, 0),
+            status=Appointment.Status.PENDING,
+        )
+        self.url = f'/api/appointments/{self.appointment.pk}/'
+
+    def test_doctor_confirms_pending_appointment(self):
+        self.client.force_authenticate(user=self.doctor_user)
+        response = self.client.patch(self.url, {'status': 'confirmed'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'confirmed')
+
+    def test_doctor_completes_confirmed_appointment(self):
+        self.appointment.status = Appointment.Status.CONFIRMED
+        self.appointment.save(update_fields=['status'])
+
+        self.client.force_authenticate(user=self.doctor_user)
+        response = self.client.patch(self.url, {'status': 'completed'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'completed')
+
+    def test_doctor_completes_pending_appointment_directly(self):
+        # Разрешено пропустить "confirmed" и сразу завершить — не все записи
+        # проходят через явное подтверждение.
+        self.client.force_authenticate(user=self.doctor_user)
+        response = self.client.patch(self.url, {'status': 'completed'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'completed')
+
+    def test_cannot_change_status_of_completed_appointment(self):
+        self.appointment.status = Appointment.Status.COMPLETED
+        self.appointment.save(update_fields=['status'])
+
+        self.client.force_authenticate(user=self.doctor_user)
+        response = self.client.patch(self.url, {'status': 'cancelled'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cannot_change_status_of_cancelled_appointment(self):
+        self.appointment.status = Appointment.Status.CANCELLED
+        self.appointment.save(update_fields=['status'])
+
+        self.client.force_authenticate(user=self.doctor_user)
+        response = self.client.patch(self.url, {'status': 'confirmed'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patient_can_cancel(self):
+        self.client.force_authenticate(user=self.patient)
+        response = self.client.patch(self.url, {'status': 'cancelled'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'cancelled')
+
+    def test_patient_cannot_confirm(self):
+        self.client.force_authenticate(user=self.patient)
+        response = self.client.patch(self.url, {'status': 'confirmed'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.status, Appointment.Status.PENDING)
+
+    def test_patient_cannot_complete(self):
+        self.appointment.status = Appointment.Status.CONFIRMED
+        self.appointment.save(update_fields=['status'])
+
+        self.client.force_authenticate(user=self.patient)
+        response = self.client.patch(self.url, {'status': 'completed'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_same_status_rejected(self):
+        self.client.force_authenticate(user=self.doctor_user)
+        response = self.client.patch(self.url, {'status': 'pending'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class AppointmentOverlapTests(APITestCase):
+    """Запись к врачу учитывает длительность услуги — второй пациент не может
+    занять время, которое уже перекрывается существующей записью."""
+
+    def setUp(self):
+        from services.models import Service
+
+        self.doctor_user = User.objects.create_user(
+            email='overlap-doctor@example.com', password='password123',
+            first_name='Doc', role=User.Role.DOCTOR,
+        )
+        self.doctor = DoctorProfile.objects.create(
+            user=self.doctor_user, is_published=True, city='Бишкек',
+            # 2026-09-01 — вторник; окно шире того, что используют тесты ниже.
+            schedule={'tuesday': {'from': '09:00', 'to': '18:00', 'enabled': True}},
+        )
+        self.patient1 = User.objects.create_user(
+            email='overlap-patient1@example.com', password='password123',
+            first_name='Ivan', role=User.Role.PATIENT,
+        )
+        self.patient2 = User.objects.create_user(
+            email='overlap-patient2@example.com', password='password123',
+            first_name='Petr', role=User.Role.PATIENT,
+        )
+        self.service_60min = Service.objects.create(
+            name='Приём (час)', category='general', duration=60, is_active=True,
+        )
+        self.create_url = '/api/appointments/'
+
+    def test_second_patient_cannot_book_overlapping_slot(self):
+        self.client.force_authenticate(user=self.patient1)
+        r1 = self.client.post(self.create_url, {
+            'doctor_id': self.doctor_user.id,
+            'service_id': self.service_60min.id,
+            'date': '2026-09-01', 'time': '10:00',
+        })
+        self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
+
+        self.client.force_authenticate(user=self.patient2)
+        r2 = self.client.post(self.create_url, {
+            'doctor_id': self.doctor_user.id,
+            'date': '2026-09-01', 'time': '10:30',  # внутри 10:00-11:00 первой записи
+        })
+        self.assertEqual(r2.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_second_patient_can_book_after_service_ends(self):
+        self.client.force_authenticate(user=self.patient1)
+        r1 = self.client.post(self.create_url, {
+            'doctor_id': self.doctor_user.id,
+            'service_id': self.service_60min.id,
+            'date': '2026-09-01', 'time': '10:00',
+        })
+        self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
+
+        self.client.force_authenticate(user=self.patient2)
+        r2 = self.client.post(self.create_url, {
+            'doctor_id': self.doctor_user.id,
+            'date': '2026-09-01', 'time': '11:00',  # ровно после окончания часовой записи
+        })
+        self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
+
+    def test_reschedule_into_occupied_slot_rejected(self):
+        self.client.force_authenticate(user=self.patient1)
+        self.client.post(self.create_url, {
+            'doctor_id': self.doctor_user.id,
+            'service_id': self.service_60min.id,
+            'date': '2026-09-01', 'time': '10:00',
+        })
+
+        self.client.force_authenticate(user=self.patient2)
+        other = self.client.post(self.create_url, {
+            'doctor_id': self.doctor_user.id,
+            'date': '2026-09-01', 'time': '12:00',
+        }).data
+
+        response = self.client.post(f"/api/appointments/{other['id']}/reschedule/", {
+            'date': '2026-09-01', 'time': '10:15',
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_available_slots_blocked_for_full_service_duration(self):
+        self.client.force_authenticate(user=self.patient1)
+        self.client.post(self.create_url, {
+            'doctor_id': self.doctor_user.id,
+            'service_id': self.service_60min.id,
+            'date': '2026-09-01', 'time': '10:00',
+        })
+
+        response = self.client.get(
+            f'/api/doctors/{self.doctor_user.id}/available-slots/', {'date': '2026-09-01'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        slots_by_time = {s['time']: s['available'] for s in response.data['slots']}
+
+        self.assertFalse(slots_by_time.get('10:00'))
+        self.assertFalse(slots_by_time.get('10:30'))
+        self.assertTrue(slots_by_time.get('11:00'))
+
+    def test_available_slots_respects_requested_service_duration(self):
+        self.client.force_authenticate(user=self.patient1)
+        self.client.post(self.create_url, {
+            'doctor_id': self.doctor_user.id,
+            'date': '2026-09-01', 'time': '11:30',  # 30-минутная запись по умолчанию
+        })
+
+        # Спрашиваем часовую услугу в 11:00 — она бы заняла и 11:30, где уже занято.
+        response = self.client.get(
+            f'/api/doctors/{self.doctor_user.id}/available-slots/',
+            {'date': '2026-09-01', 'service_id': self.service_60min.id},
+        )
+        slots_by_time = {s['time']: s['available'] for s in response.data['slots']}
+        self.assertFalse(slots_by_time.get('11:00'))

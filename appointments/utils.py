@@ -6,6 +6,45 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+# Длительность записи по умолчанию, если у услуги не указана (или услуга вообще
+# не выбрана) — совпадает с шагом слотов в DoctorAvailableSlotsView.
+DEFAULT_APPOINTMENT_DURATION_MINUTES = 30
+
+
+def appointment_duration_minutes(service) -> int:
+    if service and service.duration:
+        return service.duration
+    return DEFAULT_APPOINTMENT_DURATION_MINUTES
+
+
+def appointment_time_range(date, time, service):
+    """(start_datetime, end_datetime) записи с этой услугой (или дефолтной длительностью)."""
+    start_dt = datetime.combine(date, time)
+    end_dt = start_dt + timedelta(minutes=appointment_duration_minutes(service))
+    return start_dt, end_dt
+
+
+def find_overlapping_appointment(doctor, date, time, service, exclude_id=None):
+    """Первая активная запись этого врача на эту дату, чей интервал [start, end)
+    пересекается с новым — с учётом длительности услуги каждой из записей.
+    None, если конфликтов нет."""
+    from .models import Appointment
+
+    new_start, new_end = appointment_time_range(date, time, service)
+
+    qs = Appointment.objects.filter(
+        doctor=doctor, date=date,
+        status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED],
+    ).select_related('service')
+    if exclude_id:
+        qs = qs.exclude(pk=exclude_id)
+
+    for existing in qs:
+        existing_start, existing_end = appointment_time_range(existing.date, existing.time, existing.service)
+        if new_start < existing_end and existing_start < new_end:
+            return existing
+    return None
+
 
 def generate_meet_link(appointment_date, appointment_time, title='Онлайн-приём'):
     """

@@ -173,10 +173,23 @@ class DoctorAvailableSlotsView(APIView):
     @extend_schema(
         parameters=[
             OpenApiParameter(name='date', type=str, description='Дата в формате YYYY-MM-DD', required=True),
+            OpenApiParameter(
+                name='service_id', type=int, required=False,
+                description=(
+                    'ID услуги, на которую записывается пациент. Если передан, слот считается '
+                    'доступным только если под всю длительность ЭТОЙ услуги есть свободное окно '
+                    '(иначе используется дефолт в 30 минут).'
+                ),
+            ),
         ],
         tags=['Doctors Catalog'],
         summary='Свободные слоты времени врача',
-        description='Возвращает список 30-минутных интервалов с флагом доступности (available: true/false).'
+        description=(
+            'Возвращает список 30-минутных интервалов с флагом доступности (available: true/false). '
+            'Слот занят, если пересекается с интервалом [время, время + длительность услуги) '
+            'уже существующей записи — длительность берётся из услуги каждой записи '
+            '(30 минут по умолчанию, если услуга не указана).'
+        ),
     )
     def get(self, request, pk):
         from rest_framework.response import Response
@@ -185,6 +198,8 @@ class DoctorAvailableSlotsView(APIView):
         from datetime import datetime, timedelta
         from django.utils import timezone
         from appointments.models import Appointment
+        from appointments.utils import appointment_duration_minutes, appointment_time_range
+        from services.models import Service
 
         doctor_profile = get_object_or_404(
             DoctorProfile.objects.select_related('user').filter(
@@ -227,13 +242,18 @@ class DoctorAvailableSlotsView(APIView):
         except ValueError:
             return Response({'date': date_str, 'slots': []})
 
-        booked_times = set(
-            Appointment.objects.filter(
+        busy_ranges = [
+            appointment_time_range(apt.date, apt.time, apt.service)
+            for apt in Appointment.objects.filter(
                 doctor=doctor_profile,
                 date=target_date,
-                status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED]
-            ).values_list('time', flat=True)
-        )
+                status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED],
+            ).select_related('service')
+        ]
+
+        service_id = request.query_params.get('service_id', '').strip()
+        requested_service = Service.objects.filter(id=service_id).first() if service_id else None
+        requested_duration = appointment_duration_minutes(requested_service)
 
         lunch = doctor_profile.lunch_break or {}
         lunch_start = None
@@ -260,12 +280,22 @@ class DoctorAvailableSlotsView(APIView):
         while current_dt < end_dt:
             slot_time = current_dt.time()
             available = True
+            slot_end_dt = current_dt + timedelta(minutes=requested_duration)
 
-            if slot_time in booked_times:
+            # Вся длительность услуги должна помещаться в рабочие часы врача.
+            if slot_end_dt > end_dt:
+                available = False
+
+            if available and any(
+                current_dt < busy_end and busy_start < slot_end_dt
+                for busy_start, busy_end in busy_ranges
+            ):
                 available = False
 
             if available and lunch_start and lunch_end:
-                if lunch_start <= slot_time < lunch_end:
+                lunch_start_dt = datetime.combine(target_date, lunch_start)
+                lunch_end_dt = datetime.combine(target_date, lunch_end)
+                if current_dt < lunch_end_dt and lunch_start_dt < slot_end_dt:
                     available = False
 
             if available and target_date < local_today:
