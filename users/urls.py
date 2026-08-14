@@ -7,6 +7,7 @@ from .views import (
     EmailRegisterRequestView, EmailRegisterConfirmView,
     LoginOTPRequestView, LoginOTPVerifyView,
     VerifyEmailConfirmView, VerifyPhoneConfirmView,
+    InviteValidateView,
 )
 
 urlpatterns = [
@@ -33,4 +34,6 @@ urlpatterns = [
     path('verify/email/confirm/', VerifyEmailConfirmView.as_view(), name='auth-verify-email-confirm'),
     path('verify/phone/request/', PhoneRegisterRequestView.as_view(), name='auth-verify-phone-request'),
     path('verify/phone/confirm/', VerifyPhoneConfirmView.as_view(), name='auth-verify-phone-confirm'),
+
+    path('invite/validate/', InviteValidateView.as_view(), name='auth-invite-validate'),
 ]

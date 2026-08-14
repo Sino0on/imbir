@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer, OpenApiParameter
 from rest_framework import serializers, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,8 +11,9 @@ from rest_framework_simplejwt.exceptions import TokenError
 import random
 from .models import (
     DoctorDocument, ClinicPhoto, ClinicDocument, PasswordResetCode, PhoneVerificationCode,
-    EmailVerificationCode, LoginCode,
+    EmailVerificationCode, LoginCode, ClinicInvite,
 )
+from clinics.serializers import ClinicListSerializer, ClinicBranchSerializer
 from .serializers import (
     LoginSerializer, UserMeSerializer,
     ClientRegisterSerializer, DoctorRegisterSerializer, ClinicRegisterSerializer,
@@ -482,6 +483,67 @@ class VerifyPhoneConfirmView(APIView):
         verification.save(update_fields=['is_used'])
 
         return Response({'detail': 'Телефон подтверждён.'}, status=status.HTTP_200_OK)
+
+
+_INVITE_VALIDATE_RESPONSE = inline_serializer('InviteValidateResponse', fields={
+    'data': inline_serializer('InviteValidateData', fields={
+        'valid': serializers.BooleanField(),
+        'clinic': ClinicListSerializer(allow_null=True),
+        'branch': ClinicBranchSerializer(allow_null=True),
+    }),
+})
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            name='invite_clinic_id', type=int, location=OpenApiParameter.QUERY, required=True,
+            description='user_id клиники — то же значение, что потом уходит в /register/doctor/.',
+        ),
+        OpenApiParameter(
+            name='invite_branch_id', type=int, location=OpenApiParameter.QUERY, required=False,
+            description='id филиала, если приглашение выдано на конкретный филиал.',
+        ),
+    ],
+    responses={200: _INVITE_VALIDATE_RESPONSE},
+    tags=['auth'],
+    summary='Проверить пригласительную ссылку клиники до начала регистрации врача',
+    description=(
+        'Публичный эндпоинт для welcome-экрана перед 7-шаговой анкетой врача: показывает, '
+        'действителен ли инвайт, и карточку клиники (+ филиала), не дожидаясь финальной '
+        'отправки формы. Логика поиска инвайта та же, что и в самой регистрации — '
+        'валидность не гарантирует, что она не изменится к моменту сабмита (клиника может '
+        'отозвать инвайт), финальная проверка всё равно происходит на /register/doctor/.'
+    ),
+)
+class InviteValidateView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        clinic_id = request.query_params.get('invite_clinic_id', '').strip()
+        branch_id = request.query_params.get('invite_branch_id', '').strip()
+
+        if not clinic_id:
+            return Response(
+                {'detail': 'Параметр invite_clinic_id обязателен.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        qs = ClinicInvite.objects.select_related('clinic__user', 'branch').filter(
+            clinic__user_id=clinic_id, is_active=True,
+        )
+        if branch_id:
+            qs = qs.filter(branch_id=branch_id)
+        invite = qs.order_by('-created_at').first()
+
+        if not invite or not invite.is_valid:
+            return Response({'data': {'valid': False, 'clinic': None, 'branch': None}})
+
+        return Response({'data': {
+            'valid': True,
+            'clinic': ClinicListSerializer(invite.clinic, context={'request': request}).data,
+            'branch': ClinicBranchSerializer(invite.branch).data if invite.branch else None,
+        }})
 
 
 
