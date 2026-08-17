@@ -1,5 +1,285 @@
 [
   {
+    "model": "references.specialization",
+    "pk": 1,
+    "fields": {
+      "name": "anti-age спец."
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 2,
+    "fields": {
+      "name": "Андрология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 3,
+    "fields": {
+      "name": "Аритмология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 4,
+    "fields": {
+      "name": "Врач сосудистый хирург"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 5,
+    "fields": {
+      "name": "Врач-физиотерапевт"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 6,
+    "fields": {
+      "name": "Гастроэнтерология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 7,
+    "fields": {
+      "name": "Гепатолог"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 8,
+    "fields": {
+      "name": "Гинекология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 9,
+    "fields": {
+      "name": "Дерматология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 10,
+    "fields": {
+      "name": "Детская аллергология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 11,
+    "fields": {
+      "name": "Диагностика и лечение ревматических заболеваний"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 12,
+    "fields": {
+      "name": "Диагностирует и лечит травматическую и нетравматическую"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 13,
+    "fields": {
+      "name": "Интервенционная кардиология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 14,
+    "fields": {
+      "name": "Кардиология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 15,
+    "fields": {
+      "name": "Маммология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 16,
+    "fields": {
+      "name": "Микрохирург"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 17,
+    "fields": {
+      "name": "Неврология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 18,
+    "fields": {
+      "name": "Неонатология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 19,
+    "fields": {
+      "name": "Остеопат"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 20,
+    "fields": {
+      "name": "Оториноларингология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 21,
+    "fields": {
+      "name": "Педиатрия"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 22,
+    "fields": {
+      "name": "Пластический хирург"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 23,
+    "fields": {
+      "name": "Пластический хирург-Ассистент"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 24,
+    "fields": {
+      "name": "Привентивный интегративный врач  (нутрициолог)"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 25,
+    "fields": {
+      "name": "Психолог – это специалист"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 26,
+    "fields": {
+      "name": "Терапия"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 27,
+    "fields": {
+      "name": "Только взрослый врач. Сосудистый хирург"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 28,
+    "fields": {
+      "name": "Травматология и ортопедия"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 29,
+    "fields": {
+      "name": "УЗИ-диагностика"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 30,
+    "fields": {
+      "name": "Урология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 31,
+    "fields": {
+      "name": "Хирургия"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 32,
+    "fields": {
+      "name": "Эндокринология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 33,
+    "fields": {
+      "name": "Эхокардиография"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 34,
+    "fields": {
+      "name": "врач акушер-гинеколог высшей категории"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 35,
+    "fields": {
+      "name": "врач эндокринолог"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 36,
+    "fields": {
+      "name": "врач-офтальмолог высшей квалификационной категории"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 37,
+    "fields": {
+      "name": "квалифицированный массажист"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 38,
+    "fields": {
+      "name": "общий хирург и проктолог"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 39,
+    "fields": {
+      "name": "специалист физиокабинета"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 40,
+    "fields": {
+      "name": "фиброскан"
+    }
+  },
+  {
     "model": "users.user",
     "fields": {
       "password": "pbkdf2_sha256$1000000$025AtlPrrP37CXAeahuZ1r$9n/JlCD+n3ab9WjT+wsmqddcCxJXxBn2OabTT27kYDY=",
@@ -214,11 +494,11 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Терапевт"
+        26
       ],
       "narrow_specializations": [
-        "Общая терапия",
-        "Гастроэнтерология"
+        26,
+        6
       ],
       "additional_services": "",
       "equipment": [
@@ -278,7 +558,11 @@
       "is_published": true,
       "profile_views": 0,
       "created_at": "2026-06-01T07:45:49.971Z",
-      "updated_at": "2026-06-01T07:45:49.971Z"
+      "updated_at": "2026-06-01T07:45:49.971Z",
+      "services": [
+        1,
+        2
+      ]
     }
   },
   {
@@ -339,11 +623,11 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Кардиолог"
+        14
       ],
       "narrow_specializations": [
-        "Аритмология",
-        "Эхокардиография"
+        3,
+        33
       ],
       "additional_services": "",
       "equipment": [
@@ -405,7 +689,12 @@
       "is_published": true,
       "profile_views": 0,
       "created_at": "2026-06-01T07:45:50.183Z",
-      "updated_at": "2026-06-01T07:45:50.183Z"
+      "updated_at": "2026-06-01T07:45:50.183Z",
+      "services": [
+        9,
+        10,
+        11
+      ]
     }
   },
   {
@@ -461,11 +750,11 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Педиатр"
+        21
       ],
       "narrow_specializations": [
-        "Неонатология",
-        "Детская аллергология"
+        18,
+        10
       ],
       "additional_services": "",
       "equipment": [
@@ -525,7 +814,11 @@
       "is_published": true,
       "profile_views": 0,
       "created_at": "2026-06-01T07:45:50.394Z",
-      "updated_at": "2026-06-01T07:45:50.394Z"
+      "updated_at": "2026-06-01T07:45:50.394Z",
+      "services": [
+        3,
+        4
+      ]
     }
   },
   {
@@ -630,13 +923,13 @@
       "license_date": "2010-06-01",
       "license_authority": "Министерство здравоохранения КР",
       "primary_specializations": [
-        "Терапия",
-        "Педиатрия",
-        "Хирургия"
+        26,
+        21,
+        31
       ],
       "narrow_specializations": [
-        "Гастроэнтерология",
-        "Неврология"
+        6,
+        17
       ],
       "additional_services": "Лаборатория, рентген, УЗИ, ЭКГ",
       "equipment": [
@@ -726,11 +1019,11 @@
       "license_date": "2015-03-20",
       "license_authority": "Министерство здравоохранения КР",
       "primary_specializations": [
-        "Кардиология"
+        14
       ],
       "narrow_specializations": [
-        "Аритмология",
-        "Интервенционная кардиология"
+        3,
+        13
       ],
       "additional_services": "Кардиохирургия, реабилитация",
       "equipment": [
@@ -871,7 +1164,6 @@
       "price": "800.00",
       "duration": 30,
       "clinic": 1,
-      "doctor": 1,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.833Z"
     }
@@ -886,7 +1178,6 @@
       "price": "500.00",
       "duration": 20,
       "clinic": 1,
-      "doctor": 1,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.833Z"
     }
@@ -901,7 +1192,6 @@
       "price": "700.00",
       "duration": 30,
       "clinic": 1,
-      "doctor": 3,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.834Z"
     }
@@ -916,7 +1206,6 @@
       "price": "600.00",
       "duration": 40,
       "clinic": 1,
-      "doctor": 3,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.834Z"
     }
@@ -931,7 +1220,6 @@
       "price": "400.00",
       "duration": 5,
       "clinic": 1,
-      "doctor": null,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.834Z"
     }
@@ -946,7 +1234,6 @@
       "price": "800.00",
       "duration": 5,
       "clinic": 1,
-      "doctor": null,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.834Z"
     }
@@ -961,7 +1248,6 @@
       "price": "1200.00",
       "duration": 30,
       "clinic": 1,
-      "doctor": null,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.835Z"
     }
@@ -976,7 +1262,6 @@
       "price": "600.00",
       "duration": 15,
       "clinic": 1,
-      "doctor": null,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.835Z"
     }
@@ -991,7 +1276,6 @@
       "price": "1200.00",
       "duration": 45,
       "clinic": 2,
-      "doctor": 2,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.835Z"
     }
@@ -1006,7 +1290,6 @@
       "price": "2500.00",
       "duration": 60,
       "clinic": 2,
-      "doctor": 2,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.835Z"
     }
@@ -1021,7 +1304,6 @@
       "price": "3000.00",
       "duration": null,
       "clinic": 2,
-      "doctor": 2,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.836Z"
     }
@@ -1036,7 +1318,6 @@
       "price": "2000.00",
       "duration": null,
       "clinic": 2,
-      "doctor": null,
       "is_active": true,
       "created_at": "2026-06-01T07:45:50.836Z"
     }
@@ -1261,14 +1542,14 @@
       "email": "dr.temirbekovazha100@imbir.kg",
       "first_name": "Жаныл",
       "last_name": "Темирбекова",
-      "middle_name": "Толомушевна",
       "phone": "+996702446622",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Толомушевна"
     }
   },
   {
@@ -1300,7 +1581,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Отоларингология"
+        20
       ],
       "narrow_specializations": [],
       "additional_services": "Отоларингология\\ЛОР – это отрасль медицины, которая специализируется на диагностике, лечении и профилактике болезней уха, горла, носа.",
@@ -1336,14 +1617,14 @@
       "email": "dr.sharshembievaz101@imbir.kg",
       "first_name": "Азамат",
       "last_name": "Шаршембиев",
-      "middle_name": "Джолдошбекович",
       "phone": "+996700777337",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Джолдошбекович"
     }
   },
   {
@@ -1375,7 +1656,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Уролог специалист"
+        30
       ],
       "narrow_specializations": [],
       "additional_services": "Уролог специалист, занимающийся диагностикой, профилактикой и терапией заболеваний мочевыделительной и мужской половой систем, а также забрюшинного пространства.",
@@ -1411,14 +1692,14 @@
       "email": "dr.potekhinayan102@imbir.kg",
       "first_name": "Яна",
       "last_name": "Потехина",
-      "middle_name": "Игоревна",
       "phone": "+996551994067",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Игоревна"
     }
   },
   {
@@ -1450,7 +1731,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Невролог"
+        17
       ],
       "narrow_specializations": [],
       "additional_services": "Невролог\nНозологии: головная боль, боли в позвоночнике- остеохондроз, межпозвоночные грыжи, протрузии, полинейропатии, мононейропатии, невралгия тройничного нерва, нейропатия лицевого нерва, синдром беспокойных ног, головокружения, шум в ушах, сосудистые заболевания головного мозга, последствия инсультов, нарушения памяти, расстройство вегетативной нервной системы, болевой синдром в теле, неврозы, неврозоподобные состояния.",
@@ -1486,14 +1767,14 @@
       "email": "dr.sergeevavi103@imbir.kg",
       "first_name": "Виктория",
       "last_name": "Сергеева",
-      "middle_name": "Витальевна",
       "phone": "+996555696867",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Витальевна"
     }
   },
   {
@@ -1525,7 +1806,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Гастроэнтеролог"
+        6
       ],
       "narrow_specializations": [],
       "additional_services": "Гастроэнтеролог -  это диагностика, лечение и профилактика болезней пищевода, желудка, двенадцатиперстной кишки, кишечника, печени, желчного пузыря и поджелудочной железы.",
@@ -1561,14 +1842,14 @@
       "email": "dr.kamalovsa104@imbir.kg",
       "first_name": "Сардор",
       "last_name": "Камалов",
-      "middle_name": "Шухратович",
       "phone": "+996557110101",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Шухратович"
     }
   },
   {
@@ -1600,7 +1881,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Диагностирует и лечит травматическую и нетравматическую"
+        12
       ],
       "narrow_specializations": [],
       "additional_services": "Диагностирует и лечит травматическую и нетравматическую патологию опорно-двигательного аппарата. Специализируется на диагностике и консервативном лечении заболеваний суставов и стоп",
@@ -1636,14 +1917,14 @@
       "email": "dr.erubaevnu105@imbir.kg",
       "first_name": "Нуржан",
       "last_name": "Ерубаев",
-      "middle_name": "Дауренович",
       "phone": "+996703941803",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Дауренович"
     }
   },
   {
@@ -1675,7 +1956,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "УЗИ- специалист"
+        29
       ],
       "narrow_specializations": [],
       "additional_services": "УЗИ- специалист",
@@ -1711,14 +1992,14 @@
       "email": "dr.kadyrakunovnu106@imbir.kg",
       "first_name": "Нурлан",
       "last_name": "Кадыракунов",
-      "middle_name": "Эркинбекович",
       "phone": "+996755975555",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Эркинбекович"
     }
   },
   {
@@ -1750,7 +2031,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "УЗИ- специалист"
+        29
       ],
       "narrow_specializations": [],
       "additional_services": "УЗИ- специалист",
@@ -1786,14 +2067,14 @@
       "email": "dr.dzhafarovagu107@imbir.kg",
       "first_name": "Гулбахор",
       "last_name": "Джафарова",
-      "middle_name": "Рамазановна",
       "phone": "+996707544555",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Рамазановна"
     }
   },
   {
@@ -1825,7 +2106,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Привентивный интегративный врач  (нутрициолог)"
+        24
       ],
       "narrow_specializations": [],
       "additional_services": "Привентивный интегративный врач  (нутрициолог) — это целостный подход к здоровью человека, где организм рассматривается как единая система, а не набор органов.",
@@ -1861,14 +2142,14 @@
       "email": "dr.sejtalievaal108@imbir.kg",
       "first_name": "Алтынай",
       "last_name": "Сейталиева",
-      "middle_name": "Темиркуловна(кольпоскопист)",
       "phone": "+996708712828",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Темиркуловна(кольпоскопист)"
     }
   },
   {
@@ -1900,7 +2181,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Гинеколог"
+        8
       ],
       "narrow_specializations": [],
       "additional_services": "Гинеколог - это врач, который занимается диагностикой, лечением и профилактикой заболеваний женской половой системы.",
@@ -1936,14 +2217,14 @@
       "email": "dr.shepelma109@imbir.kg",
       "first_name": "Марина",
       "last_name": "Шепель",
-      "middle_name": "Николаевна",
       "phone": "+996555316004",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Николаевна"
     }
   },
   {
@@ -1975,7 +2256,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Гинеколог"
+        8
       ],
       "narrow_specializations": [],
       "additional_services": "Гинеколог - это врач, который занимается диагностикой, лечением и профилактикой заболеваний женской половой системы.",
@@ -2011,14 +2292,14 @@
       "email": "dr.alimovana110@imbir.kg",
       "first_name": "Надира",
       "last_name": "Алимова",
-      "middle_name": "Юлдашевна",
       "phone": "+996773933040",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Юлдашевна"
     }
   },
   {
@@ -2050,7 +2331,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Маммолог"
+        15
       ],
       "narrow_specializations": [],
       "additional_services": "Маммолог - это специалист, который занимается диагностикой, лечением и профилактикой заболеваний молочных желез.",
@@ -2086,14 +2367,14 @@
       "email": "dr.sydykbekovaas111@imbir.kg",
       "first_name": "Асел",
       "last_name": "Сыдыкбекова",
-      "middle_name": "Келдибековна",
       "phone": "+996709827557",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Келдибековна"
     }
   },
   {
@@ -2125,7 +2406,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Психолог – это специалист"
+        25
       ],
       "narrow_specializations": [],
       "additional_services": "Психолог – это специалист, который изучает психическую деятельность человека, ее процессы, проявления, формы организации, закономерности, индивидуальные личностные свойства и оказывает психологическую помощь психически здоровым людям.",
@@ -2161,14 +2442,14 @@
       "email": "dr.darchybaevamu112@imbir.kg",
       "first_name": "Мунара",
       "last_name": "Дарчыбаева",
-      "middle_name": "Кадышевна",
       "phone": "+996709084465",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Кадышевна"
     }
   },
   {
@@ -2200,7 +2481,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Гастроэнтеролог"
+        6
       ],
       "narrow_specializations": [],
       "additional_services": "Гастроэнтеролог -  это диагностика, лечение и профилактика болезней пищевода, желудка, двенадцатиперстной кишки, кишечника, печени, желчного пузыря и поджелудочной железы.",
@@ -2236,14 +2517,14 @@
       "email": "dr.sherkulovaal113@imbir.kg",
       "first_name": "Алтынай",
       "last_name": "Шеркулова",
-      "middle_name": "Шеркуловна",
       "phone": "+996555166586",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Шеркуловна"
     }
   },
   {
@@ -2274,9 +2555,7 @@
       "license_number": "",
       "license_date": null,
       "license_authority": "",
-      "primary_specializations": [
-        "Врач"
-      ],
+      "primary_specializations": [],
       "narrow_specializations": [],
       "additional_services": "Врач - кардиолог, терапевт",
       "equipment": [],
@@ -2311,14 +2590,14 @@
       "email": "dr.kalyuzhnayaok114@imbir.kg",
       "first_name": "Оксана",
       "last_name": "Калюжная",
-      "middle_name": "Александровна",
       "phone": "+996555654517",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Александровна"
     }
   },
   {
@@ -2350,7 +2629,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Остеопат"
+        19
       ],
       "narrow_specializations": [],
       "additional_services": "Остеопат, физиотерапевт, врач интегративной медицины и иглорефлексотерапевт",
@@ -2386,14 +2665,14 @@
       "email": "dr.tynalievaas115@imbir.kg",
       "first_name": "Асел",
       "last_name": "Тыналиева",
-      "middle_name": "Асхатовна",
       "phone": "+996705558835",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Асхатовна"
     }
   },
   {
@@ -2425,7 +2704,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Лор врач"
+        20
       ],
       "narrow_specializations": [],
       "additional_services": "Лор врач",
@@ -2461,14 +2740,14 @@
       "email": "dr.toktokozhoevnu116@imbir.kg",
       "first_name": "Нурахмед",
       "last_name": "Токтокожоев",
-      "middle_name": "Анарбекович 203 кабинет",
       "phone": "+996556161588",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Анарбекович 203 кабинет"
     }
   },
   {
@@ -2500,7 +2779,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "общий хирург и проктолог"
+        38
       ],
       "narrow_specializations": [],
       "additional_services": "общий хирург и проктолог",
@@ -2536,14 +2815,14 @@
       "email": "dr.gogaevala117@imbir.kg",
       "first_name": "Лайла",
       "last_name": "Гогаева",
-      "middle_name": "Борисовна",
       "phone": "+996555326617",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Борисовна"
     }
   },
   {
@@ -2575,7 +2854,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "врач-офтальмолог высшей квалификационной категории"
+        36
       ],
       "narrow_specializations": [],
       "additional_services": "врач-офтальмолог высшей квалификационной категории, кандидат медицинских наук.г",
@@ -2611,14 +2890,14 @@
       "email": "dr.asanovalo118@imbir.kg",
       "first_name": "Лола",
       "last_name": "Асанова",
-      "middle_name": "Стальбековна 207 кабинет",
       "phone": "+996554714727",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Стальбековна 207 кабинет"
     }
   },
   {
@@ -2650,7 +2929,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "врач акушер-гинеколог высшей категории"
+        34
       ],
       "narrow_specializations": [],
       "additional_services": "врач акушер-гинеколог высшей категории, отличник здравоохранения РФ",
@@ -2686,14 +2965,14 @@
       "email": "dr.kudajbergenovada119@imbir.kg",
       "first_name": "Дарыгуль",
       "last_name": "Кудайбергенова",
-      "middle_name": "Айылчиевна",
       "phone": "+996502209933",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Айылчиевна"
     }
   },
   {
@@ -2725,7 +3004,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "квалифицированный массажист"
+        37
       ],
       "narrow_specializations": [],
       "additional_services": "квалифицированный массажист, врач",
@@ -2761,14 +3040,14 @@
       "email": "dr.valishevara120@imbir.kg",
       "first_name": "Рамиля",
       "last_name": "Валишева",
-      "middle_name": "Джалильевна @doctor_valisheva",
       "phone": "+996555215055",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Джалильевна @doctor_valisheva"
     }
   },
   {
@@ -2800,7 +3079,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "врач эндокринолог"
+        35
       ],
       "narrow_specializations": [],
       "additional_services": "врач эндокринолог/нутрициолог",
@@ -2836,14 +3115,14 @@
       "email": "dr.bejsheevaal121@imbir.kg",
       "first_name": "Алмагуль",
       "last_name": "Бейшеева",
-      "middle_name": "Жумабаевна",
       "phone": "+996776161938",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Жумабаевна"
     }
   },
   {
@@ -2875,7 +3154,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "УЗИ специалист"
+        29
       ],
       "narrow_specializations": [],
       "additional_services": "УЗИ специалист",
@@ -2911,14 +3190,14 @@
       "email": "dr.daniyarovali122@imbir.kg",
       "first_name": "Линда",
       "last_name": "Даниярова",
-      "middle_name": "Данияровна",
       "phone": "+7991278-73-85",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Данияровна"
     }
   },
   {
@@ -2950,7 +3229,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "терапевт"
+        26
       ],
       "narrow_specializations": [],
       "additional_services": "терапевт - инфузиолог",
@@ -2986,14 +3265,14 @@
       "email": "dr.zhumagulovada123@imbir.kg",
       "first_name": "Даткайым",
       "last_name": "Жумагулова",
-      "middle_name": "Саламатовна",
       "phone": "+996505565699",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Саламатовна"
     }
   },
   {
@@ -3025,7 +3304,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "эндокринолог"
+        32
       ],
       "narrow_specializations": [],
       "additional_services": "эндокринолог",
@@ -3061,14 +3340,14 @@
       "email": "dr.mamatovem124@imbir.kg",
       "first_name": "Эмрах",
       "last_name": "Маматов",
-      "middle_name": "Салманович",
       "phone": "+996500290499",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Салманович"
     }
   },
   {
@@ -3100,7 +3379,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "терапевт"
+        26
       ],
       "narrow_specializations": [],
       "additional_services": "терапевт",
@@ -3136,14 +3415,14 @@
       "email": "dr.ismailoved125@imbir.kg",
       "first_name": "Эдиль",
       "last_name": "Исмаилов",
-      "middle_name": "Алманбекович",
       "phone": "+996555993999",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Алманбекович"
     }
   },
   {
@@ -3175,7 +3454,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург"
+        22
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург",
@@ -3211,14 +3490,14 @@
       "email": "dr.bocharnikoval126@imbir.kg",
       "first_name": "Александр",
       "last_name": "Бочарников",
-      "middle_name": "Андреевич",
       "phone": "+996550833661",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Андреевич"
     }
   },
   {
@@ -3250,7 +3529,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург"
+        22
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург",
@@ -3286,14 +3565,14 @@
       "email": "dr.logvinenkoma127@imbir.kg",
       "first_name": "Мария",
       "last_name": "Логвиненко",
-      "middle_name": "Юрьевна",
       "phone": "",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Юрьевна"
     }
   },
   {
@@ -3323,7 +3602,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург"
+        22
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург",
@@ -3359,14 +3638,14 @@
       "email": "dr.dilgeral128@imbir.kg",
       "first_name": "Алтынай",
       "last_name": "Дильгер",
-      "middle_name": "",
       "phone": "+996500080550",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": ""
     }
   },
   {
@@ -3398,7 +3677,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург"
+        22
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург",
@@ -3434,14 +3713,14 @@
       "email": "dr.aralbaever129@imbir.kg",
       "first_name": "Ержан",
       "last_name": "Аралбаев",
-      "middle_name": "Муратович",
       "phone": "+996553131365",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Муратович"
     }
   },
   {
@@ -3473,7 +3752,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург"
+        22
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург",
@@ -3509,14 +3788,14 @@
       "email": "dr.muratte130@imbir.kg",
       "first_name": "Тегени",
       "last_name": "Мурат",
-      "middle_name": "Раджив",
       "phone": "+996554454454",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Раджив"
     }
   },
   {
@@ -3548,7 +3827,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург"
+        22
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург",
@@ -3584,14 +3863,14 @@
       "email": "dr.apievka131@imbir.kg",
       "first_name": "Канат",
       "last_name": "Апиев",
-      "middle_name": "Каныбекович",
       "phone": "+996556568788",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Каныбекович"
     }
   },
   {
@@ -3623,7 +3902,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Микрохирург"
+        16
       ],
       "narrow_specializations": [],
       "additional_services": "Микрохирург",
@@ -3659,14 +3938,14 @@
       "email": "dr.kamchybekovbe132@imbir.kg",
       "first_name": "Бексултан",
       "last_name": "Камчыбеков",
-      "middle_name": "Камчыбекович",
       "phone": "+996557393639",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Камчыбекович"
     }
   },
   {
@@ -3698,7 +3977,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Микрохирург"
+        16
       ],
       "narrow_specializations": [],
       "additional_services": "Микрохирург",
@@ -3734,14 +4013,14 @@
       "email": "dr.ibraevame133@imbir.kg",
       "first_name": "Мээрим",
       "last_name": "Ибраева",
-      "middle_name": "Токтогазиевна",
       "phone": "+996559018793",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Токтогазиевна"
     }
   },
   {
@@ -3773,7 +4052,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург"
+        22
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург",
@@ -3809,14 +4088,14 @@
       "email": "dr.kubanychbekovel134@imbir.kg",
       "first_name": "Элдияр",
       "last_name": "Кубанычбеков",
-      "middle_name": "Кубанычбекович",
       "phone": "+996551501400",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Кубанычбекович"
     }
   },
   {
@@ -3848,7 +4127,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург-Ассистент"
+        23
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург-Ассистент",
@@ -3884,14 +4163,14 @@
       "email": "dr.bakirovzho135@imbir.kg",
       "first_name": "Жолдошбек",
       "last_name": "Бакиров",
-      "middle_name": "Усеевич",
       "phone": "+996552212174",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Усеевич"
     }
   },
   {
@@ -3923,7 +4202,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Андролог- это врач"
+        2
       ],
       "narrow_specializations": [],
       "additional_services": "Андролог- это врач, который занимается лечением патологических процессов и заболеваний мужской половой сферы.",
@@ -3959,14 +4238,14 @@
       "email": "dr.mamadzhanovdi136@imbir.kg",
       "first_name": "Дильшод",
       "last_name": "Мамаджанов",
-      "middle_name": "Бахтиярович",
       "phone": "+996555454248",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Бахтиярович"
     }
   },
   {
@@ -3998,7 +4277,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Гепатолог"
+        7
       ],
       "narrow_specializations": [],
       "additional_services": "Гепатолог - это врач, специализирующийся на лечении болезней печени.",
@@ -4034,14 +4313,14 @@
       "email": "dr.usubalievme137@imbir.kg",
       "first_name": "Мейкин",
       "last_name": "Усубалиев",
-      "middle_name": "Бейшембаевич",
       "phone": "+996702544535",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Бейшембаевич"
     }
   },
   {
@@ -4073,7 +4352,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "дерматовенеролог"
+        9
       ],
       "narrow_specializations": [],
       "additional_services": "дерматовенеролог",
@@ -4109,14 +4388,14 @@
       "email": "dr.elistratovar138@imbir.kg",
       "first_name": "Артем",
       "last_name": "Елистратов",
-      "middle_name": "Анательевич",
       "phone": "+996705320400",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Анательевич"
     }
   },
   {
@@ -4148,7 +4427,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Диагностика и лечение ревматических заболеваний"
+        11
       ],
       "narrow_specializations": [],
       "additional_services": "Диагностика и лечение ревматических заболеваний у взрослых.",
@@ -4184,14 +4463,14 @@
       "email": "dr.nurmatku139@imbir.kg",
       "first_name": "Кубанычбекович",
       "last_name": "Нурмат",
-      "middle_name": "(личный) Мадрахимова Азиза Алижоновна (ассистент)",
       "phone": "+996700898899",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "(личный) Мадрахимова Азиза Алижоновна (ассистент)"
     }
   },
   {
@@ -4221,7 +4500,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Только взрослый врач. Сосудистый хирург"
+        27
       ],
       "narrow_specializations": [],
       "additional_services": "Только взрослый врач. Сосудистый хирург, флеболог, специалист ультразвуковой диагностики, член Ассоциации флебологов России",
@@ -4257,14 +4536,14 @@
       "email": "dr.madrakhimovaaz140@imbir.kg",
       "first_name": "Азиза",
       "last_name": "Мадрахимова",
-      "middle_name": "Алижановна",
       "phone": "+996706707095",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Алижановна"
     }
   },
   {
@@ -4296,7 +4575,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Врач сосудистый хирург"
+        4
       ],
       "narrow_specializations": [],
       "additional_services": "Врач сосудистый хирург, флеболог",
@@ -4332,14 +4611,14 @@
       "email": "dr.esenturky141@imbir.kg",
       "first_name": "кызы",
       "last_name": "Эсентур",
-      "middle_name": "Гулжан",
       "phone": "+996755444508",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Гулжан"
     }
   },
   {
@@ -4371,7 +4650,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "специалист физиокабинета"
+        39
       ],
       "narrow_specializations": [],
       "additional_services": "специалист физиокабинета",
@@ -4407,14 +4686,14 @@
       "email": "dr.lukyanovdm142@imbir.kg",
       "first_name": "Дмитрий",
       "last_name": "Лукьянов",
-      "middle_name": "Васильевич",
       "phone": "+996556588991",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Васильевич"
     }
   },
   {
@@ -4446,7 +4725,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Врач-физиотерапевт"
+        5
       ],
       "narrow_specializations": [],
       "additional_services": "Врач-физиотерапевт",
@@ -4482,14 +4761,14 @@
       "email": "dr.urmanbetovasa143@imbir.kg",
       "first_name": "Сайкал",
       "last_name": "Урманбетова",
-      "middle_name": "Кубатбековна",
       "phone": "+996708141237",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Кубатбековна"
     }
   },
   {
@@ -4521,7 +4800,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "дерматовенеролог"
+        9
       ],
       "narrow_specializations": [],
       "additional_services": "дерматовенеролог, дермокосметолог",
@@ -4557,14 +4836,14 @@
       "email": "dr.zhumabekovsu144@imbir.kg",
       "first_name": "Субанбек",
       "last_name": "Жумабеков",
-      "middle_name": "Бакытович",
       "phone": "+996709360225",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Бакытович"
     }
   },
   {
@@ -4596,7 +4875,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "ортопед"
+        28
       ],
       "narrow_specializations": [],
       "additional_services": "ортопед",
@@ -4632,14 +4911,14 @@
       "email": "dr.kadyrbekovra145@imbir.kg",
       "first_name": "Рамис",
       "last_name": "Кадырбеков",
-      "middle_name": "Кадырбекович",
       "phone": "+996503858596",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Кадырбекович"
     }
   },
   {
@@ -4671,7 +4950,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "травматолог ортопед"
+        28
       ],
       "narrow_specializations": [],
       "additional_services": "травматолог ортопед",
@@ -4707,14 +4986,14 @@
       "email": "dr.sheralievta146@imbir.kg",
       "first_name": "Таалайбек",
       "last_name": "Шералиев",
-      "middle_name": "Усеналиевич (whatsapp)",
       "phone": "+996700447440",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Усеналиевич (whatsapp)"
     }
   },
   {
@@ -4746,7 +5025,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "ортопед"
+        28
       ],
       "narrow_specializations": [],
       "additional_services": "ортопед",
@@ -4782,14 +5061,14 @@
       "email": "dr.askarbekuu147@imbir.kg",
       "first_name": "уулу",
       "last_name": "Аскарбек",
-      "middle_name": "Тилек",
       "phone": "+996550104091",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Тилек"
     }
   },
   {
@@ -4821,7 +5100,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "фиброскан"
+        40
       ],
       "narrow_specializations": [],
       "additional_services": "фиброскан",
@@ -4857,14 +5136,14 @@
       "email": "dr.kydyralievana148@imbir.kg",
       "first_name": "Назгуль",
       "last_name": "Кыдыралиева",
-      "middle_name": "Мухамбетовна",
       "phone": "+996702280278",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Мухамбетовна"
     }
   },
   {
@@ -4894,7 +5173,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "фиброскан"
+        40
       ],
       "narrow_specializations": [],
       "additional_services": "фиброскан",
@@ -4930,14 +5209,14 @@
       "email": "dr.izteleuto149@imbir.kg",
       "first_name": "Торехан",
       "last_name": "Изтелеу",
-      "middle_name": "Куатович",
       "phone": "+996558887078",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Куатович"
     }
   },
   {
@@ -4969,7 +5248,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург"
+        22
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург",
@@ -5005,14 +5284,14 @@
       "email": "dr.ezhikovaas150@imbir.kg",
       "first_name": "Асель",
       "last_name": "Ежикова",
-      "middle_name": "Алмасовна",
       "phone": "+996501800810",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Алмасовна"
     }
   },
   {
@@ -5044,7 +5323,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург"
+        22
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург",
@@ -5080,14 +5359,14 @@
       "email": "dr.ajtbaevul151@imbir.kg",
       "first_name": "Улукбек",
       "last_name": "Айтбаев",
-      "middle_name": "Муратбекович",
       "phone": "+996772672677",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Муратбекович"
     }
   },
   {
@@ -5119,7 +5398,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Пластический хирург"
+        22
       ],
       "narrow_specializations": [],
       "additional_services": "Пластический хирург",
@@ -5155,14 +5434,14 @@
       "email": "dr.gornozhenkoma152@imbir.kg",
       "first_name": "Марина",
       "last_name": "Горноженко",
-      "middle_name": "Васильевна",
       "phone": "+996551270005",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Васильевна"
     }
   },
   {
@@ -5194,7 +5473,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "anti-age спец."
+        1
       ],
       "narrow_specializations": [],
       "additional_services": "anti-age спец., нутрициолог, дермато-косметолог",
@@ -5230,14 +5509,14 @@
       "email": "dr.pakvl153@imbir.kg",
       "first_name": "Владимир",
       "last_name": "Пак",
-      "middle_name": "Викторович",
       "phone": "+996702999000",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Викторович"
     }
   },
   {
@@ -5269,7 +5548,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Лор"
+        20
       ],
       "narrow_specializations": [],
       "additional_services": "Лор",
@@ -5305,14 +5584,14 @@
       "email": "dr.bajzakoval154@imbir.kg",
       "first_name": "Алмаз",
       "last_name": "Байзаков",
-      "middle_name": "Жыргалбекович",
       "phone": "+996990770191",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Жыргалбекович"
     }
   },
   {
@@ -5344,7 +5623,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Отоларингология"
+        20
       ],
       "narrow_specializations": [],
       "additional_services": "Отоларингология\\ЛОР – это отрасль медицины, которая специализируется на диагностике, лечении и профилактике болезней уха, горла, носа.",
@@ -5380,14 +5659,14 @@
       "email": "dr.talasbaevasa155@imbir.kg",
       "first_name": "Саадат",
       "last_name": "Таласбаева",
-      "middle_name": "Салаватовна",
       "phone": "+996772681375",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Салаватовна"
     }
   },
   {
@@ -5419,7 +5698,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Отоларинголог"
+        20
       ],
       "narrow_specializations": [],
       "additional_services": "Отоларинголог\\ЛОР",
@@ -5455,14 +5734,14 @@
       "email": "dr.nurbekovake156@imbir.kg",
       "first_name": "Керемет",
       "last_name": "Нурбекова",
-      "middle_name": "Нурбековна",
       "phone": "+996504543737",
       "role": "doctor",
       "is_active": true,
       "is_staff": false,
       "date_joined": "2026-06-27T08:00:00.000Z",
       "groups": [],
-      "user_permissions": []
+      "user_permissions": [],
+      "patronymic": "Нурбековна"
     }
   },
   {
@@ -5494,7 +5773,7 @@
       "license_date": null,
       "license_authority": "",
       "primary_specializations": [
-        "Отоларингология"
+        20
       ],
       "narrow_specializations": [],
       "additional_services": "Отоларингология\\ЛОР – это отрасль медицины, которая специализируется на диагностике, лечении и профилактике болезней уха, горла, носа.",
