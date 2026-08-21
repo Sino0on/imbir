@@ -79,6 +79,7 @@ def save_hybrid_documents(profile, field_name, model_class, request):
 
 import urllib.request
 import urllib.parse
+import urllib.error
 import json
 import logging
 
@@ -122,5 +123,41 @@ def send_sms_nikita(phone, text):
             return True
     except Exception as e:
         logger.error(f"Failed to send SMS to {phone} via Nikita SMS: {e}")
+        return False
+
+
+def send_telegram_debug(text):
+    """Дублирует OTP-код в тестовый Telegram-чат (TG_BOT_TOKEN/TG_CHAT_ID) —
+    только для отладки при разработке, не влияет на основную отправку по SMS/email.
+    Если не настроено — тихо ничего не делает (не ошибка, не блокирует основной поток)."""
+    token = getattr(settings, 'TG_BOT_TOKEN', '')
+    chat_id = getattr(settings, 'TG_CHAT_ID', '')
+    thread_id = getattr(settings, 'TG_CHAT_THREAD_ID', '')
+
+    if not token or not chat_id:
+        return False
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+    if thread_id:
+        payload["message_thread_id"] = thread_id
+
+    try:
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={'Content-Type': 'application/json'},
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            res_data = response.read().decode('utf-8')
+            logger.info(f"Telegram debug message sent. Response: {res_data}")
+            return True
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8')
+        logger.error(f"Failed to send Telegram debug message: HTTP {e.code}: {body}")
+        return False
+    except Exception as e:
+        logger.error(f"Failed to send Telegram debug message: {e}")
         return False
 

@@ -357,6 +357,12 @@ NIKITA_SMS_LOGIN = config('NIKITA_SMS_LOGIN', default='')
 NIKITA_SMS_PASSWORD = config('NIKITA_SMS_PASSWORD', default='')
 NIKITA_SMS_SENDER = config('NIKITA_SMS_SENDER', default='Imbir')
 
+# Тестовое дублирование OTP-кодов в Telegram-чат (send_telegram_debug в users/utils.py).
+# Не заданы — просто не отправляется, никак не влияет на реальную отправку по SMS/email.
+TG_BOT_TOKEN = config('TG_BOT_TOKEN', default='')
+TG_CHAT_ID = config('TG_CHAT_ID', default='')
+TG_CHAT_THREAD_ID = config('TG_CHAT_THREAD_ID', default='')
+
 # Geolocation Settings
 DEFAULT_CITY = 'Бишкек'
 
