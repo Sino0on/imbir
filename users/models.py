@@ -31,7 +31,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     patronymic = models.CharField(max_length=100, blank=True, null=True)
-    phone = models.CharField(max_length=20, blank=True)
+    phone = models.CharField(
+        max_length=20, blank=True, null=True, unique=True,
+        error_messages={'unique': 'Пользователь с таким номером телефона уже зарегистрирован'},
+    )
     avatar = models.ImageField(upload_to='users/avatars/', null=True, blank=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.PATIENT)
 

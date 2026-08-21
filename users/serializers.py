@@ -84,7 +84,7 @@ class ClientRegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
-            phone=validated_data.get('phone', ''),
+            phone=validated_data.get('phone') or None,
             role=User.Role.PATIENT,
         )
 
@@ -240,7 +240,11 @@ class DoctorRegisterSerializer(serializers.Serializer):
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError({'step1': {'email': 'Пользователь с таким email уже существует'}})
 
-        _check_contact_verified(email, s1.get('phone', ''))
+        phone = s1.get('phone', '')
+        if phone and User.objects.filter(phone=phone).exists():
+            raise serializers.ValidationError({'step1': {'phone': 'Пользователь с таким номером телефона уже зарегистрирован'}})
+
+        _check_contact_verified(email, phone)
 
         for field, msg in [
             ('agree_terms', 'Необходимо принять условия использования'),
@@ -302,7 +306,7 @@ class DoctorRegisterSerializer(serializers.Serializer):
                 password=validated_data['password'],
                 first_name=first_name,
                 last_name=last_name,
-                phone=s1.get('phone', ''),
+                phone=s1.get('phone') or None,
                 role=User.Role.DOCTOR,
             )
 
@@ -393,7 +397,11 @@ class ClinicRegisterSerializer(serializers.Serializer):
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError({'step2': {'email': 'Пользователь с таким email уже существует'}})
 
-        _check_contact_verified(email, s2.get('phone', ''))
+        phone = s2.get('phone', '')
+        if phone and User.objects.filter(phone=phone).exists():
+            raise serializers.ValidationError({'step2': {'phone': 'Пользователь с таким номером телефона уже зарегистрирован'}})
+
+        _check_contact_verified(email, phone)
 
         if not s7.get('agree_terms'):
             raise serializers.ValidationError({'step7': 'Необходимо принять условия использования'})
@@ -432,7 +440,7 @@ class ClinicRegisterSerializer(serializers.Serializer):
                 password=validated_data['password'],
                 first_name=s1['name'],
                 last_name='',
-                phone=s2.get('phone', ''),
+                phone=s2.get('phone') or None,
                 role=User.Role.CLINIC,
             )
 
