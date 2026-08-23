@@ -4,7 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from doctors.search_views import GlobalSearchView, GlobalSearchSuggestView
-from doctors.views import InterviewListView
+from doctors.views import InterviewListView, bulk_photo_tool
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -37,6 +37,9 @@ urlpatterns = [
 
     # Video interviews (public aggregate across doctors)
     path('api/interviews/', InterviewListView.as_view(), name='interview-list'),
+
+    # Внутренний инструмент: массовая загрузка фото врачей по имени файла
+    path('tools/doctor-photos/', bulk_photo_tool, name='doctor-bulk-photo-tool'),
 
 ]
 

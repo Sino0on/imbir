@@ -1,7 +1,9 @@
 import os
 import re
 
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.db.models import Q
+from django.shortcuts import redirect, render
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.parsers import MultiPartParser
@@ -204,6 +206,38 @@ def _build_doctor_name_index():
     return index
 
 
+def _match_and_apply_photos(files):
+    """Сопоставляет каждый файл с врачом по имени и сразу сохраняет фото при
+    однозначном совпадении. Общая логика для API-эндпоинта и HTML-инструмента."""
+    name_index = _build_doctor_name_index()
+    matched, not_found, ambiguous = [], [], []
+
+    for file in files:
+        key = _normalize_photo_name(file.name)
+        candidates = name_index.get(key, [])
+
+        if len(candidates) == 1:
+            doctor = candidates[0]
+            doctor.photo = file
+            doctor.save(update_fields=['photo'])
+            matched.append({
+                'file': file.name,
+                'doctor_id': doctor.user_id,
+                'doctor_name': ' '.join(filter(None, [
+                    doctor.user.last_name, doctor.user.first_name, doctor.user.patronymic,
+                ])),
+            })
+        elif len(candidates) == 0:
+            not_found.append(file.name)
+        else:
+            ambiguous.append({
+                'file': file.name,
+                'candidate_doctor_ids': [d.user_id for d in candidates],
+            })
+
+    return {'matched': matched, 'not_found': not_found, 'ambiguous': ambiguous}
+
+
 @extend_schema(
     request={
         'multipart/form-data': inline_serializer('BulkDoctorPhotoUploadRequest', fields={
@@ -243,33 +277,8 @@ class BulkDoctorPhotoUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        name_index = _build_doctor_name_index()
-        matched, not_found, ambiguous = [], [], []
-
-        for file in files:
-            key = _normalize_photo_name(file.name)
-            candidates = name_index.get(key, [])
-
-            if len(candidates) == 1:
-                doctor = candidates[0]
-                doctor.photo = file
-                doctor.save(update_fields=['photo'])
-                matched.append({
-                    'file': file.name,
-                    'doctor_id': doctor.user_id,
-                    'doctor_name': ' '.join(filter(None, [
-                        doctor.user.last_name, doctor.user.first_name, doctor.user.patronymic,
-                    ])),
-                })
-            elif len(candidates) == 0:
-                not_found.append(file.name)
-            else:
-                ambiguous.append({
-                    'file': file.name,
-                    'candidate_doctor_ids': [d.user_id for d in candidates],
-                })
-
-        return Response({'data': {'matched': matched, 'not_found': not_found, 'ambiguous': ambiguous}})
+        result = _match_and_apply_photos(files)
+        return Response({'data': result})
 
 
 class DoctorAvailableSlotsView(APIView):
@@ -417,3 +426,31 @@ class DoctorAvailableSlotsView(APIView):
             current_dt += timedelta(minutes=30)
 
         return Response({'date': date_str, 'slots': slots})
+
+
+def bulk_photo_tool(request):
+    """Внутренний инструмент: HTML-страница с логином, где можно за раз загрузить
+    пачку фото врачей — они сами разложатся по врачам по имени файла."""
+    if request.method == 'POST' and 'logout' in request.POST:
+        auth_logout(request)
+        return redirect('doctor-bulk-photo-tool')
+
+    if request.method == 'POST' and 'photos' not in request.FILES and 'password' in request.POST:
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+        user = authenticate(request, username=email, password=password)
+        if user is not None and user.is_staff:
+            auth_login(request, user)
+            return redirect('doctor-bulk-photo-tool')
+        return render(request, 'doctors/bulk_photo_tool.html', {
+            'login_error': 'Неверный email/пароль, либо у аккаунта нет прав администратора',
+        })
+
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return render(request, 'doctors/bulk_photo_tool.html', {})
+
+    result = None
+    if request.method == 'POST' and request.FILES.getlist('photos'):
+        result = _match_and_apply_photos(request.FILES.getlist('photos'))
+
+    return render(request, 'doctors/bulk_photo_tool.html', {'result': result})
