@@ -22,6 +22,7 @@ from .serializers import (
     EmailRegisterRequestSerializer, EmailRegisterConfirmSerializer,
     LoginOTPRequestSerializer, LoginOTPVerifySerializer,
     VerifyEmailConfirmSerializer, VerifyPhoneConfirmSerializer,
+    EmailCheckSerializer,
 )
 from users.utils import save_hybrid_documents, send_sms_nikita, send_telegram_debug
 
@@ -550,6 +551,30 @@ class InviteValidateView(APIView):
             'clinic': ClinicListSerializer(invite.clinic, context={'request': request}).data,
             'branch': ClinicBranchSerializer(invite.branch).data if invite.branch else None,
         }})
+
+
+@extend_schema(
+    request=EmailCheckSerializer,
+    responses={200: inline_serializer('EmailAvailabilityResponse', fields={
+        'data': inline_serializer('EmailAvailabilityData', fields={
+            'email': serializers.EmailField(),
+            'available': serializers.BooleanField(),
+        }),
+    })},
+    tags=['auth'],
+    summary='Проверка занятости email',
+    description='Свободен ли email для регистрации — без отправки кода и без побочных эффектов.',
+)
+class EmailAvailabilityView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = EmailCheckSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        available = not User.objects.filter(email=email).exists()
+        return Response({'data': {'email': email, 'available': available}})
 
 
 

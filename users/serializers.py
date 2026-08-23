@@ -629,6 +629,12 @@ class EmailRegisterRequestSerializer(serializers.Serializer):
         return value
 
 
+class EmailCheckSerializer(serializers.Serializer):
+    """Просто проверяет формат email — существование намеренно не валидируется
+    здесь, это и есть ответ, который возвращает EmailAvailabilityView."""
+    email = serializers.EmailField()
+
+
 class EmailRegisterConfirmSerializer(serializers.Serializer):
     email = serializers.EmailField()
     code = serializers.CharField(max_length=4, min_length=4)
