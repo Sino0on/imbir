@@ -1,8 +1,14 @@
+import os
+import re
+
 from django.db.models import Q
+from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, inline_serializer
 
 from users.models import DoctorProfile
 from core.pagination import StandardPagination
@@ -165,6 +171,105 @@ class InterviewListView(ListAPIView):
             .prefetch_related('doctor__primary_specializations')
             .order_by('-priority', 'id')
         )
+
+
+def _normalize_photo_name(filename):
+    """"Иванов Иван Иванович (2).jpg" -> "иванов иван иванович"."""
+    name = os.path.splitext(filename)[0]
+    name = re.sub(r'\s*\(\d+\)\s*$', '', name)
+    name = re.sub(r'\s+', ' ', name).strip().lower()
+    return name
+
+
+def _build_doctor_name_index():
+    """{нормализованное ФИО: [DoctorProfile, ...]} по всем вариантам, под которыми
+    может быть названо фото — "Фамилия Имя Отчество" или просто "Имя Отчество"."""
+    index = {}
+    for doctor in DoctorProfile.objects.select_related('user').all():
+        last = (doctor.user.last_name or '').strip().lower()
+        first = (doctor.user.first_name or '').strip().lower()
+        patronymic = (doctor.user.patronymic or '').strip().lower()
+
+        variants = set()
+        if last and first and patronymic:
+            variants.add(f"{last} {first} {patronymic}")
+        if first and patronymic:
+            variants.add(f"{first} {patronymic}")
+        if last and first:
+            variants.add(f"{last} {first}")
+
+        for variant in variants:
+            index.setdefault(variant, []).append(doctor)
+
+    return index
+
+
+@extend_schema(
+    request={
+        'multipart/form-data': inline_serializer('BulkDoctorPhotoUploadRequest', fields={
+            'photos': serializers.ListField(
+                child=serializers.ImageField(),
+                help_text='Несколько файлов. Имя файла (без расширения) — '
+                          '"Фамилия Имя Отчество" или "Имя Отчество".',
+            ),
+        }),
+    },
+    responses={200: inline_serializer('BulkDoctorPhotoUploadResponse', fields={
+        'data': inline_serializer('BulkDoctorPhotoUploadResult', fields={
+            'matched': serializers.ListField(child=serializers.DictField()),
+            'not_found': serializers.ListField(child=serializers.CharField()),
+            'ambiguous': serializers.ListField(child=serializers.DictField()),
+        }),
+    })},
+    tags=['Doctors Catalog'],
+    summary='Массовая загрузка аватарок врачей по имени файла',
+    description=(
+        'Только для админов. Принимает сразу несколько файлов в поле "photos". '
+        'По имени файла (без расширения) ищется врач: "Фамилия Имя Отчество" или '
+        '"Имя Отчество" (без фамилии). Совпал ровно один врач — фото проставляется '
+        'ему. Ноль совпадений или несколько разных врачей под одним именем — файл '
+        'пропускается (not_found / ambiguous), чтобы не перепутать фото.'
+    ),
+)
+class BulkDoctorPhotoUploadView(APIView):
+    permission_classes = (IsAdminUser,)
+    parser_classes = (MultiPartParser,)
+
+    def post(self, request):
+        files = request.FILES.getlist('photos')
+        if not files:
+            return Response(
+                {'detail': 'Передайте хотя бы один файл в поле "photos"'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        name_index = _build_doctor_name_index()
+        matched, not_found, ambiguous = [], [], []
+
+        for file in files:
+            key = _normalize_photo_name(file.name)
+            candidates = name_index.get(key, [])
+
+            if len(candidates) == 1:
+                doctor = candidates[0]
+                doctor.photo = file
+                doctor.save(update_fields=['photo'])
+                matched.append({
+                    'file': file.name,
+                    'doctor_id': doctor.user_id,
+                    'doctor_name': ' '.join(filter(None, [
+                        doctor.user.last_name, doctor.user.first_name, doctor.user.patronymic,
+                    ])),
+                })
+            elif len(candidates) == 0:
+                not_found.append(file.name)
+            else:
+                ambiguous.append({
+                    'file': file.name,
+                    'candidate_doctor_ids': [d.user_id for d in candidates],
+                })
+
+        return Response({'data': {'matched': matched, 'not_found': not_found, 'ambiguous': ambiguous}})
 
 
 class DoctorAvailableSlotsView(APIView):
