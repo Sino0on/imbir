@@ -52,7 +52,11 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
             'equipment', 'patient_conditions', 'payment_methods',
             # Публичный профиль
             'about', 'experience_years', 'is_online_available', 'consultation_price',
-            'education', 'work_experience', 'skills', 'interviews',
+            # Профессиональные данные и образование. Храним отдельно от
+            # work_experience: карточка врача не должна переписывать историю
+            # мест работы ради правки текущей должности или допобразования.
+            'position', 'qualification_category', 'academic_degree',
+            'education', 'additional_education', 'work_experience', 'skills', 'interviews',
             # Статус и счётчики
             'is_published', 'profile_views', 'rating', 'reviews_count',
         )
