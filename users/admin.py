@@ -69,6 +69,27 @@ class DoctorProfileAdmin(admin.ModelAdmin):
     inlines = (DoctorDocumentInline, DoctorInterviewInline)
     filter_horizontal = ('services', 'tags', 'primary_specializations', 'narrow_specializations')
     list_per_page = 500
+    actions = ('make_online_available', 'make_online_unavailable', 'make_published', 'make_unpublished')
+
+    @admin.action(description='Включить приём онлайн у выбранных')
+    def make_online_available(self, request, queryset):
+        updated = queryset.update(is_online_available=True)
+        self.message_user(request, f'Приём онлайн включён у {updated} врачей.')
+
+    @admin.action(description='Выключить приём онлайн у выбранных')
+    def make_online_unavailable(self, request, queryset):
+        updated = queryset.update(is_online_available=False)
+        self.message_user(request, f'Приём онлайн выключен у {updated} врачей.')
+
+    @admin.action(description='Опубликовать выбранных')
+    def make_published(self, request, queryset):
+        updated = queryset.update(is_published=True)
+        self.message_user(request, f'Опубликовано врачей: {updated}.')
+
+    @admin.action(description='Снять с публикации выбранных')
+    def make_unpublished(self, request, queryset):
+        updated = queryset.update(is_published=False)
+        self.message_user(request, f'Снято с публикации врачей: {updated}.')
 
     fieldsets = (
         ('Основное', {'fields': ('user', 'gender', 'birth_date', 'city', 'languages', 'photo')}),
@@ -129,6 +150,17 @@ class ClinicProfileAdmin(admin.ModelAdmin):
     inlines = (ClinicBranchInline, ClinicPhotoInline, ClinicDocumentInline)
     filter_horizontal = ('tags', 'primary_specializations', 'narrow_specializations')
     list_per_page = 25
+    actions = ('make_published', 'make_unpublished')
+
+    @admin.action(description='Опубликовать выбранные')
+    def make_published(self, request, queryset):
+        updated = queryset.update(is_published=True)
+        self.message_user(request, f'Опубликовано клиник: {updated}.')
+
+    @admin.action(description='Снять с публикации выбранные')
+    def make_unpublished(self, request, queryset):
+        updated = queryset.update(is_published=False)
+        self.message_user(request, f'Снято с публикации клиник: {updated}.')
 
     fieldsets = (
         ('Основное', {'fields': ('user', 'name', 'clinic_type', 'description', 'logo')}),
