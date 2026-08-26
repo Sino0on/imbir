@@ -208,15 +208,32 @@ class DoctorReviewSerializer(serializers.ModelSerializer):
 
 
 class DoctorServiceReadSerializer(serializers.ModelSerializer):
+    photo = serializers.SerializerMethodField()
+
     class Meta:
         model = Service
-        fields = ('id', 'name', 'category', 'description', 'price', 'duration', 'is_active', 'created_at')
+        fields = (
+            'id', 'name', 'category', 'description', 'price', 'duration', 'photo',
+            'schedule', 'lunch_break', 'is_active', 'created_at',
+        )
+
+    def get_photo(self, obj):
+        if not obj.photo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
 
 
 class DoctorServiceWriteSerializer(serializers.ModelSerializer):
+    photo = HybridImageField(required=False, allow_null=True)
+    # Явный default: BooleanField в multipart/form-data трактует отсутствие поля как
+    # "чекбокс не отмечен" -> False, а не как "использовать default модели" (True).
+    # Актуально именно тут, т.к. photo делает multipart нормой, а не исключением.
+    is_active = serializers.BooleanField(required=False, default=True)
+
     class Meta:
         model = Service
-        fields = ('name', 'category', 'description', 'price', 'duration', 'is_active')
+        fields = ('name', 'category', 'description', 'price', 'duration', 'photo', 'schedule', 'lunch_break', 'is_active')
 
     def create(self, validated_data):
         doctor = self.context['doctor']

@@ -211,7 +211,10 @@ class DoctorServiceListCreateView(ListAPIView):
         serializer = DoctorServiceWriteSerializer(data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
         service = serializer.save()
-        return Response(DoctorServiceReadSerializer(service).data, status=status.HTTP_201_CREATED)
+        return Response(
+            DoctorServiceReadSerializer(service, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 @extend_schema_view(
@@ -235,7 +238,7 @@ class DoctorServiceDetailView(APIView):
         serializer = DoctorServiceWriteSerializer(service, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         service = serializer.save()
-        return Response(DoctorServiceReadSerializer(service).data)
+        return Response(DoctorServiceReadSerializer(service, context={'request': request}).data)
 
     def delete(self, request, pk):
         service = self._get_service(request, pk)

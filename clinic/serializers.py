@@ -261,6 +261,11 @@ class ClinicServiceWriteSerializer(serializers.ModelSerializer):
     branch_id = serializers.PrimaryKeyRelatedField(
         source='branch', queryset=ClinicBranch.objects.all(), required=False, allow_null=True,
     )
+    # Явный default: BooleanField в multipart/form-data трактует отсутствие поля как
+    # "чекбокс не отмечен" -> False, а не как "использовать default модели" (True).
+    # На partial-обновлениях (PUT здесь всегда идёт с partial=True) не мешает —
+    # DRF не подставляет default полям, которых нет во входных данных.
+    is_active = serializers.BooleanField(required=False, default=True)
 
     class Meta:
         model = Service
