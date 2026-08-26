@@ -124,9 +124,17 @@ class DoctorProfile(models.Model):
     is_online_available = models.BooleanField(default=False)
     consultation_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
-    # Биография — заполняется врачом в личном кабинете
-    # education: [{"institution": "КГМУ", "degree": "Высшее медицинское", "year": 2005}]
+    # Профессиональные данные — обычно заполняются клиникой при добавлении врача
+    position = models.CharField(max_length=255, blank=True)  # текущая должность
+    qualification_category = models.CharField(max_length=100, blank=True)  # категория/квалификация
+    academic_degree = models.CharField(max_length=255, blank=True)  # научная степень
+
+    # Биография — заполняется врачом в личном кабинете либо клиникой при добавлении врача
+    # education: [{"institution": "КГМУ", "degree": "Высшее медицинское", "year": 2005,
+    #              "internship": "...", "residency": "...", "diploma_specialization": "..."}]
     education = models.JSONField(default=list, null=True, blank=True)
+    # additional_education (доп. образование, курсы): [{"name": "Курс повышения квалификации", "year": 2022}]
+    additional_education = models.JSONField(default=list, null=True, blank=True)
     # work_experience: [{"clinic": "ГКБ №1", "position": "Терапевт", "from": 2005, "to": 2015}]
     work_experience = models.JSONField(default=list, null=True, blank=True)
     # skills: ["Диагностика", "УЗИ"]

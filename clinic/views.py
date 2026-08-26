@@ -15,12 +15,16 @@ from appointments.models import Appointment
 from core.pagination import StandardPagination
 from reviews.models import Review
 from services.models import Service
-from users.models import ClinicBranch, ClinicDocument, ClinicInvite, ClinicPhoto, ClinicProfile, DoctorClinicLink
+from users.models import (
+    ClinicBranch, ClinicDocument, ClinicInvite, ClinicPhoto, ClinicProfile, DoctorClinicLink,
+    DoctorDocument, DoctorProfile,
+)
 from .permissions import IsClinic
 from .serializers import (
     ClinicAppointmentSerializer,
     ClinicBranchUpdateSerializer,
     ClinicDoctorSerializer,
+    ClinicDoctorProfileSerializer,
     ClinicInviteCreateSerializer,
     ClinicInviteSerializer,
     ClinicOwnProfileSerializer,
@@ -183,21 +187,105 @@ class ClinicDoctorListView(ListCreateAPIView):
         return Response(ClinicDoctorSerializer(link, context=self.get_serializer_context()).data, status=status.HTTP_201_CREATED)
 
 
-@extend_schema(responses={204: None}, tags=['Clinic Cabinet'])
-class ClinicDoctorUnlinkView(DestroyAPIView):
+@extend_schema_view(
+    get=extend_schema(responses={200: ClinicDoctorProfileSerializer}, tags=['Clinic Cabinet'],
+                       summary='Карточка прикреплённого врача'),
+    patch=extend_schema(request=ClinicDoctorProfileSerializer, responses={200: ClinicDoctorProfileSerializer},
+                         tags=['Clinic Cabinet'], summary='Править данные прикреплённого врача'),
+    delete=extend_schema(responses={204: None}, tags=['Clinic Cabinet'], summary='Открепить врача от клиники'),
+)
+class ClinicDoctorDetailView(RetrieveUpdateAPIView):
+    """Уже прикреплённый к клинике врач: GET/PATCH — карточка и правка полей, которые
+    заполняет клиника при найме; DELETE — открепление от клиники (сам аккаунт врача
+    не удаляется). Найти можно только среди врачей, реально привязанных к этой клинике."""
     permission_classes = (IsClinic,)
-    serializer_class = ClinicDoctorSerializer
-    # Список врачей отдаёт id = doctor.user.id, поэтому и открепляем по user-id,
-    # а не по pk связи DoctorClinicLink.
-    lookup_field = 'doctor__user_id'
+    serializer_class = ClinicDoctorProfileSerializer
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+    http_method_names = ['get', 'patch', 'delete']
     lookup_url_kwarg = 'pk'
 
     def get_queryset(self):
         clinic = ClinicProfile.objects.get(user=self.request.user)
-        return DoctorClinicLink.objects.filter(clinic=clinic)
+        return DoctorProfile.objects.filter(
+            clinic_links__clinic=clinic, clinic_links__is_active=True,
+        ).select_related('user').distinct()
 
-    def destroy(self, request, *args, **kwargs):
-        super().destroy(request, *args, **kwargs)
+    def get_object(self):
+        from django.shortcuts import get_object_or_404
+        return get_object_or_404(self.get_queryset(), user_id=self.kwargs['pk'])
+
+    def delete(self, request, *args, **kwargs):
+        doctor = self.get_object()
+        clinic = ClinicProfile.objects.get(user=request.user)
+        DoctorClinicLink.objects.filter(clinic=clinic, doctor=doctor).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema_view(
+    get=extend_schema(tags=['Clinic Cabinet'], summary='Документы (сертификаты) прикреплённого врача'),
+    post=extend_schema(tags=['Clinic Cabinet'], summary='Загрузить документ прикреплённому врачу'),
+)
+class ClinicDoctorDocumentListCreateView(APIView):
+    permission_classes = (IsClinic,)
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+    def _get_doctor(self, request, pk):
+        clinic = ClinicProfile.objects.get(user=request.user)
+        from django.shortcuts import get_object_or_404
+        return get_object_or_404(
+            DoctorProfile.objects.filter(clinic_links__clinic=clinic, clinic_links__is_active=True).distinct(),
+            user_id=pk,
+        )
+
+    def get(self, request, pk):
+        doctor = self._get_doctor(request, pk)
+        docs = doctor.documents.all().order_by('uploaded_at')
+        data = [{
+            'id': d.id,
+            'url': request.build_absolute_uri(d.file.url),
+            'uploaded_at': d.uploaded_at,
+        } for d in docs]
+        return Response(data)
+
+    def post(self, request, pk):
+        doctor = self._get_doctor(request, pk)
+
+        uploaded_file = request.FILES.get('file')
+        url_str = (request.data.get('url') or '').strip()
+
+        if uploaded_file:
+            ext = os.path.splitext(uploaded_file.name)[1].lower()
+            filename = f'doctors/documents/{uuid.uuid4().hex}{ext}'
+            saved_path = default_storage.save(filename, uploaded_file)
+            doc = DoctorDocument.objects.create(doctor=doctor, file=saved_path)
+        elif url_str:
+            from users.utils import get_relative_path_from_url
+            rel_path = get_relative_path_from_url(url_str)
+            doc = DoctorDocument.objects.create(doctor=doctor, file=rel_path)
+        else:
+            return Response({'detail': 'Необходимо передать file (multipart) или url (строка).'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'id': doc.id,
+            'url': request.build_absolute_uri(doc.file.url),
+            'uploaded_at': doc.uploaded_at,
+        }, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(responses={204: None}, tags=['Clinic Cabinet'], summary='Удалить документ прикреплённого врача')
+class ClinicDoctorDocumentDeleteView(APIView):
+    permission_classes = (IsClinic,)
+
+    def delete(self, request, pk, doc_id):
+        clinic = ClinicProfile.objects.get(user=request.user)
+        from django.shortcuts import get_object_or_404
+        doctor = get_object_or_404(
+            DoctorProfile.objects.filter(clinic_links__clinic=clinic, clinic_links__is_active=True).distinct(),
+            user_id=pk,
+        )
+        doc = get_object_or_404(DoctorDocument, pk=doc_id, doctor=doctor)
+        doc.file.delete(save=False)
+        doc.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -227,10 +315,11 @@ class ClinicServiceListCreateView(ListCreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         service = serializer.save()
-        return Response(ClinicServiceReadSerializer(service).data, status=status.HTTP_201_CREATED)
+        return Response(ClinicServiceReadSerializer(service, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema_view(
+    get=extend_schema(responses={200: ClinicServiceReadSerializer}, tags=['Clinic Cabinet'], summary='Карточка процедуры'),
     put=extend_schema(request=ClinicServiceWriteSerializer, responses={200: ClinicServiceReadSerializer}, tags=['Clinic Cabinet']),
     delete=extend_schema(responses={204: None}, tags=['Clinic Cabinet']),
 )
@@ -243,6 +332,12 @@ class ClinicServiceDetailView(APIView):
             return Service.objects.get(pk=pk, clinic=clinic)
         except Service.DoesNotExist:
             return None
+
+    def get(self, request, pk):
+        service = self._get_service(request, pk)
+        if not service:
+            return Response({'detail': 'Не найдено'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(ClinicServiceReadSerializer(service, context={'request': request}).data)
 
     def put(self, request, pk):
         service = self._get_service(request, pk)
@@ -258,7 +353,7 @@ class ClinicServiceDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         service = serializer.save()
         service.refresh_from_db()
-        return Response(ClinicServiceReadSerializer(service).data)
+        return Response(ClinicServiceReadSerializer(service, context={'request': request}).data)
 
     def delete(self, request, pk):
         service = self._get_service(request, pk)

@@ -5,8 +5,23 @@ from reviews.models import Review
 from services.models import Service
 from references.models import Specialization
 from references.serializers import SpecializationSerializer
-from users.models import ClinicBranch, ClinicInvite, ClinicProfile, DoctorClinicLink
+from users.models import ClinicBranch, ClinicInvite, ClinicProfile, DoctorClinicLink, DoctorProfile
 from users.serializers import HybridImageField
+
+# Поля профиля врача, которые заполняет клиника при найме (не логин/график/цена приёма —
+# это остаётся в зоне ответственности самого врача через /api/doctor/profile/).
+_CLINIC_DOCTOR_PROFILE_FIELDS = (
+    # Основная информация
+    'gender', 'birth_date', 'city', 'languages', 'photo',
+    # Профессиональные данные
+    'primary_specializations', 'primary_specialization_ids',
+    'narrow_specializations', 'narrow_specialization_ids',
+    'experience_years', 'position', 'qualification_category', 'academic_degree',
+    # Образование
+    'education', 'additional_education',
+    # Документы
+    'license_number',
+)
 
 
 class ClinicBranchUpdateSerializer(serializers.ModelSerializer):
@@ -161,12 +176,64 @@ class ClinicDoctorSerializer(serializers.ModelSerializer):
         return Appointment.objects.filter(doctor=obj.doctor, clinic=clinic).count()
 
 
+class ClinicDoctorProfileSerializer(serializers.ModelSerializer):
+    """Полная карточка уже прикреплённого к клинике врача — просмотр (GET) и правка
+    (PATCH) полей, которые заполняет клиника при найме. Логин (email/пароль) и график
+    приёма сюда не входят — это меняет только сам врач через /api/doctor/profile/."""
+    id = serializers.IntegerField(source='user.id', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    patronymic = serializers.CharField(source='user.patronymic', read_only=True)
+    full_name = serializers.CharField(source='user.full_name', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    phone = serializers.CharField(source='user.phone', read_only=True)
+    photo = HybridImageField(required=False, allow_null=True)
+
+    primary_specializations = SpecializationSerializer(many=True, read_only=True)
+    primary_specialization_ids = serializers.PrimaryKeyRelatedField(
+        source='primary_specializations', many=True, write_only=True, required=False,
+        queryset=Specialization.objects.all(),
+    )
+    narrow_specializations = SpecializationSerializer(many=True, read_only=True)
+    narrow_specialization_ids = serializers.PrimaryKeyRelatedField(
+        source='narrow_specializations', many=True, write_only=True, required=False,
+        queryset=Specialization.objects.all(),
+    )
+    documents = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DoctorProfile
+        fields = (
+            'id', 'first_name', 'last_name', 'patronymic', 'full_name', 'email', 'phone',
+        ) + _CLINIC_DOCTOR_PROFILE_FIELDS + ('documents',)
+        read_only_fields = ('id', 'first_name', 'last_name', 'patronymic', 'full_name', 'email', 'phone')
+
+    def get_documents(self, obj):
+        request = self.context.get('request')
+        return [{
+            'id': d.id,
+            'url': request.build_absolute_uri(d.file.url) if request else d.file.url,
+            'uploaded_at': d.uploaded_at,
+        } for d in obj.documents.all().order_by('uploaded_at')]
+
+
+class ClinicServiceBranchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClinicBranch
+        fields = ('id', 'name', 'address')
+
+
 class ClinicServiceReadSerializer(serializers.ModelSerializer):
     doctors = serializers.SerializerMethodField()
+    photo = serializers.SerializerMethodField()
+    branch = ClinicServiceBranchSerializer(read_only=True)
 
     class Meta:
         model = Service
-        fields = ('id', 'name', 'category', 'description', 'price', 'duration', 'is_active', 'doctors', 'created_at')
+        fields = (
+            'id', 'name', 'category', 'description', 'price', 'duration', 'photo',
+            'branch', 'schedule', 'lunch_break', 'is_active', 'doctors', 'created_at',
+        )
 
     def get_doctors(self, obj):
         return [
@@ -177,6 +244,12 @@ class ClinicServiceReadSerializer(serializers.ModelSerializer):
             for d in obj.doctors.all()
         ]
 
+    def get_photo(self, obj):
+        if not obj.photo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
+
 
 class ClinicServiceWriteSerializer(serializers.ModelSerializer):
     doctor_ids = serializers.ListField(
@@ -184,10 +257,17 @@ class ClinicServiceWriteSerializer(serializers.ModelSerializer):
         required=False,
         write_only=True
     )
+    photo = HybridImageField(required=False, allow_null=True)
+    branch_id = serializers.PrimaryKeyRelatedField(
+        source='branch', queryset=ClinicBranch.objects.all(), required=False, allow_null=True,
+    )
 
     class Meta:
         model = Service
-        fields = ('name', 'category', 'description', 'price', 'duration', 'is_active', 'doctor_ids')
+        fields = (
+            'name', 'category', 'description', 'price', 'duration', 'photo',
+            'branch_id', 'schedule', 'lunch_break', 'is_active', 'doctor_ids',
+        )
 
     def validate_doctor_ids(self, value):
         if not value:
@@ -203,6 +283,14 @@ class ClinicServiceWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 f'Некоторые врачи не принадлежат этой клинике или не найдены: {list(invalid_docs)}'
             )
+        return value
+
+    def validate_branch_id(self, value):
+        if value is None:
+            return value
+        clinic = self.context['clinic']
+        if value.clinic_id != clinic.id:
+            raise serializers.ValidationError('Этот филиал не принадлежит вашей клинике.')
         return value
 
     def create(self, validated_data):
@@ -263,6 +351,34 @@ class ClinicDoctorCreateSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, default='')
     password = serializers.CharField(max_length=128, required=False, default='Doctor123!', write_only=True)
 
+    # Основная информация — опционально, можно дополнить/поправить позже через PATCH
+    gender = serializers.CharField(required=False, allow_blank=True, default='')
+    birth_date = serializers.DateField(required=False, allow_null=True, default=None)
+    city = serializers.CharField(required=False, allow_blank=True, default='')
+    languages = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+    photo = HybridImageField(required=False, allow_null=True)
+
+    # Профессиональные данные
+    primary_specialization_ids = serializers.PrimaryKeyRelatedField(
+        source='primary_specializations', many=True, required=False, default=list,
+        queryset=Specialization.objects.all(),
+    )
+    narrow_specialization_ids = serializers.PrimaryKeyRelatedField(
+        source='narrow_specializations', many=True, required=False, default=list,
+        queryset=Specialization.objects.all(),
+    )
+    experience_years = serializers.IntegerField(required=False, default=0)
+    position = serializers.CharField(required=False, allow_blank=True, default='')
+    qualification_category = serializers.CharField(required=False, allow_blank=True, default='')
+    academic_degree = serializers.CharField(required=False, allow_blank=True, default='')
+
+    # Образование
+    education = serializers.ListField(required=False, default=list)
+    additional_education = serializers.ListField(required=False, default=list)
+
+    # Документы
+    license_number = serializers.CharField(required=False, allow_blank=True, default='')
+
     def validate_email(self, value):
         from users.models import User
         if User.objects.filter(email=value).exists():
@@ -282,7 +398,7 @@ class ClinicDoctorCreateSerializer(serializers.Serializer):
 
         user = User.objects.create_user(
             email=validated_data['email'],
-            phone=validated_data.get('phone', ''),
+            phone=validated_data.get('phone') or None,
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             password=validated_data['password'],
@@ -291,10 +407,23 @@ class ClinicDoctorCreateSerializer(serializers.Serializer):
 
         doctor_profile = DoctorProfile.objects.create(
             user=user,
-            city=clinic.city,
+            city=validated_data.get('city') or clinic.city,
             country=clinic.country,
-            is_published=True
+            is_published=True,
+            gender=validated_data.get('gender', ''),
+            birth_date=validated_data.get('birth_date'),
+            languages=validated_data.get('languages') or [],
+            photo=validated_data.get('photo'),
+            experience_years=validated_data.get('experience_years') or 0,
+            position=validated_data.get('position', ''),
+            qualification_category=validated_data.get('qualification_category', ''),
+            academic_degree=validated_data.get('academic_degree', ''),
+            education=validated_data.get('education') or [],
+            additional_education=validated_data.get('additional_education') or [],
+            license_number=validated_data.get('license_number', ''),
         )
+        doctor_profile.primary_specializations.set(validated_data.get('primary_specializations') or [])
+        doctor_profile.narrow_specializations.set(validated_data.get('narrow_specializations') or [])
 
         link = DoctorClinicLink.objects.create(
             doctor=doctor_profile,
