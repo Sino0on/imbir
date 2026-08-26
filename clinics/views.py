@@ -1,4 +1,5 @@
 from django.db.models import Q
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny
 
@@ -7,6 +8,29 @@ from core.pagination import StandardPagination
 from .serializers import ClinicListSerializer, ClinicDetailSerializer
 
 
+@extend_schema(
+    parameters=[
+        OpenApiParameter(name='search', type=str, description='Поиск по названию клиники'),
+        OpenApiParameter(name='city', type=str, description='Фильтр по городу'),
+        OpenApiParameter(
+            name='specialization',
+            type=str,
+            description=(
+                'Фильтр по специализации. Несколько значений — через запятую '
+                '(например, specialization=Кардиология,Терапия) или повтором параметра; '
+                'клиника попадает в выдачу, если совпадает хотя бы одна.'
+            ),
+        ),
+        OpenApiParameter(name='min_rating', type=float, description='Минимальный рейтинг (0–5)'),
+        OpenApiParameter(name='min_experience', type=int, description='Минимальный стаж клиники (лет)'),
+        OpenApiParameter(name='max_experience', type=int, description='Максимальный стаж клиники (лет)'),
+        OpenApiParameter(name='min_price', type=float, description='Минимальная цена услуги'),
+        OpenApiParameter(name='max_price', type=float, description='Максимальная цена услуги'),
+    ],
+    tags=['Clinics Catalog'],
+    summary='Список клиник с фильтрацией',
+    description='Возвращает список опубликованных клиник с пагинацией и фильтрацией.',
+)
 class ClinicListView(ListAPIView):
     permission_classes = (AllowAny,)
     serializer_class = ClinicListSerializer
@@ -32,12 +56,21 @@ class ClinicListView(ListAPIView):
         if city:
             qs = qs.filter(city__icontains=city)
 
-        specialization = params.get('specialization', '').strip()
-        if specialization:
-            qs = qs.filter(
-                Q(primary_specializations__name__iexact=specialization)
-                | Q(narrow_specializations__name__iexact=specialization)
-            ).distinct()
+        specialization_values = []
+        for raw in params.getlist('specialization'):
+            specialization_values.extend(
+                value.strip() for value in raw.split(',') if value.strip()
+            )
+        specialization_values = list(dict.fromkeys(specialization_values))
+
+        if specialization_values:
+            specialization_filter = Q()
+            for value in specialization_values:
+                specialization_filter |= (
+                    Q(primary_specializations__name__icontains=value)
+                    | Q(narrow_specializations__name__icontains=value)
+                )
+            qs = qs.filter(specialization_filter).distinct()
 
         min_rating = params.get('min_rating')
         if min_rating:
