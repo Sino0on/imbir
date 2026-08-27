@@ -41,12 +41,10 @@ class ServiceListSerializer(serializers.ModelSerializer):
         return first.reviews_count if first else 0
 
     def get_photo(self, obj):
-        # Фото первого врача из списка
-        first = obj.doctors.first()
-        if not first or not first.photo:
+        if not obj.photo:
             return None
         request = self.context.get('request')
-        return request.build_absolute_uri(first.photo.url) if request else first.photo.url
+        return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
 
 
 
@@ -76,7 +74,7 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
         model = Service
         fields = (
             'id', 'name', 'category', 'description',
-            'price', 'duration',
+            'price', 'duration', 'photo',
             'clinic', 'doctor', 'doctors',
         )
 
