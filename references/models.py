@@ -63,6 +63,15 @@ class SiteSettings(models.Model):
                   'ничего не делает, фото сохраняется как есть.',
     )
 
+    class AiPhotoProvider(models.TextChoices):
+        OPENAI = 'openai', 'OpenAI (gpt-image-1)'
+        GEMINI = 'gemini', 'Gemini (nano banana)'
+
+    ai_photo_provider = models.CharField(
+        max_length=10, choices=AiPhotoProvider.choices, default=AiPhotoProvider.OPENAI,
+        verbose_name='Провайдер ИИ-обработки фото',
+    )
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

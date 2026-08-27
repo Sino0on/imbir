@@ -220,6 +220,10 @@ LIVEKIT_S3_ENDPOINT = config('LIVEKIT_S3_ENDPOINT', default='')
 
 OPENAI_API_KEY = config('OPENAI_API_KEY', default=None)
 
+# В .env переменная называется JEMINI_* (опечатка автора) — здесь читаем её,
+# но в коде проекта везде используем правильное имя GEMINI.
+GEMINI_API_KEY = config('JEMINI_API_KEY', default=None)
+
 # Google Calendar API (OAuth2, для генерации Google Meet ссылок)
 GOOGLE_OAUTH_CLIENT_ID = config('GOOGLE_OAUTH_CLIENT_ID', default=None)
 GOOGLE_OAUTH_CLIENT_SECRET = config('GOOGLE_OAUTH_CLIENT_SECRET', default=None)
