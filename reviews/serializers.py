@@ -1,3 +1,4 @@
+from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count
 from rest_framework import serializers
 from .models import Review
@@ -82,11 +83,19 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
                 data['doctor'] = DoctorProfile.objects.get(user_id=target_id, is_published=True)
             except DoctorProfile.DoesNotExist:
                 raise serializers.ValidationError({'target_id': 'Врач не найден.'})
+            if Review.objects.filter(author=request.user, doctor=data['doctor']).exists():
+                raise serializers.ValidationError(
+                    {'target_id': 'Вы уже оставили отзыв этому врачу.'}
+                )
         elif target_type == Review.TargetType.CLINIC:
             try:
                 data['clinic'] = ClinicProfile.objects.get(user_id=target_id, is_published=True)
             except ClinicProfile.DoesNotExist:
                 raise serializers.ValidationError({'target_id': 'Клиника не найдена.'})
+            if Review.objects.filter(author=request.user, clinic=data['clinic']).exists():
+                raise serializers.ValidationError(
+                    {'target_id': 'Вы уже оставили отзыв этой клинике.'}
+                )
 
         if appointment_id is not None:
             try:
@@ -107,6 +116,16 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data['author'] = self.context['request'].user
-        review = Review.objects.create(**validated_data)
+        try:
+            with transaction.atomic():
+                review = Review.objects.create(**validated_data)
+        except IntegrityError as error:
+            if validated_data.get('appointment'):
+                message = 'На эту запись уже оставлен отзыв.'
+            elif validated_data.get('doctor'):
+                message = 'Вы уже оставили отзыв этому врачу.'
+            else:
+                message = 'Вы уже оставили отзыв этой клинике.'
+            raise serializers.ValidationError({'target_id': message}) from error
         _update_rating(review)
         return review

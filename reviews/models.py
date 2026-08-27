@@ -34,6 +34,18 @@ class Review(models.Model):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['author', 'doctor'],
+                condition=models.Q(doctor__isnull=False),
+                name='uniq_review_author_doctor',
+            ),
+            models.UniqueConstraint(
+                fields=['author', 'clinic'],
+                condition=models.Q(clinic__isnull=False),
+                name='uniq_review_author_clinic',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.author.full_name} → {self.target_type} ({self.rating}★)'
