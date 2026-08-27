@@ -65,7 +65,13 @@ class DoctorAppointmentListView(ListAPIView):
         params = self.request.query_params
 
         status_filter = params.get('status', '').strip()
-        if status_filter:
+        if status_filter == 'upcoming':
+            qs = qs.filter(status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED])
+        elif status_filter == 'completed':
+            qs = qs.filter(status=Appointment.Status.COMPLETED)
+        elif status_filter == 'cancelled':
+            qs = qs.filter(status=Appointment.Status.CANCELLED)
+        elif status_filter:
             qs = qs.filter(status=status_filter)
 
         date_filter = params.get('date', '').strip()
