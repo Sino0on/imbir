@@ -60,7 +60,12 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
             # Статус и счётчики
             'is_published', 'profile_views', 'rating', 'reviews_count',
         )
-        read_only_fields = ('profile_views', 'rating', 'reviews_count', 'documents', 'interviews')
+        # is_published — читаем, но не пишем отсюда: полный PUT-профиль не должен
+        # быть способом публикации/снятия с публикации (это модерационное поле,
+        # меняется через админку). Иначе любое сохранение без явного is_published
+        # в теле запроса тихо снимает врача с публикации (BooleanField в multipart
+        # трактует отсутствие поля как False, а не как "оставить как было").
+        read_only_fields = ('profile_views', 'rating', 'reviews_count', 'documents', 'interviews', 'is_published')
 
 
     def get_documents(self, obj):

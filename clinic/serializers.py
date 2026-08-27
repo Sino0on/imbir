@@ -91,7 +91,9 @@ class ClinicOwnProfileSerializer(serializers.ModelSerializer):
             'branches',
             'photos',
         )
-        read_only_fields = ('rating', 'reviews_count', 'doctors_count', 'profile_views', 'photos', 'documents')
+        # is_published — та же логика, что у DoctorOwnProfileSerializer: не пишем
+        # отсюда, полный PUT-профиль иначе тихо снимает клинику с публикации.
+        read_only_fields = ('rating', 'reviews_count', 'doctors_count', 'profile_views', 'photos', 'documents', 'is_published')
 
     def get_photos(self, obj):
         request = self.context.get('request')

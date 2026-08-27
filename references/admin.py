@@ -24,6 +24,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         ('Соцсети', {'fields': ('facebook_url', 'instagram_url', 'twitter_url', 'linkedin_url')}),
         ('Контакты', {'fields': ('contact_email', 'contact_phone', 'address')}),
         ('Юридические тексты', {'fields': ('terms_text', 'privacy_policy_text')}),
+        ('Функции', {'fields': ('ai_doctor_photo_processing_enabled',)}),
     )
 
     def has_add_permission(self, request):

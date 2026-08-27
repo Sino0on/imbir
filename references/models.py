@@ -56,6 +56,13 @@ class SiteSettings(models.Model):
     terms_text = models.TextField(blank=True, verbose_name='Условия и положения')
     privacy_policy_text = models.TextField(blank=True, verbose_name='Политика конфиденциальности')
 
+    ai_doctor_photo_processing_enabled = models.BooleanField(
+        default=True,
+        verbose_name='ИИ-обработка фото врачей включена',
+        help_text='Если выключено — ?process_photo=true у PUT /api/doctor/profile/ '
+                  'ничего не делает, фото сохраняется как есть.',
+    )
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

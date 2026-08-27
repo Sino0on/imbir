@@ -39,7 +39,9 @@ from .serializers import (
                     'Если true и в этом же запросе передано новое фото (поле photo, файл) — '
                     'оно будет обработано через ИИ: на человека наденут белый медицинский халат '
                     'и поместят на белый фон. При неудаче обработки сохраняется исходное фото '
-                    'как есть, и в ответе появляется "photo_ai_processing": "failed".'
+                    'как есть, и в ответе появляется "photo_ai_processing": "failed". Если '
+                    'функция выключена в настройках сайта (админка) — "photo_ai_processing": '
+                    '"disabled", фото тоже сохраняется как есть.'
                 ),
             ),
         ],
@@ -55,14 +57,20 @@ class DoctorProfileView(RetrieveUpdateAPIView):
         return DoctorProfile.objects.select_related('user').get(user=self.request.user)
 
     def update(self, request, *args, **kwargs):
+        from references.models import SiteSettings
+
         should_process = request.query_params.get('process_photo', '').strip().lower() in ('1', 'true', 'yes')
+        ai_enabled = SiteSettings.load().ai_doctor_photo_processing_enabled
         uploaded_photo = request.FILES.get('photo')
         photo_bytes = None
-        if should_process and uploaded_photo:
+        if should_process and uploaded_photo and ai_enabled:
             photo_bytes = uploaded_photo.read()
             uploaded_photo.seek(0)  # чтобы обычное сохранение через сериализатор тоже отработало штатно
 
         response = super().update(request, *args, **kwargs)
+
+        if should_process and uploaded_photo and not ai_enabled and response.status_code == 200:
+            response.data['photo_ai_processing'] = 'disabled'
 
         if photo_bytes and response.status_code == 200:
             from .ai_photo import generate_doctor_coat_photo
