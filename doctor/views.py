@@ -3,7 +3,7 @@ import uuid
 from django.shortcuts import get_object_or_404
 from django.db.models import Count, Max, Q
 from django.core.files.storage import default_storage
-from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer, OpenApiParameter
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -30,6 +30,22 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    put=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='process_photo', type=bool, required=False,
+                description=(
+                    'Если true и в этом же запросе передано новое фото (поле photo, файл) — '
+                    'оно будет обработано через ИИ: на человека наденут белый медицинский халат '
+                    'и поместят на белый фон. При неудаче обработки сохраняется исходное фото '
+                    'как есть, и в ответе появляется "photo_ai_processing": "failed".'
+                ),
+            ),
+        ],
+        tags=['Doctor Cabinet'],
+    ),
+)
 class DoctorProfileView(RetrieveUpdateAPIView):
     permission_classes = (IsDoctor,)
     serializer_class = DoctorOwnProfileSerializer
@@ -37,6 +53,28 @@ class DoctorProfileView(RetrieveUpdateAPIView):
 
     def get_object(self):
         return DoctorProfile.objects.select_related('user').get(user=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        should_process = request.query_params.get('process_photo', '').strip().lower() in ('1', 'true', 'yes')
+        uploaded_photo = request.FILES.get('photo')
+        photo_bytes = None
+        if should_process and uploaded_photo:
+            photo_bytes = uploaded_photo.read()
+            uploaded_photo.seek(0)  # чтобы обычное сохранение через сериализатор тоже отработало штатно
+
+        response = super().update(request, *args, **kwargs)
+
+        if photo_bytes and response.status_code == 200:
+            from .ai_photo import generate_doctor_coat_photo
+            processed = generate_doctor_coat_photo(photo_bytes, uploaded_photo.name)
+            if processed:
+                from django.core.files.base import ContentFile
+                profile = self.get_object()
+                profile.photo.save(f'{profile.user_id}_coat.png', ContentFile(processed), save=True)
+                response = Response(self.get_serializer(profile).data)
+            else:
+                response.data['photo_ai_processing'] = 'failed'
+        return response
 
 
 class DoctorScheduleView(RetrieveUpdateAPIView):
