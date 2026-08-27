@@ -2,7 +2,7 @@ import os
 import re
 
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
-from django.db.models import Q
+from django.db.models import F, Q
 from django.shortcuts import redirect, render
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
@@ -151,12 +151,15 @@ class DoctorDetailView(RetrieveAPIView):
     def get_object(self):
         from django.shortcuts import get_object_or_404
         # id в URL — это user.id, а не DoctorProfile.id
-        return get_object_or_404(
+        obj = get_object_or_404(
             DoctorProfile.objects.select_related('user').filter(
                 user__is_active=True, is_published=True
             ),
             user__id=self.kwargs['pk'],
         )
+        DoctorProfile.objects.filter(pk=obj.pk).update(profile_views=F('profile_views') + 1)
+        obj.profile_views += 1
+        return obj
 
 
 @extend_schema(tags=['Doctors Catalog'], summary='Список видео-интервью врачей')

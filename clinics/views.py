@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import F, Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny
@@ -122,10 +122,13 @@ class ClinicDetailView(RetrieveAPIView):
 
     def get_object(self):
         from django.shortcuts import get_object_or_404
-        return get_object_or_404(
+        obj = get_object_or_404(
             ClinicProfile.objects
             .select_related('user')
             .prefetch_related('photos')
             .filter(user__is_active=True, is_published=True),
             user__id=self.kwargs['pk'],
         )
+        ClinicProfile.objects.filter(pk=obj.pk).update(profile_views=F('profile_views') + 1)
+        obj.profile_views += 1
+        return obj
