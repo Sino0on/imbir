@@ -285,7 +285,7 @@ GET /api/doctors/
 |---|---|---|
 | `search` | string | Поиск по имени и специализации |
 | `city` | string | Фильтр по городу |
-| `specialization` | string | Фильтр по специализации |
+| `specialization` | string | Фильтр по специализации; несколько значений через запятую или повтором параметра, совпадение по OR |
 | `min_price` | int | Минимальная цена приёма |
 | `max_price` | int | Максимальная цена приёма |
 | `min_rating` | float | Минимальный рейтинг (0–5) |
@@ -378,7 +378,9 @@ GET /api/doctors/{id}/
 ```
 GET /api/clinics/
 ```
-**Query-параметры:** `search`, `city`, `specialization`, `min_rating`, `payment_method`, `page`, `page_size`
+**Query-параметры:** `search`, `city`, `specialization`, `min_rating`, `min_experience`, `max_experience`, `min_price`, `max_price`, `page`, `page_size`
+
+`specialization` необязателен. Пример нескольких специализаций: `?specialization=Кардиология,Терапия`. Клиника попадает в выдачу, если подходит хотя бы одна выбранная специализация. Чтобы показать клиники без фильтра, параметр не передаётся.
 
 **Ответ:**
 ```json
@@ -728,6 +730,20 @@ Authorization: Bearer <token>
 }
 ```
 
+**Профессиональные данные и образование.** `position`,
+`qualification_category` и `academic_degree` — отдельные плоские поля, а не
+часть `work_experience`. История работ остаётся массивом записей и не должна
+перезаписываться при сохранении текущей должности.
+
+Дополнительное образование передаётся и возвращается отдельно:
+```json
+"additional_education": [
+  { "name": "Курс УЗИ-диагностики", "year": 2024 }
+]
+```
+Это поле не смешивается с `education`, поэтому год курса сохраняется при
+повторном `PUT /api/doctor/profile/`.
+
 ### 10.2 Расписание врача
 ```
 GET /api/doctor/schedule/
@@ -839,8 +855,13 @@ Authorization: Bearer <token>
 ### 11.2 Врачи клиники
 ```
 GET    /api/clinic/doctors/
-POST   /api/clinic/doctors/invite/   Body: { "email": "doctor@mail.com" }  — приглашение врача
-DELETE /api/clinic/doctors/{id}/                                           — открепить врача
+POST   /api/clinic/doctors/                         — создать и привязать врача
+GET    /api/clinic/doctors/{id}/                    — полная карточка врача клиники
+PATCH  /api/clinic/doctors/{id}/                    — частично изменить карточку
+DELETE /api/clinic/doctors/{id}/                    — открепить врача
+GET    /api/clinic/doctors/{id}/documents/          — сертификаты врача
+POST   /api/clinic/doctors/{id}/documents/          — загрузить сертификат
+DELETE /api/clinic/doctors/{id}/documents/{doc_id}/ — удалить сертификат
 ```
 **Ответ GET:**
 ```json
@@ -859,10 +880,27 @@ DELETE /api/clinic/doctors/{id}/                                           — �
 }
 ```
 
+**POST/PATCH карточки врача.** Клиника заполняет кадровые и профессиональные
+данные: `gender`, `birth_date`, `city`, `languages`, `photo`,
+`primary_specialization_ids`, `narrow_specialization_ids`, `experience_years`,
+`position`, `qualification_category`, `academic_degree`, `education`,
+`additional_education`, `license_number`. Все поля профиля опциональны при
+создании, кроме `first_name`, `last_name`, `email`; специализации передаются
+массивами id. При чтении специализации приходят объектами
+`primary_specializations`/`narrow_specializations`, а сертификаты — в поле
+`documents`.
+
+Логин, пароль, график приёма и цену консультации клиника после создания не
+изменяет: это зона самого врача в `/api/doctor/profile/`. `POST` создаёт
+аккаунт врача, а `PATCH` доступен только той клинике, к которой врач привязан.
+Сертификаты загружаются после создания отдельным multipart-запросом с полем
+`file` (либо JSON-полем `url`).
+
 ### 11.3 Услуги клиники
 ```
 GET    /api/clinic/services/
 POST   /api/clinic/services/          — добавить услугу
+GET    /api/clinic/services/{id}/     — полная карточка процедуры
 PUT    /api/clinic/services/{id}/     — обновить
 DELETE /api/clinic/services/{id}/
 ```
@@ -876,9 +914,16 @@ DELETE /api/clinic/services/{id}/
   "duration_minutes": 30,
   "image": "https://...",
   "doctor_ids": [1, 3],
-  "schedule": "Пн–Пт 09:00–18:00"
+  "branch_id": 2,
+  "schedule": { "monday": { "enabled": true, "from": "09:00", "to": "18:00" } },
+  "lunch_break": { "from": "13:00", "to": "14:00" }
 }
 ```
+
+`photo` принимает файл в `multipart/form-data` или URL уже загруженного файла.
+`branch_id` — необязательный id филиала этой же клиники; в ответе приходит
+`branch` с названием и адресом. График и обед сохраняются отдельно от общего
+графика клиники, но пока не участвуют в расчёте доступных слотов записи.
 
 ### 11.4 Записи в клинику
 ```
