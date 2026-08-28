@@ -35,21 +35,21 @@ AI_RECOMMENDATION_INSTRUCTIONS = (
     'На приветствия, уточняющие и общие вопросы ставь false — не рекомендуй на каждое сообщение.\n'
     '- "entity_types" (array of strings): какие типы рекомендовать, подмножество '
     'из ["doctors", "clinics", "services"]. Пустой массив, если recommend=false.\n'
-    '- "tags" (array of strings): подходящие теги СТРОГО из списка ниже, дословно. '
-    'Не придумывай новых тегов. Пустой массив, если recommend=false.\n'
-    'Если подходящих тегов в списке нет — ставь recommend=false.\n'
-    'Доступные теги: {tags}'
+    '- "specializations" (array of strings): подходящие специализации СТРОГО из списка ниже, '
+    'дословно. Не придумывай новых. Пустой массив, если recommend=false.\n'
+    'Если подходящих специализаций в списке нет — ставь recommend=false.\n'
+    'Доступные специализации: {specializations}'
 )
 MAX_HISTORY = 20
 
 
 def _build_system_messages():
-    from references.models import Tag
-    tag_names = list(Tag.objects.values_list('name', flat=True))
-    tags_str = ', '.join(tag_names) if tag_names else '(список пуст)'
+    from references.models import Specialization
+    spec_names = list(Specialization.objects.values_list('name', flat=True))
+    specializations_str = ', '.join(spec_names) if spec_names else '(список пуст)'
     return [
         {'role': 'system', 'content': AI_SYSTEM_PROMPT},
-        {'role': 'system', 'content': AI_RECOMMENDATION_INSTRUCTIONS.format(tags=tags_str)},
+        {'role': 'system', 'content': AI_RECOMMENDATION_INSTRUCTIONS.format(specializations=specializations_str)},
     ]
 
 
@@ -181,12 +181,12 @@ class AIChatSendView(APIView):
         )
         raw = completion.choices[0].message.content
 
-        content, recommend, entity_types, tags = self._parse_ai_reply(raw)
+        content, recommend, entity_types, specializations = self._parse_ai_reply(raw)
 
         recommendations_ids = {}
-        if recommend and tags:
+        if recommend and specializations:
             from .recommendations import query_recommendations
-            recommendations_ids = query_recommendations(tags, entity_types)
+            recommendations_ids = query_recommendations(specializations, entity_types)
 
         ai_message = AIMessage.objects.create(
             user=request.user,
@@ -211,14 +211,14 @@ class AIChatSendView(APIView):
         content = (data.get('content') or '').strip() or (raw or '').strip()
         recommend = bool(data.get('recommend'))
         entity_types = data.get('entity_types') or []
-        tags = data.get('tags') or []
+        specializations = data.get('specializations') or []
         if not isinstance(entity_types, list):
             entity_types = []
-        if not isinstance(tags, list):
-            tags = []
+        if not isinstance(specializations, list):
+            specializations = []
         # оставляем только валидные типы сущностей
         entity_types = [t for t in entity_types if t in ('doctors', 'clinics', 'services')]
-        return content, recommend, entity_types, tags
+        return content, recommend, entity_types, specializations
 
 
 @extend_schema(

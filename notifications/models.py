@@ -5,6 +5,10 @@ from users.models import User
 class Notification(models.Model):
     class Type(models.TextChoices):
         APPOINTMENT_REMINDER = 'appointment_reminder', 'Напоминание о записи'
+        APPOINTMENT_CREATED = 'appointment_created', 'Новая запись'
+        APPOINTMENT_CONFIRMED = 'appointment_confirmed', 'Запись подтверждена'
+        APPOINTMENT_CANCELLED = 'appointment_cancelled', 'Запись отменена'
+        APPOINTMENT_COMPLETED = 'appointment_completed', 'Приём завершён'
         NEW_REVIEW = 'new_review', 'Новый отзыв'
         NEW_MESSAGE = 'new_message', 'Новое сообщение'
         SYSTEM = 'system', 'Системное'

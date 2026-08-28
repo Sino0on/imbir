@@ -128,4 +128,18 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
                 message = 'Вы уже оставили отзыв этой клинике.'
             raise serializers.ValidationError({'target_id': message}) from error
         _update_rating(review)
+        self._notify_new_review(review)
         return review
+
+    def _notify_new_review(self, review):
+        from notifications.models import Notification
+        from notifications.utils import notify, review_payload
+
+        recipient = review.doctor.user if review.doctor else review.clinic.user
+        notify(
+            recipient, Notification.Type.NEW_REVIEW,
+            'Новый отзыв',
+            f'{review.author.full_name} оставил(а) отзыв: {review.rating}★'
+            + (f' — «{review.text}»' if review.text else ''),
+            review_payload(review),
+        )

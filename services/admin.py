@@ -9,13 +9,12 @@ class ServiceAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'price_display', 'duration_display', 'clinic', 'doctors_list', 'active_badge')
     list_filter = ('category', 'is_active')
     search_fields = ('name', 'category', 'clinic__name')
-    filter_horizontal = ('tags',)
     list_per_page = 500
 
     fieldsets = (
         ('Услуга', {'fields': ('name', 'category', 'description', 'is_active')}),
         ('Параметры', {'fields': ('price', 'duration')}),
-        ('Привязка', {'fields': ('clinic', 'tags')}),
+        ('Привязка', {'fields': ('clinic',)}),
     )
 
     @admin.display(description='Врачи')

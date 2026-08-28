@@ -1,0 +1,282 @@
+[
+  {
+    "model": "references.specialization",
+    "pk": 1,
+    "fields": {
+      "name": "anti-age спец."
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 2,
+    "fields": {
+      "name": "Андрология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 3,
+    "fields": {
+      "name": "Аритмология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 4,
+    "fields": {
+      "name": "Врач сосудистый хирург"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 5,
+    "fields": {
+      "name": "Врач-физиотерапевт"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 6,
+    "fields": {
+      "name": "Гастроэнтерология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 7,
+    "fields": {
+      "name": "Гепатолог"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 8,
+    "fields": {
+      "name": "Гинекология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 9,
+    "fields": {
+      "name": "Дерматология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 10,
+    "fields": {
+      "name": "Детская аллергология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 11,
+    "fields": {
+      "name": "Диагностика и лечение ревматических заболеваний"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 12,
+    "fields": {
+      "name": "Диагностирует и лечит травматическую и нетравматическую"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 13,
+    "fields": {
+      "name": "Интервенционная кардиология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 14,
+    "fields": {
+      "name": "Кардиология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 15,
+    "fields": {
+      "name": "Маммология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 16,
+    "fields": {
+      "name": "Микрохирург"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 17,
+    "fields": {
+      "name": "Неврология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 18,
+    "fields": {
+      "name": "Неонатология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 19,
+    "fields": {
+      "name": "Остеопат"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 20,
+    "fields": {
+      "name": "Оториноларингология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 21,
+    "fields": {
+      "name": "Педиатрия"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 22,
+    "fields": {
+      "name": "Пластический хирург"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 23,
+    "fields": {
+      "name": "Пластический хирург-Ассистент"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 24,
+    "fields": {
+      "name": "Привентивный интегративный врач  (нутрициолог)"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 25,
+    "fields": {
+      "name": "Психолог – это специалист"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 26,
+    "fields": {
+      "name": "Терапия"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 27,
+    "fields": {
+      "name": "Только взрослый врач. Сосудистый хирург"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 28,
+    "fields": {
+      "name": "Травматология и ортопедия"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 29,
+    "fields": {
+      "name": "УЗИ-диагностика"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 30,
+    "fields": {
+      "name": "Урология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 31,
+    "fields": {
+      "name": "Хирургия"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 32,
+    "fields": {
+      "name": "Эндокринология"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 33,
+    "fields": {
+      "name": "Эхокардиография"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 34,
+    "fields": {
+      "name": "врач акушер-гинеколог высшей категории"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 35,
+    "fields": {
+      "name": "врач эндокринолог"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 36,
+    "fields": {
+      "name": "врач-офтальмолог высшей квалификационной категории"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 37,
+    "fields": {
+      "name": "квалифицированный массажист"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 38,
+    "fields": {
+      "name": "общий хирург и проктолог"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 39,
+    "fields": {
+      "name": "специалист физиокабинета"
+    }
+  },
+  {
+    "model": "references.specialization",
+    "pk": 40,
+    "fields": {
+      "name": "фиброскан"
+    }
+  }
+]

@@ -1,9 +1,12 @@
 """
-Подбор рекомендаций по тегам, которые вернул ИИ.
+Подбор рекомендаций по специализациям, которые вернул ИИ. Отдельного словаря
+тегов больше нет — используется тот же справочник Specialization, что и при
+регистрации врача/клиники (primary_specializations/narrow_specializations).
 
-query_recommendations() — по именам тегов и типам сущностей находит id, ранжируя
-по числу совпавших тегов (затем по рейтингу). serialize_recommendations() —
-по сохранённым id пересобирает карточки из свежих данных.
+query_recommendations() — по именам специализаций и типам сущностей находит id,
+ранжируя по числу совпадений (сначала основные специализации, потом
+дополнительные, затем по рейтингу). serialize_recommendations() — по
+сохранённым id пересобирает карточки из свежих данных.
 """
 from django.db.models import Count, Q
 
@@ -11,56 +14,76 @@ ENTITY_TYPES = ('doctors', 'clinics', 'services')
 DEFAULT_LIMIT = 3
 
 
-def _resolve_tag_ids(tag_names):
+def _resolve_specialization_ids(names):
     # Регистронезависимое сопоставление в Python: iexact на SQLite не работает
-    # с кириллицей, а словарь тегов небольшой.
-    from references.models import Tag
-    if not tag_names:
+    # с кириллицей, а справочник специализаций небольшой.
+    from references.models import Specialization
+    if not names:
         return []
-    wanted = {str(n).strip().casefold() for n in tag_names if n and str(n).strip()}
+    wanted = {str(n).strip().casefold() for n in names if n and str(n).strip()}
     if not wanted:
         return []
     return [
-        pk for pk, name in Tag.objects.values_list('id', 'name')
+        pk for pk, name in Specialization.objects.values_list('id', 'name')
         if name.casefold() in wanted
     ]
 
 
-def query_recommendations(tag_names, entity_types, limit=DEFAULT_LIMIT):
-    """Возвращает {'doctors': [ids], 'clinics': [ids], 'services': [ids]} по совпадению тегов."""
+def _ranked_by_specializations(qs, spec_ids, limit):
+    """Для DoctorProfile/ClinicProfile — у обоих есть primary/narrow_specializations и rating."""
+    match_q = Q(primary_specializations__in=spec_ids) | Q(narrow_specializations__in=spec_ids)
+    return list(
+        qs.filter(match_q)
+        .annotate(
+            primary_matches=Count(
+                'primary_specializations', filter=Q(primary_specializations__in=spec_ids), distinct=True,
+            ),
+            narrow_matches=Count(
+                'narrow_specializations', filter=Q(narrow_specializations__in=spec_ids), distinct=True,
+            ),
+        )
+        .order_by('-primary_matches', '-narrow_matches', '-rating')
+        .values_list('pk', flat=True)
+        .distinct()[:limit]
+    )
+
+
+def query_recommendations(specialization_names, entity_types, limit=DEFAULT_LIMIT):
+    """Возвращает {'doctors': [ids], 'clinics': [ids], 'services': [ids]} по совпадению специализаций."""
     from users.models import DoctorProfile, ClinicProfile
     from services.models import Service
 
     result = {'doctors': [], 'clinics': [], 'services': []}
-    tag_ids = _resolve_tag_ids(tag_names)
-    if not tag_ids:
+    spec_ids = _resolve_specialization_ids(specialization_names)
+    if not spec_ids:
         return result
 
     wanted = set(entity_types or ENTITY_TYPES)
 
-    def ranked(qs):
-        return list(
-            qs.filter(tags__in=tag_ids)
-            .annotate(match_count=Count('tags', filter=Q(tags__in=tag_ids), distinct=True))
-            .order_by('-match_count', '-rating')
-            .values_list('pk', flat=True)
-            .distinct()[:limit]
-        )
-
     if 'doctors' in wanted:
-        result['doctors'] = ranked(
-            DoctorProfile.objects.filter(is_published=True, user__is_active=True)
+        result['doctors'] = _ranked_by_specializations(
+            DoctorProfile.objects.filter(is_published=True, user__is_active=True),
+            spec_ids, limit,
         )
     if 'clinics' in wanted:
-        result['clinics'] = ranked(
-            ClinicProfile.objects.filter(is_published=True, user__is_active=True)
+        result['clinics'] = _ranked_by_specializations(
+            ClinicProfile.objects.filter(is_published=True, user__is_active=True),
+            spec_ids, limit,
         )
     if 'services' in wanted:
-        # у услуги нет собственного rating — ранжируем по совпадению и id
+        # У услуги нет своих специализаций — сопоставляем через специализации
+        # привязанных к ней врачей (Service.doctors уже существует).
+        match_q = Q(doctors__primary_specializations__in=spec_ids) | Q(doctors__narrow_specializations__in=spec_ids)
         result['services'] = list(
-            Service.objects.filter(is_active=True, tags__in=tag_ids)
-            .annotate(match_count=Count('tags', filter=Q(tags__in=tag_ids), distinct=True))
-            .order_by('-match_count', '-id')
+            Service.objects.filter(is_active=True)
+            .filter(match_q)
+            .annotate(
+                primary_matches=Count(
+                    'doctors__primary_specializations',
+                    filter=Q(doctors__primary_specializations__in=spec_ids), distinct=True,
+                ),
+            )
+            .order_by('-primary_matches', '-id')
             .values_list('pk', flat=True)
             .distinct()[:limit]
         )

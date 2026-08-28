@@ -106,6 +106,8 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
                 and appointment.doctor and appointment.doctor.user):
             self._notify_chat(appointment)
 
+        self._notify_new_appointment(appointment)
+
         return appointment
 
     def _notify_chat(self, appointment):
@@ -118,6 +120,23 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         if appointment.google_meet_link:
             content += f' Ссылка на видеовстречу: {appointment.google_meet_link}'
         send_system_message(room, content)
+
+    def _notify_new_appointment(self, appointment):
+        from notifications.models import Notification
+        from notifications.utils import notify, appointment_payload
+
+        date_str = appointment.date.strftime('%d.%m.%Y')
+        time_str = appointment.time.strftime('%H:%M')
+        patient_name = appointment.patient.full_name if appointment.patient else appointment.guest_name
+        title = 'Новая запись'
+        body = f'{patient_name} записался(-ась) на {date_str} в {time_str}.'
+        payload = appointment_payload(appointment)
+
+        doctor_user = appointment.doctor.user if appointment.doctor else None
+        clinic_user = appointment.clinic.user if appointment.clinic else None
+        notify(doctor_user, Notification.Type.APPOINTMENT_CREATED, title, body, payload)
+        if clinic_user and clinic_user != doctor_user:
+            notify(clinic_user, Notification.Type.APPOINTMENT_CREATED, title, body, payload)
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
@@ -221,6 +240,55 @@ class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Пациент может только отменить запись.')
 
         return value
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        self._notify_status_change(instance)
+        return instance
+
+    def _notify_status_change(self, appointment):
+        from notifications.models import Notification
+        from notifications.utils import notify, appointment_payload
+
+        date_str = appointment.date.strftime('%d.%m.%Y')
+        time_str = appointment.time.strftime('%H:%M')
+        payload = appointment_payload(appointment)
+
+        request = self.context.get('request')
+        actor = getattr(request, 'user', None)
+        actor_is_patient = (
+            bool(actor) and getattr(actor, 'is_authenticated', False)
+            and appointment.patient_id is not None
+            and appointment.patient_id == actor.id
+        )
+
+        patient_user = appointment.patient
+        doctor_user = appointment.doctor.user if appointment.doctor else None
+        clinic_user = appointment.clinic.user if appointment.clinic else None
+
+        if appointment.status == Appointment.Status.CONFIRMED:
+            notify(
+                patient_user, Notification.Type.APPOINTMENT_CONFIRMED,
+                'Запись подтверждена',
+                f'Ваша запись на {date_str} в {time_str} подтверждена.',
+                payload,
+            )
+        elif appointment.status == Appointment.Status.CANCELLED:
+            title = 'Запись отменена'
+            if actor_is_patient:
+                body = f'Пациент отменил запись на {date_str} в {time_str}.'
+                notify(doctor_user, Notification.Type.APPOINTMENT_CANCELLED, title, body, payload)
+                notify(clinic_user, Notification.Type.APPOINTMENT_CANCELLED, title, body, payload)
+            else:
+                body = f'Ваша запись на {date_str} в {time_str} отменена.'
+                notify(patient_user, Notification.Type.APPOINTMENT_CANCELLED, title, body, payload)
+        elif appointment.status == Appointment.Status.COMPLETED:
+            notify(
+                patient_user, Notification.Type.APPOINTMENT_COMPLETED,
+                'Приём завершён',
+                'Приём завершён. Будем рады, если оставите отзыв о враче.',
+                payload,
+            )
 
 
 class AppointmentRescheduleSerializer(serializers.Serializer):

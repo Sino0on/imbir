@@ -25,7 +25,6 @@ class Service(models.Model):
     lunch_break = models.JSONField(default=dict, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    tags = models.ManyToManyField('references.Tag', related_name='services', blank=True)
 
     class Meta:
         verbose_name = 'Услуга'
