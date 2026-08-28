@@ -263,6 +263,29 @@ class DoctorServiceWriteSerializer(serializers.ModelSerializer):
             'schedule', 'lunch_break', 'is_active', 'clinic_id', 'branch_id',
         )
 
+    @staticmethod
+    def _resolve_branch(clinic, link_branch, branch_id):
+        """Единая логика для обоих путей (авто-подстановка и явный clinic_id):
+        явный branch_id > филиал из привязки врача к этой клинике > если у
+        клиники всего один филиал вообще — берём его, неоднозначности нет."""
+        from users.models import ClinicBranch
+
+        if branch_id is not None:
+            try:
+                return ClinicBranch.objects.get(pk=branch_id, clinic=clinic)
+            except ClinicBranch.DoesNotExist:
+                raise serializers.ValidationError(
+                    {'branch_id': 'Этот филиал не принадлежит выбранной клинике.'}
+                )
+
+        if link_branch is not None:
+            return link_branch
+
+        clinic_branches = list(ClinicBranch.objects.filter(clinic=clinic)[:2])
+        if len(clinic_branches) == 1:
+            return clinic_branches[0]
+        return None
+
     def validate(self, attrs):
         doctor = self.context['doctor']
         clinic_id = attrs.pop('clinic_id', None)
@@ -294,25 +317,16 @@ class DoctorServiceWriteSerializer(serializers.ModelSerializer):
                 )
             link = links[0]
             attrs['clinic'] = link.clinic
-            attrs['branch'] = link.branch
+            attrs['branch'] = self._resolve_branch(link.clinic, link.branch, branch_id)
             return attrs
 
-        matching_link = next((l for l in links if l.clinic_id == clinic_id), None)
+        # clinic_id от клиента — публичный id клиники (= ClinicProfile.user_id,
+        # как везде в API), а не ClinicProfile.pk — их нельзя сравнивать напрямую.
+        matching_link = next((l for l in links if l.clinic.user_id == clinic_id), None)
         if not matching_link:
             raise serializers.ValidationError({'clinic_id': 'Вы не привязаны к этой клинике.'})
         attrs['clinic'] = matching_link.clinic
-
-        if branch_id is not None:
-            from users.models import ClinicBranch
-            try:
-                branch = ClinicBranch.objects.get(pk=branch_id, clinic=matching_link.clinic)
-            except ClinicBranch.DoesNotExist:
-                raise serializers.ValidationError(
-                    {'branch_id': 'Этот филиал не принадлежит выбранной клинике.'}
-                )
-            attrs['branch'] = branch
-        else:
-            attrs['branch'] = matching_link.branch
+        attrs['branch'] = self._resolve_branch(matching_link.clinic, matching_link.branch, branch_id)
 
         return attrs
 

@@ -50,6 +50,22 @@ class ClinicProfileView(RetrieveUpdateAPIView):
 
 # ── Branches ─────────────────────────────────────────────────────────────────
 
+@extend_schema_view(
+    get=extend_schema(responses={200: ClinicBranchUpdateSerializer(many=True)}, tags=['Clinic Cabinet'], summary='Список филиалов клиники'),
+    post=extend_schema(request=ClinicBranchUpdateSerializer, responses={201: ClinicBranchUpdateSerializer}, tags=['Clinic Cabinet'], summary='Добавить филиал'),
+)
+class BranchListCreateView(ListCreateAPIView):
+    permission_classes = (IsClinic,)
+    serializer_class = ClinicBranchUpdateSerializer
+
+    def get_queryset(self):
+        return ClinicBranch.objects.filter(clinic__user=self.request.user).order_by('id')
+
+    def perform_create(self, serializer):
+        clinic = ClinicProfile.objects.get(user=self.request.user)
+        serializer.save(clinic=clinic)
+
+
 @extend_schema(tags=['Clinic Cabinet'])
 class BranchUpdateView(UpdateAPIView):
     permission_classes = (IsClinic,)

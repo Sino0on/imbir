@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    BranchListCreateView,
     BranchUpdateView,
     ClinicAppointmentListView,
     ClinicDoctorListView,
@@ -30,6 +31,7 @@ urlpatterns = [
     path('doctors/<int:pk>/documents/<int:doc_id>/', ClinicDoctorDocumentDeleteView.as_view(), name='clinic-doctor-document-delete'),
     path('services/', ClinicServiceListCreateView.as_view(), name='clinic-services'),
     path('services/<int:pk>/', ClinicServiceDetailView.as_view(), name='clinic-service-detail'),
+    path('branches/', BranchListCreateView.as_view(), name='clinic-branch-list-create'),
     path('branches/<int:pk>/', BranchUpdateView.as_view(), name='clinic-branch-update'),
     path('invites/', InviteListCreateView.as_view(), name='clinic-invite-list-create'),
     path('invites/<uuid:pk>/', InviteDeleteView.as_view(), name='clinic-invite-delete'),
