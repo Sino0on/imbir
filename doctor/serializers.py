@@ -218,12 +218,14 @@ class DoctorReviewSerializer(serializers.ModelSerializer):
 
 class DoctorServiceReadSerializer(serializers.ModelSerializer):
     photo = serializers.SerializerMethodField()
+    clinic = serializers.SerializerMethodField()
+    branch = serializers.SerializerMethodField()
 
     class Meta:
         model = Service
         fields = (
             'id', 'name', 'category', 'description', 'price', 'duration', 'photo',
-            'schedule', 'lunch_break', 'is_active', 'created_at',
+            'clinic', 'branch', 'schedule', 'lunch_break', 'is_active', 'created_at',
         )
 
     def get_photo(self, obj):
@@ -232,6 +234,16 @@ class DoctorServiceReadSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
 
+    def get_clinic(self, obj):
+        if not obj.clinic:
+            return None
+        return {'id': obj.clinic.user_id, 'name': obj.clinic.name}
+
+    def get_branch(self, obj):
+        if not obj.branch:
+            return None
+        return {'id': obj.branch.id, 'name': obj.branch.name, 'address': obj.branch.address}
+
 
 class DoctorServiceWriteSerializer(serializers.ModelSerializer):
     photo = HybridImageField(required=False, allow_null=True)
@@ -239,10 +251,70 @@ class DoctorServiceWriteSerializer(serializers.ModelSerializer):
     # "чекбокс не отмечен" -> False, а не как "использовать default модели" (True).
     # Актуально именно тут, т.к. photo делает multipart нормой, а не исключением.
     is_active = serializers.BooleanField(required=False, default=True)
+    # Врач сам эти поля не вводит в обычном случае — берём из его привязок к
+    # клинике(-ам). Нужны только если врач состоит в нескольких клиниках сразу.
+    clinic_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
+    branch_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = Service
-        fields = ('name', 'category', 'description', 'price', 'duration', 'photo', 'schedule', 'lunch_break', 'is_active')
+        fields = (
+            'name', 'category', 'description', 'price', 'duration', 'photo',
+            'schedule', 'lunch_break', 'is_active', 'clinic_id', 'branch_id',
+        )
+
+    def validate(self, attrs):
+        doctor = self.context['doctor']
+        clinic_id = attrs.pop('clinic_id', None)
+        branch_id = attrs.pop('branch_id', None)
+
+        # На обновлении трогаем clinic/branch только если явно прислали clinic_id —
+        # обычная правка (цена, фото и т.п.) не должна их переопределять.
+        if self.instance is not None and clinic_id is None:
+            return attrs
+
+        links = list(
+            doctor.clinic_links.filter(is_active=True).select_related('clinic', 'branch')
+        )
+
+        if not links:
+            if clinic_id:
+                raise serializers.ValidationError(
+                    {'clinic_id': 'Вы не привязаны ни к одной клинике.'}
+                )
+            if self.instance is None:
+                attrs['clinic'] = None
+                attrs['branch'] = None
+            return attrs
+
+        if clinic_id is None:
+            if len(links) > 1:
+                raise serializers.ValidationError(
+                    {'clinic_id': 'Вы привязаны к нескольким клиникам — укажите clinic_id.'}
+                )
+            link = links[0]
+            attrs['clinic'] = link.clinic
+            attrs['branch'] = link.branch
+            return attrs
+
+        matching_link = next((l for l in links if l.clinic_id == clinic_id), None)
+        if not matching_link:
+            raise serializers.ValidationError({'clinic_id': 'Вы не привязаны к этой клинике.'})
+        attrs['clinic'] = matching_link.clinic
+
+        if branch_id is not None:
+            from users.models import ClinicBranch
+            try:
+                branch = ClinicBranch.objects.get(pk=branch_id, clinic=matching_link.clinic)
+            except ClinicBranch.DoesNotExist:
+                raise serializers.ValidationError(
+                    {'branch_id': 'Этот филиал не принадлежит выбранной клинике.'}
+                )
+            attrs['branch'] = branch
+        else:
+            attrs['branch'] = matching_link.branch
+
+        return attrs
 
     def create(self, validated_data):
         doctor = self.context['doctor']

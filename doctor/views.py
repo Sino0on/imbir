@@ -287,7 +287,10 @@ class DoctorServiceDetailView(APIView):
         service = self._get_service(request, pk)
         if not service:
             return Response({'detail': 'Не найдено'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = DoctorServiceWriteSerializer(service, data=request.data, partial=True)
+        profile = DoctorProfile.objects.get(user=request.user)
+        serializer = DoctorServiceWriteSerializer(
+            service, data=request.data, partial=True, context={'doctor': profile},
+        )
         serializer.is_valid(raise_exception=True)
         service = serializer.save()
         return Response(DoctorServiceReadSerializer(service, context={'request': request}).data)

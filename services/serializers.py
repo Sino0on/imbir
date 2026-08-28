@@ -41,10 +41,14 @@ class ServiceListSerializer(serializers.ModelSerializer):
         return first.reviews_count if first else 0
 
     def get_photo(self, obj):
-        if not obj.photo:
-            return None
         request = self.context.get('request')
-        return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
+        if obj.photo:
+            return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
+        # Фото не своё — фолбэк на фото первого врача, только если у услуги своего нет
+        first = obj.doctors.first()
+        if first and first.photo:
+            return request.build_absolute_uri(first.photo.url) if request else first.photo.url
+        return None
 
 
 
@@ -69,6 +73,7 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
     clinic = serializers.SerializerMethodField()
     doctor = serializers.SerializerMethodField()
     doctors = ServiceDoctorSerializer(many=True, read_only=True)
+    photo = serializers.SerializerMethodField()
 
     class Meta:
         model = Service
@@ -77,6 +82,15 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
             'price', 'duration', 'photo',
             'clinic', 'doctor', 'doctors',
         )
+
+    def get_photo(self, obj):
+        request = self.context.get('request')
+        if obj.photo:
+            return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
+        first = obj.doctors.first()
+        if first and first.photo:
+            return request.build_absolute_uri(first.photo.url) if request else first.photo.url
+        return None
 
     def get_clinic(self, obj):
         if not obj.clinic:
