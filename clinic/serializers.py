@@ -157,11 +157,16 @@ class ClinicDoctorSerializer(serializers.ModelSerializer):
     specialty = serializers.SerializerMethodField()
     photo = serializers.SerializerMethodField()
     rating = serializers.DecimalField(source='doctor.rating', max_digits=3, decimal_places=2)
+    reviews_count = serializers.IntegerField(source='doctor.reviews_count')
+    experience_years = serializers.IntegerField(source='doctor.experience_years')
     appointments_total = serializers.SerializerMethodField()
 
     class Meta:
         model = DoctorClinicLink
-        fields = ('id', 'full_name', 'specialty', 'photo', 'rating', 'appointments_total', 'is_active')
+        fields = (
+            'id', 'full_name', 'specialty', 'photo', 'rating', 'reviews_count',
+            'experience_years', 'appointments_total', 'is_active',
+        )
 
     def get_specialty(self, obj):
         spec = obj.doctor.primary_specializations.first()

@@ -271,6 +271,7 @@ class DoctorServiceListCreateView(ListAPIView):
 
 @extend_schema_view(
     put=extend_schema(request=DoctorServiceWriteSerializer, responses={200: DoctorServiceReadSerializer}, tags=['Doctor Cabinet']),
+    patch=extend_schema(request=DoctorServiceWriteSerializer, responses={200: DoctorServiceReadSerializer}, tags=['Doctor Cabinet']),
     delete=extend_schema(responses={204: None}, tags=['Doctor Cabinet']),
 )
 class DoctorServiceDetailView(APIView):
@@ -294,6 +295,10 @@ class DoctorServiceDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         service = serializer.save()
         return Response(DoctorServiceReadSerializer(service, context={'request': request}).data)
+
+    # put уже реализован как частичное обновление (partial=True) — просто даём
+    # вызывать его и через PATCH, раз по факту это он и есть.
+    patch = put
 
     def delete(self, request, pk):
         service = self._get_service(request, pk)

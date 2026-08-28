@@ -327,6 +327,7 @@ class ClinicServiceListCreateView(ListCreateAPIView):
 @extend_schema_view(
     get=extend_schema(responses={200: ClinicServiceReadSerializer}, tags=['Clinic Cabinet'], summary='Карточка процедуры'),
     put=extend_schema(request=ClinicServiceWriteSerializer, responses={200: ClinicServiceReadSerializer}, tags=['Clinic Cabinet']),
+    patch=extend_schema(request=ClinicServiceWriteSerializer, responses={200: ClinicServiceReadSerializer}, tags=['Clinic Cabinet']),
     delete=extend_schema(responses={204: None}, tags=['Clinic Cabinet']),
 )
 class ClinicServiceDetailView(APIView):
@@ -360,6 +361,10 @@ class ClinicServiceDetailView(APIView):
         service = serializer.save()
         service.refresh_from_db()
         return Response(ClinicServiceReadSerializer(service, context={'request': request}).data)
+
+    # put уже реализован как частичное обновление (partial=True) — просто даём
+    # вызывать его и через PATCH, раз по факту это он и есть.
+    patch = put
 
     def delete(self, request, pk):
         service = self._get_service(request, pk)
