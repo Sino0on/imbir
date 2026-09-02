@@ -160,6 +160,10 @@ def send_telegram_debug(text):
         with urllib.request.urlopen(req, timeout=10) as response:
             res_data = response.read().decode('utf-8')
             logger.info(f"Telegram debug message sent. Response: {res_data}")
+            if chat_id_2:
+                with urllib.request.urlopen(req2, timeout=10) as response2:
+                    res_data2 = response2.read().decode('utf-8')
+                    logger.info(f"Telegram debug message sent to chat_id_2. Response: {res_data2}")
             return True
     except urllib.error.HTTPError as e:
         body = e.read().decode('utf-8')
