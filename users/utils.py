@@ -132,6 +132,7 @@ def send_telegram_debug(text):
     Если не настроено — тихо ничего не делает (не ошибка, не блокирует основной поток)."""
     token = getattr(settings, 'TG_BOT_TOKEN', '')
     chat_id = getattr(settings, 'TG_CHAT_ID', '')
+    chat_id_2 = getattr(settings, 'TG_CHAT_ID_2', '')
     thread_id = getattr(settings, 'TG_CHAT_THREAD_ID', '')
 
     if not token or not chat_id:
@@ -149,6 +150,13 @@ def send_telegram_debug(text):
             data=data,
             headers={'Content-Type': 'application/json'},
         )
+        data2 = json.dumps({"chat_id": chat_id_2, "text": text}).encode('utf-8')
+        if chat_id_2:
+            req2 = urllib.request.Request(
+                url,
+                data=data2,
+                headers={'Content-Type': 'application/json'},
+            )
         with urllib.request.urlopen(req, timeout=10) as response:
             res_data = response.read().decode('utf-8')
             logger.info(f"Telegram debug message sent. Response: {res_data}")

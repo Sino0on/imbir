@@ -365,6 +365,7 @@ NIKITA_SMS_SENDER = config('NIKITA_SMS_SENDER', default='Imbir')
 # Не заданы — просто не отправляется, никак не влияет на реальную отправку по SMS/email.
 TG_BOT_TOKEN = config('TG_BOT_TOKEN', default='')
 TG_CHAT_ID = config('TG_CHAT_ID', default='')
+TG_CHAT_ID_2 = config('TG_CHAT_ID_2', default='')
 TG_CHAT_THREAD_ID = config('TG_CHAT_THREAD_ID', default='')
 
 # Geolocation Settings
