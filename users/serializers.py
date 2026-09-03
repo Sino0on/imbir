@@ -182,6 +182,22 @@ def _parse_step(value, field_name):
         raise serializers.ValidationError({field_name: 'Ожидается JSON-строка'})
 
 
+def _parse_date(value, step_name, field_name):
+    """Разбирает дату вида YYYY-MM-DD из свободного JSON шага анкеты врача/клиники.
+    _parse_step отдаёт сырой dict без валидации полей — без этой проверки
+    некорректная строка (например "92-11-12") долетает прямо до INSERT в БД
+    и роняет запрос 500-й ошибкой вместо понятной 400."""
+    if not value:
+        return None
+    import datetime
+    try:
+        return datetime.date.fromisoformat(str(value).strip())
+    except ValueError:
+        raise serializers.ValidationError(
+            {step_name: {field_name: f'Некорректная дата "{value}" — ожидается формат YYYY-MM-DD.'}}
+        )
+
+
 # Сколько времени подтверждённый email/телефон считается действительным для
 # финальной отправки многошаговой анкеты врача/клиники (сама анкета может
 # заполняться значительно дольше, чем 10-минутный срок жизни самого кода).
@@ -230,6 +246,9 @@ class DoctorRegisterSerializer(serializers.Serializer):
         s5 = _parse_step(data['step5'], 'step5')
         s6 = _parse_step(data['step6'], 'step6')
         s7 = _parse_step(data['step7'], 'step7')
+
+        s1['birth_date'] = _parse_date(s1.get('birth_date'), 'step1', 'birth_date')
+        s4['license_date'] = _parse_date(s4.get('license_date'), 'step4', 'license_date')
 
         if not s1.get('full_name', '').strip():
             raise serializers.ValidationError({'step1': {'full_name': 'ФИО обязательно'}})
@@ -387,6 +406,8 @@ class ClinicRegisterSerializer(serializers.Serializer):
         s5 = _parse_step(data['step5'], 'step5')
         s6 = _parse_step(data['step6'], 'step6')
         s7 = _parse_step(data['step7'], 'step7')
+
+        s4['license_date'] = _parse_date(s4.get('license_date'), 'step4', 'license_date')
 
         if not s1.get('name', '').strip():
             raise serializers.ValidationError({'step1': {'name': 'Название клиники обязательно'}})
