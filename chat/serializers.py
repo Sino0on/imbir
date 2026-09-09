@@ -7,7 +7,10 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ChatMessage
-        fields = ('id', 'sender', 'content', 'created_at', 'is_read')
+        fields = (
+            'id', 'sender', 'content', 'created_at', 'is_read',
+            'edited_at', 'is_deleted',
+        )
 
     def get_sender(self, obj):
         if not obj.sender:
@@ -30,7 +33,10 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         msg = obj.messages.last()
         if not msg:
             return None
-        return {'content': msg.content, 'created_at': msg.created_at}
+        return {
+            'content': 'Сообщение удалено' if msg.is_deleted else msg.content,
+            'created_at': msg.created_at,
+        }
 
 
 class CreateRoomSerializer(serializers.Serializer):

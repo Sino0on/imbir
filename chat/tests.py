@@ -40,6 +40,35 @@ class UnreadCountTests(APITestCase):
         response = self.client.get(self.unread_url)
         self.assertEqual(response.data['unread_count'], 0)
 
+
+class ChatMessageModerationTests(APITestCase):
+    def setUp(self):
+        self.user_1 = User.objects.create_user(
+            email='edit1@example.com', password='password123', first_name='Ivan', role=User.Role.DOCTOR
+        )
+        self.user_2 = User.objects.create_user(
+            email='edit2@example.com', password='password123', first_name='Petr', role=User.Role.PATIENT
+        )
+        self.room = ChatRoom.objects.create()
+        self.room.participants.add(self.user_1, self.user_2)
+        self.client.force_authenticate(user=self.user_1)
+
+    def test_history_exposes_edit_and_delete_state(self):
+        message = ChatMessage.objects.create(
+            room=self.room, sender=self.user_1, content='Original'
+        )
+        message.content = 'Updated'
+        message.edited_at = message.created_at
+        message.is_deleted = True
+        message.save()
+
+        response = self.client.get(f'/api/chat/rooms/{self.room.pk}/messages/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data[0]['content'], 'Updated')
+        self.assertTrue(response.data[0]['edited_at'])
+        self.assertTrue(response.data[0]['is_deleted'])
+
         # 3. Sent by user 2: user 1 should now have 1 unread message
         ChatMessage.objects.create(room=self.room, sender=self.user_2, content='Reply from 2')
         response = self.client.get(self.unread_url)

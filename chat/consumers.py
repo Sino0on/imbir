@@ -2,6 +2,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
+from django.utils import timezone
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -50,6 +51,33 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             return
 
+        if msg_type == 'edit':
+            content = data.get('content', '').strip()
+            message = await self.edit_message(data.get('message_id'), content)
+            if message:
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        'type': 'chat_message_edited',
+                        **message,
+                    },
+                )
+            return
+
+        if msg_type == 'delete':
+            raw_ids = data.get('message_ids', data.get('message_id'))
+            message_ids = raw_ids if isinstance(raw_ids, list) else [raw_ids]
+            deleted_ids = await self.delete_messages(message_ids)
+            if deleted_ids:
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        'type': 'chat_messages_deleted',
+                        'message_ids': deleted_ids,
+                    },
+                )
+            return
+
         content = data.get('content', '').strip()
         if not content:
             return
@@ -73,10 +101,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if event.get('sender_id') is not None:
             sender = {'id': event['sender_id'], 'full_name': event['sender_name']}
         await self.send(text_data=json.dumps({
+            'type': 'message',
             'id': event['id'],
             'sender': sender,
             'content': event['content'],
             'created_at': event['created_at'],
+        }))
+
+    async def chat_message_edited(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'message_edited',
+            'id': event['id'],
+            'content': event['content'],
+            'edited_at': event['edited_at'],
+        }))
+
+    async def chat_messages_deleted(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'messages_deleted',
+            'message_ids': event['message_ids'],
         }))
 
     async def typing_status(self, event):
@@ -101,3 +144,42 @@ class ChatConsumer(AsyncWebsocketConsumer):
         room = ChatRoom.objects.get(pk=room_id)
         msg = ChatMessage.objects.create(room=room, sender=user, content=content)
         return {'id': msg.id, 'created_at': msg.created_at.isoformat()}
+
+    @database_sync_to_async
+    def edit_message(self, message_id, content):
+        from .models import ChatMessage
+
+        if not content or not str(message_id).isdigit():
+            return None
+        message = ChatMessage.objects.filter(
+            pk=int(message_id), room_id=self.room_id, sender=self.user,
+            is_deleted=False,
+        ).first()
+        if not message:
+            return None
+        message.content = content
+        message.edited_at = timezone.now()
+        message.save(update_fields=('content', 'edited_at'))
+        return {
+            'id': message.id,
+            'content': message.content,
+            'edited_at': message.edited_at.isoformat(),
+        }
+
+    @database_sync_to_async
+    def delete_messages(self, message_ids):
+        from .models import ChatMessage
+
+        ids = {
+            int(message_id) for message_id in message_ids
+            if str(message_id).isdigit()
+        }
+        if not ids:
+            return []
+        messages = ChatMessage.objects.filter(
+            pk__in=ids, room_id=self.room_id, sender=self.user,
+            is_deleted=False,
+        )
+        deleted_ids = list(messages.values_list('id', flat=True))
+        messages.update(is_deleted=True, content='', edited_at=None)
+        return deleted_ids
