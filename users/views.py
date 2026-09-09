@@ -91,6 +91,12 @@ class DoctorRegisterView(APIView):
     parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def post(self, request):
+        process_photo = str(request.data.get('process_photo', '')).strip().lower() in ('1', 'true', 'yes')
+        uploaded_photo = request.FILES.get('photo')
+        photo_bytes = uploaded_photo.read() if (process_photo and uploaded_photo) else None
+        if uploaded_photo:
+            uploaded_photo.seek(0)  # чтобы обычное сохранение через сериализатор тоже отработало штатно
+
         serializer = DoctorRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -98,12 +104,29 @@ class DoctorRegisterView(APIView):
         doctor_profile = user.doctor_profile
         save_hybrid_documents(doctor_profile, 'documents', DoctorDocument, request)
 
+        photo_ai_processing = None
+        if photo_bytes:
+            from references.models import SiteSettings
+            if SiteSettings.load().ai_doctor_photo_processing_enabled:
+                from doctor.ai_photo import generate_doctor_coat_photo
+                processed = generate_doctor_coat_photo(photo_bytes, uploaded_photo.name)
+                if processed:
+                    from django.core.files.base import ContentFile
+                    doctor_profile.photo.save(f'{user.id}_coat.png', ContentFile(processed), save=True)
+                else:
+                    photo_ai_processing = 'failed'
+            else:
+                photo_ai_processing = 'disabled'
+
         refresh = RefreshToken.for_user(user)
-        return Response({
+        response_data = {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user': UserMeSerializer(user).data,
-        }, status=status.HTTP_201_CREATED)
+        }
+        if photo_ai_processing:
+            response_data['photo_ai_processing'] = photo_ai_processing
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(request=ClinicRegisterSerializer, responses={201: _TOKEN_RESPONSE}, tags=['auth'])
