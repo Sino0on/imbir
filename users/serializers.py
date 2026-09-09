@@ -74,7 +74,7 @@ class ClientRegisterSerializer(serializers.ModelSerializer):
         fields = ('first_name', 'last_name', 'email', 'password', 'phone')
 
     def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
+        if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError('Пользователь с таким email уже существует')
         return value
 
@@ -211,7 +211,7 @@ def _check_contact_verified(email, phone):
     cutoff = timezone.now() - timezone.timedelta(hours=_CONTACT_VERIFICATION_WINDOW_HOURS)
 
     email_verified = bool(email) and EmailVerificationCode.objects.filter(
-        email=email, is_used=True, created_at__gte=cutoff,
+        email__iexact=email, is_used=True, created_at__gte=cutoff,
     ).exists()
     phone_verified = bool(phone) and PhoneVerificationCode.objects.filter(
         phone=phone, is_used=True, created_at__gte=cutoff,
@@ -264,7 +264,7 @@ class DoctorRegisterSerializer(serializers.Serializer):
         email = s1.get('email', '')
         if not email:
             raise serializers.ValidationError({'step1': {'email': 'Email обязателен'}})
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError({'step1': {'email': 'Пользователь с таким email уже существует'}})
 
         phone = s1.get('phone', '')
@@ -423,7 +423,7 @@ class ClinicRegisterSerializer(serializers.Serializer):
         email = s2.get('email', '')
         if not email:
             raise serializers.ValidationError({'step2': {'email': 'Email обязателен'}})
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError({'step2': {'email': 'Пользователь с таким email уже существует'}})
 
         phone = s2.get('phone', '')
@@ -586,7 +586,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
         filter_kwargs = {'code': code, 'is_used': False}
         if email:
-            filter_kwargs['email'] = email
+            filter_kwargs['email__iexact'] = email
         else:
             filter_kwargs['phone'] = phone
 
@@ -599,7 +599,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
 
         if email:
-            if not User.objects.filter(email=email).exists():
+            if not User.objects.filter(email__iexact=email).exists():
                 raise serializers.ValidationError({'email': 'Пользователь с таким email не найден'})
         else:
             if not User.objects.filter(phone=phone).exists():
@@ -653,7 +653,7 @@ class EmailRegisterRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
     def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
+        if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError('Пользователь с таким email уже зарегистрирован')
         return value
 
@@ -676,7 +676,7 @@ class EmailRegisterConfirmSerializer(serializers.Serializer):
         code = data.get('code')
 
         verification = EmailVerificationCode.objects.filter(
-            email=email,
+            email__iexact=email,
             code=code,
             is_used=False
         ).order_by('-created_at').first()
@@ -687,7 +687,7 @@ class EmailRegisterConfirmSerializer(serializers.Serializer):
         if verification.is_expired():
             raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
 
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError({'email': 'Пользователь с таким email уже зарегистрирован'})
 
         data['verification'] = verification
@@ -725,7 +725,7 @@ class LoginOTPVerifySerializer(serializers.Serializer):
 
         filter_kwargs = {'code': code, 'is_used': False}
         if email:
-            filter_kwargs['email'] = email
+            filter_kwargs['email__iexact'] = email
         else:
             filter_kwargs['phone'] = phone
 
@@ -738,7 +738,7 @@ class LoginOTPVerifySerializer(serializers.Serializer):
             raise serializers.ValidationError({'code': 'Срок действия кода истёк'})
 
         try:
-            user = User.objects.get(email=email) if email else User.objects.get(phone=phone)
+            user = User.objects.get(email__iexact=email) if email else User.objects.get(phone=phone)
         except User.DoesNotExist:
             raise serializers.ValidationError({'code': 'Пользователь не найден'})
 
@@ -765,7 +765,7 @@ class VerifyEmailConfirmSerializer(serializers.Serializer):
         code = data.get('code')
 
         verification = EmailVerificationCode.objects.filter(
-            email=email,
+            email__iexact=email,
             code=code,
             is_used=False
         ).order_by('-created_at').first()

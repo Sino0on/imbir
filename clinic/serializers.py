@@ -393,7 +393,7 @@ class ClinicDoctorCreateSerializer(serializers.Serializer):
 
     def validate_email(self, value):
         from users.models import User
-        if User.objects.filter(email=value).exists():
+        if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError('Пользователь с такой почтой уже существует.')
         return value
 

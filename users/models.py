@@ -8,7 +8,11 @@ class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError('Email обязателен')
-        email = self.normalize_email(email)
+        # normalize_email лишь приводит домен к нижнему регистру (по стандарту),
+        # часть до @ — нет. Приводим полностью сами: почта у нас регистронезависимый
+        # идентификатор везде (уникальность, логин, поиск), и хранить её нужно
+        # единообразно, иначе Test@x.com и test@x.com превратятся в разные аккаунты.
+        email = self.normalize_email(email).lower()
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -18,6 +22,12 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(email, password, **extra_fields)
+
+    def get_by_natural_key(self, email):
+        # Регистронезависимый логин — иначе authenticate() (Django ModelBackend)
+        # ищет email точным совпадением, и человек, зарегистрировавший
+        # Ivan@Gmail.com, не сможет войти, набрав ivan@gmail.com.
+        return self.get(email__iexact=email)
 
 
 class User(AbstractBaseUser, PermissionsMixin):

@@ -199,7 +199,7 @@ class PasswordResetRequestView(APIView):
 
         if email:
             try:
-                user = User.objects.get(email=email)
+                user = User.objects.get(email__iexact=email)
                 PasswordResetCode.objects.create(email=email, code=code)
 
                 subject = "Восстановление пароля — Imbir"
@@ -267,7 +267,7 @@ class PasswordResetConfirmView(APIView):
 
         try:
             if email:
-                user = User.objects.get(email=email)
+                user = User.objects.get(email__iexact=email)
             else:
                 user = User.objects.get(phone=phone)
             user.set_password(password)
@@ -431,7 +431,7 @@ class LoginOTPRequestView(APIView):
         code = f"{random.randint(100000, 999999)}"
 
         if email:
-            user = User.objects.filter(email=email).first()
+            user = User.objects.filter(email__iexact=email).first()
             if user:
                 LoginCode.objects.create(email=email, code=code)
                 subject = "Код входа — Imbir"
@@ -596,7 +596,7 @@ class EmailAvailabilityView(APIView):
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
 
-        available = not User.objects.filter(email=email).exists()
+        available = not User.objects.filter(email__iexact=email).exists()
         return Response({'data': {'email': email, 'available': available}})
 
 
