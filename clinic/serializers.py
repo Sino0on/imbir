@@ -5,7 +5,7 @@ from reviews.models import Review
 from services.models import Service
 from references.models import Specialization
 from references.serializers import SpecializationSerializer
-from users.models import ClinicBranch, ClinicInvite, ClinicProfile, DoctorClinicLink, DoctorProfile
+from users.models import ClinicBranch, ClinicInvite, ClinicProfile, DoctorClinicLink, DoctorInvitation, DoctorProfile
 from users.serializers import HybridImageField
 
 # Поля профиля врача, которые заполняет клиника при найме (не логин/график/цена приёма —
@@ -53,6 +53,68 @@ class ClinicInviteCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return ClinicInvite.objects.create(clinic=self.context['clinic'], **validated_data)
+
+
+class DoctorInvitationClinicSerializer(serializers.ModelSerializer):
+    """Приглашения, отправленные клиникой — с точки зрения клиники (кого пригласили)."""
+    doctor_id = serializers.IntegerField(source='doctor.user_id', read_only=True)
+    doctor_name = serializers.CharField(source='doctor.user.full_name', read_only=True)
+    doctor_specialty = serializers.SerializerMethodField()
+    doctor_photo = serializers.SerializerMethodField()
+    branch = ClinicBranchUpdateSerializer(read_only=True)
+
+    class Meta:
+        model = DoctorInvitation
+        fields = (
+            'id', 'doctor_id', 'doctor_name', 'doctor_specialty', 'doctor_photo',
+            'branch', 'message', 'status', 'created_at', 'responded_at',
+        )
+
+    def get_doctor_specialty(self, obj):
+        spec = obj.doctor.primary_specializations.first()
+        return spec.name if spec else ''
+
+    def get_doctor_photo(self, obj):
+        if not obj.doctor.photo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.doctor.photo.url) if request else obj.doctor.photo.url
+
+
+class DoctorInvitationCreateSerializer(serializers.Serializer):
+    doctor_id = serializers.IntegerField()
+    branch_id = serializers.IntegerField(required=False, allow_null=True)
+    message = serializers.CharField(required=False, allow_blank=True, default='')
+
+    def validate_doctor_id(self, value):
+        if not DoctorProfile.objects.filter(user_id=value, user__is_active=True).exists():
+            raise serializers.ValidationError('Врач не найден.')
+        clinic = self.context['clinic']
+        if DoctorClinicLink.objects.filter(doctor__user_id=value, clinic=clinic, is_active=True).exists():
+            raise serializers.ValidationError('Этот врач уже привязан к вашей клинике.')
+        if DoctorInvitation.objects.filter(
+            doctor__user_id=value, clinic=clinic, status=DoctorInvitation.Status.PENDING,
+        ).exists():
+            raise serializers.ValidationError('Этому врачу уже отправлено приглашение — дождитесь ответа.')
+        return value
+
+    def validate_branch_id(self, value):
+        if value is None:
+            return value
+        clinic = self.context['clinic']
+        if not ClinicBranch.objects.filter(pk=value, clinic=clinic).exists():
+            raise serializers.ValidationError('Этот филиал не принадлежит вашей клинике.')
+        return value
+
+    def create(self, validated_data):
+        clinic = self.context['clinic']
+        doctor = DoctorProfile.objects.get(user_id=validated_data['doctor_id'])
+        branch_id = validated_data.get('branch_id')
+        branch = ClinicBranch.objects.get(pk=branch_id) if branch_id else None
+        return DoctorInvitation.objects.create(
+            clinic=clinic, doctor=doctor, branch=branch,
+            message=validated_data.get('message', ''),
+        )
 
 
 # ── Clinic Cabinet ──────────────────────────────────────────────────────────

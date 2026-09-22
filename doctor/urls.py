@@ -13,6 +13,9 @@ from .views import (
     DoctorDocumentDeleteView,
     DoctorInterviewListCreateView,
     DoctorInterviewDetailView,
+    DoctorInvitationListView,
+    DoctorInvitationAcceptView,
+    DoctorInvitationDeclineView,
 )
 
 urlpatterns = [
@@ -29,4 +32,7 @@ urlpatterns = [
     path('documents/<int:pk>/', DoctorDocumentDeleteView.as_view(), name='doctor-document-delete'),
     path('interviews/', DoctorInterviewListCreateView.as_view(), name='doctor-interviews'),
     path('interviews/<int:pk>/', DoctorInterviewDetailView.as_view(), name='doctor-interview-detail'),
+    path('invitations/', DoctorInvitationListView.as_view(), name='doctor-invitation-list'),
+    path('invitations/<int:pk>/accept/', DoctorInvitationAcceptView.as_view(), name='doctor-invitation-accept'),
+    path('invitations/<int:pk>/decline/', DoctorInvitationDeclineView.as_view(), name='doctor-invitation-decline'),
 ]

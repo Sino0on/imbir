@@ -4,7 +4,7 @@ from reviews.models import Review
 from services.models import Service
 from references.models import Specialization
 from references.serializers import SpecializationSerializer
-from users.models import DoctorProfile, User
+from users.models import DoctorInvitation, DoctorProfile, User
 from doctors.serializers import InterviewSerializer
 from doctors.models import Interview
 
@@ -335,3 +335,29 @@ class DoctorServiceWriteSerializer(serializers.ModelSerializer):
         service = Service.objects.create(**validated_data)
         doctor.services.add(service)
         return service
+
+
+class DoctorInvitationSerializer(serializers.ModelSerializer):
+    """Приглашения, полученные врачом — с точки зрения врача (какая клиника позвала)."""
+    clinic_id = serializers.IntegerField(source='clinic.user_id', read_only=True)
+    clinic_name = serializers.CharField(source='clinic.name', read_only=True)
+    clinic_logo = serializers.SerializerMethodField()
+    branch = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DoctorInvitation
+        fields = (
+            'id', 'clinic_id', 'clinic_name', 'clinic_logo',
+            'branch', 'message', 'status', 'created_at', 'responded_at',
+        )
+
+    def get_clinic_logo(self, obj):
+        if not obj.clinic.logo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.clinic.logo.url) if request else obj.clinic.logo.url
+
+    def get_branch(self, obj):
+        if not obj.branch:
+            return None
+        return {'id': obj.branch.id, 'name': obj.branch.name, 'address': obj.branch.address}

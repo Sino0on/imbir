@@ -347,6 +347,42 @@ class DoctorClinicLink(models.Model):
         return f'{self.doctor.user.full_name} @ {self.clinic.name}'
 
 
+class DoctorInvitation(models.Model):
+    """Прицельное приглашение конкретному уже зарегистрированному врачу —
+    в отличие от ClinicInvite (обезличенная ссылка/код для регистрации).
+    Врач сам решает принять или отклонить через свой кабинет."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Ожидает ответа'
+        ACCEPTED = 'accepted', 'Принято'
+        DECLINED = 'declined', 'Отклонено'
+
+    clinic = models.ForeignKey(ClinicProfile, on_delete=models.CASCADE, related_name='doctor_invitations')
+    doctor = models.ForeignKey(DoctorProfile, on_delete=models.CASCADE, related_name='clinic_invitations')
+    branch = models.ForeignKey(
+        ClinicBranch, on_delete=models.SET_NULL, null=True, blank=True, related_name='doctor_invitations',
+    )
+    message = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Приглашение врача в клинику'
+        verbose_name_plural = '↳ Приглашения врачей в клинику'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['clinic', 'doctor'],
+                condition=models.Q(status='pending'),
+                name='unique_pending_doctor_invitation',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.clinic.name} → {self.doctor.user.full_name} ({self.status})'
+
+
 class PasswordResetCode(models.Model):
     email = models.EmailField(blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)

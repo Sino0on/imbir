@@ -3,7 +3,7 @@ import uuid
 from django.db.models import Count, Q, Sum
 from django.core.files.storage import default_storage
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer, OpenApiParameter
 from rest_framework import serializers, status
 from rest_framework.generics import DestroyAPIView, ListCreateAPIView, RetrieveUpdateAPIView, UpdateAPIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -17,7 +17,7 @@ from reviews.models import Review
 from services.models import Service
 from users.models import (
     ClinicBranch, ClinicDocument, ClinicInvite, ClinicPhoto, ClinicProfile, DoctorClinicLink,
-    DoctorDocument, DoctorProfile,
+    DoctorDocument, DoctorInvitation, DoctorProfile,
 )
 from .permissions import IsClinic
 from .serializers import (
@@ -32,6 +32,8 @@ from .serializers import (
     ClinicServiceReadSerializer,
     ClinicServiceWriteSerializer,
     ClinicDoctorCreateSerializer,
+    DoctorInvitationClinicSerializer,
+    DoctorInvitationCreateSerializer,
 )
 
 
@@ -424,6 +426,80 @@ class InviteDeleteView(DestroyAPIView):
 
     def get_queryset(self):
         return ClinicInvite.objects.filter(clinic__user=self.request.user)
+
+
+# ── Doctor invitations (прицельные, не обезличенные ссылки) ──────────────────
+
+@extend_schema_view(
+    get=extend_schema(
+        parameters=[OpenApiParameter(
+            name='status', type=str, required=False,
+            description='Фильтр: pending / accepted / declined',
+        )],
+        responses={200: DoctorInvitationClinicSerializer(many=True)}, tags=['Clinic Cabinet'],
+        summary='Список приглашений, отправленных врачам',
+    ),
+    post=extend_schema(
+        request=DoctorInvitationCreateSerializer, responses={201: DoctorInvitationClinicSerializer},
+        tags=['Clinic Cabinet'], summary='Пригласить врача в клинику',
+    ),
+)
+class DoctorInvitationListCreateView(ListCreateAPIView):
+    permission_classes = (IsClinic,)
+    pagination_class = StandardPagination
+
+    def get_serializer_class(self):
+        return DoctorInvitationCreateSerializer if self.request.method == 'POST' else DoctorInvitationClinicSerializer
+
+    def get_queryset(self):
+        clinic = ClinicProfile.objects.get(user=self.request.user)
+        qs = (
+            DoctorInvitation.objects.filter(clinic=clinic)
+            .select_related('doctor__user', 'branch')
+        )
+        status_filter = self.request.query_params.get('status', '').strip()
+        if status_filter in dict(DoctorInvitation.Status.choices):
+            qs = qs.filter(status=status_filter)
+        return qs
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['clinic'] = ClinicProfile.objects.get(user=self.request.user)
+        return ctx
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        invitation = serializer.save()
+        self._notify_doctor(invitation)
+        return Response(
+            DoctorInvitationClinicSerializer(invitation, context=self.get_serializer_context()).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def _notify_doctor(self, invitation):
+        from notifications.models import Notification
+        from notifications.utils import notify
+
+        notify(
+            invitation.doctor.user, Notification.Type.CLINIC_INVITE_RECEIVED,
+            'Приглашение от клиники',
+            f'{invitation.clinic.name} приглашает вас присоединиться.',
+            {'invitation_id': invitation.id, 'clinic_id': invitation.clinic.user_id},
+        )
+
+
+@extend_schema(
+    responses={204: None}, tags=['Clinic Cabinet'],
+    summary='Отменить приглашение (только пока врач не ответил)',
+)
+class DoctorInvitationDeleteView(DestroyAPIView):
+    permission_classes = (IsClinic,)
+    serializer_class = DoctorInvitationClinicSerializer
+
+    def get_queryset(self):
+        clinic = ClinicProfile.objects.get(user=self.request.user)
+        return DoctorInvitation.objects.filter(clinic=clinic, status=DoctorInvitation.Status.PENDING)
 
     def destroy(self, request, *args, **kwargs):
         super().destroy(request, *args, **kwargs)

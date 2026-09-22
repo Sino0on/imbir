@@ -5,7 +5,7 @@ from django.utils.html import format_html
 from doctors.models import Interview
 from .models import (
     ClinicBranch, ClinicDocument, ClinicInvite, ClinicPhoto, ClinicProfile,
-    DoctorClinicLink, DoctorDocument, DoctorProfile, PatientProfile, User,
+    DoctorClinicLink, DoctorDocument, DoctorInvitation, DoctorProfile, PatientProfile, User,
     PasswordResetCode, PhoneVerificationCode, EmailVerificationCode, LoginCode,
 )
 
@@ -209,6 +209,14 @@ class DoctorClinicLinkAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'clinic')
     search_fields = ('doctor__user__email', 'clinic__name')
     readonly_fields = ('created_at',)
+
+
+@admin.register(DoctorInvitation)
+class DoctorInvitationAdmin(admin.ModelAdmin):
+    list_display = ('doctor', 'clinic', 'branch', 'status', 'created_at', 'responded_at')
+    list_filter = ('status', 'clinic')
+    search_fields = ('doctor__user__email', 'clinic__name')
+    readonly_fields = ('created_at', 'responded_at')
 
 
 @admin.register(DoctorDocument)

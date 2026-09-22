@@ -11,6 +11,9 @@ class Notification(models.Model):
         APPOINTMENT_COMPLETED = 'appointment_completed', 'Приём завершён'
         NEW_REVIEW = 'new_review', 'Новый отзыв'
         NEW_MESSAGE = 'new_message', 'Новое сообщение'
+        CLINIC_INVITE_RECEIVED = 'clinic_invite_received', 'Приглашение от клиники'
+        CLINIC_INVITE_ACCEPTED = 'clinic_invite_accepted', 'Приглашение принято'
+        CLINIC_INVITE_DECLINED = 'clinic_invite_declined', 'Приглашение отклонено'
         SYSTEM = 'system', 'Системное'
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')

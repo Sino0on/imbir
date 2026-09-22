@@ -3,6 +3,7 @@ import uuid
 from django.shortcuts import get_object_or_404
 from django.db.models import Count, Max, Q
 from django.core.files.storage import default_storage
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer, OpenApiParameter
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -14,7 +15,7 @@ from appointments.models import Appointment
 from core.pagination import StandardPagination
 from reviews.models import Review
 from services.models import Service
-from users.models import DoctorDocument, DoctorProfile, User
+from users.models import DoctorClinicLink, DoctorDocument, DoctorInvitation, DoctorProfile, User
 from doctors.models import Interview
 from .permissions import IsDoctor
 from .serializers import (
@@ -27,6 +28,7 @@ from .serializers import (
     DoctorServiceWriteSerializer,
     DoctorAppointmentSummarySerializer,
     DoctorInterviewSerializer,
+    DoctorInvitationSerializer,
 )
 
 
@@ -416,3 +418,88 @@ class DoctorInterviewDetailView(RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         profile = DoctorProfile.objects.get(user=self.request.user)
         return Interview.objects.filter(doctor=profile)
+
+
+# ── Приглашения от клиник ─────────────────────────────────────────────────────
+
+def _get_pending_invitation(request, pk):
+    profile = DoctorProfile.objects.get(user=request.user)
+    return get_object_or_404(
+        DoctorInvitation.objects.select_related('clinic__user', 'branch'),
+        pk=pk, doctor=profile, status=DoctorInvitation.Status.PENDING,
+    )
+
+
+@extend_schema_view(
+    get=extend_schema(
+        parameters=[OpenApiParameter(
+            name='status', type=str, required=False,
+            description='Фильтр: pending / accepted / declined',
+        )],
+        responses={200: DoctorInvitationSerializer(many=True)}, tags=['Doctor Cabinet'],
+        summary='Список приглашений от клиник',
+    ),
+)
+class DoctorInvitationListView(ListAPIView):
+    permission_classes = (IsDoctor,)
+    serializer_class = DoctorInvitationSerializer
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        profile = DoctorProfile.objects.get(user=self.request.user)
+        qs = DoctorInvitation.objects.filter(doctor=profile).select_related('clinic__user', 'branch')
+        status_filter = self.request.query_params.get('status', '').strip()
+        if status_filter in dict(DoctorInvitation.Status.choices):
+            qs = qs.filter(status=status_filter)
+        return qs
+
+
+@extend_schema(request=None, responses={200: DoctorInvitationSerializer}, tags=['Doctor Cabinet'], summary='Принять приглашение клиники')
+class DoctorInvitationAcceptView(APIView):
+    permission_classes = (IsDoctor,)
+
+    def post(self, request, pk):
+        invitation = _get_pending_invitation(request, pk)
+
+        DoctorClinicLink.objects.get_or_create(
+            doctor=invitation.doctor, clinic=invitation.clinic,
+            defaults={'branch': invitation.branch},
+        )
+
+        invitation.status = DoctorInvitation.Status.ACCEPTED
+        invitation.responded_at = timezone.now()
+        invitation.save(update_fields=['status', 'responded_at'])
+
+        from notifications.models import Notification
+        from notifications.utils import notify
+        notify(
+            invitation.clinic.user, Notification.Type.CLINIC_INVITE_ACCEPTED,
+            'Приглашение принято',
+            f'{invitation.doctor.user.full_name} принял(а) приглашение присоединиться к клинике.',
+            {'invitation_id': invitation.id, 'doctor_id': invitation.doctor.user_id},
+        )
+
+        return Response(DoctorInvitationSerializer(invitation, context={'request': request}).data)
+
+
+@extend_schema(request=None, responses={200: DoctorInvitationSerializer}, tags=['Doctor Cabinet'], summary='Отклонить приглашение клиники')
+class DoctorInvitationDeclineView(APIView):
+    permission_classes = (IsDoctor,)
+
+    def post(self, request, pk):
+        invitation = _get_pending_invitation(request, pk)
+
+        invitation.status = DoctorInvitation.Status.DECLINED
+        invitation.responded_at = timezone.now()
+        invitation.save(update_fields=['status', 'responded_at'])
+
+        from notifications.models import Notification
+        from notifications.utils import notify
+        notify(
+            invitation.clinic.user, Notification.Type.CLINIC_INVITE_DECLINED,
+            'Приглашение отклонено',
+            f'{invitation.doctor.user.full_name} отклонил(а) приглашение присоединиться к клинике.',
+            {'invitation_id': invitation.id, 'doctor_id': invitation.doctor.user_id},
+        )
+
+        return Response(DoctorInvitationSerializer(invitation, context={'request': request}).data)
