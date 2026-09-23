@@ -461,10 +461,13 @@ class DoctorInvitationAcceptView(APIView):
     def post(self, request, pk):
         invitation = _get_pending_invitation(request, pk)
 
-        DoctorClinicLink.objects.get_or_create(
-            doctor=invitation.doctor, clinic=invitation.clinic,
-            defaults={'branch': invitation.branch},
-        )
+        # get_or_create() применяет defaults только к НОВОЙ записи — если связь
+        # уже существует (например, is_active=False после отвязки в прошлом),
+        # её надо явно реактивировать, а не молча оставить как есть.
+        link, _ = DoctorClinicLink.objects.get_or_create(doctor=invitation.doctor, clinic=invitation.clinic)
+        link.is_active = True
+        link.branch = invitation.branch
+        link.save(update_fields=['is_active', 'branch'])
 
         invitation.status = DoctorInvitation.Status.ACCEPTED
         invitation.responded_at = timezone.now()
