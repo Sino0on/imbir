@@ -1,6 +1,6 @@
 from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -70,11 +70,25 @@ _SPEC_RESPONSE = inline_serializer('SpecializationList', fields={
 })
 
 
-@extend_schema(responses={200: _SPEC_RESPONSE}, tags=['References'], summary='Список специализаций')
+@extend_schema(
+    responses={200: _SPEC_RESPONSE}, tags=['References'], summary='Список специализаций',
+    parameters=[
+        OpenApiParameter(name='type', type=str, enum=['doctor', 'clinic'],
+                         description='Специализации опубликованных врачей или клиник.'),
+        OpenApiParameter(name='include_unused', type=bool,
+                         description='Полный справочник для регистрации и редактирования профиля, '
+                                     'включая ещё не выбранные специализации.'),
+    ],
+)
 class SpecializationsView(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request):
+        if request.query_params.get('include_unused', '').strip().lower() in ('true', '1'):
+            specializations = Specialization.objects.all().order_by('name')
+            serializer = SpecializationSerializer(specializations, many=True, context={'request': request})
+            return Response({'data': serializer.data})
+
         # ?type=clinic — специализации, встречающиеся у клиник,
         # ?type=doctor — только у врачей,
         # без параметра — объединение обоих (обратная совместимость).
