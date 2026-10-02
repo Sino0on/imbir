@@ -235,13 +235,15 @@ class DoctorRegisterSerializer(serializers.Serializer):
     step6 = serializers.CharField()
     step7 = serializers.CharField()
     photo = HybridImageField(required=False, allow_null=True)
-    # Обработать photo через ИИ (белый халат + белый фон) сразу при регистрации.
+    # Обработать photo через ИИ (белый халат + белый фон) после регистрации, в фоне.
     # default=False — то же значение, что и при отсутствии поля в multipart, так
     # что тут нет той путаницы с BooleanField, что была у is_active в услугах.
     process_photo = serializers.BooleanField(
         required=False, default=False,
         help_text='Если true и передано фото — оно будет обработано через ИИ '
-                  '(белый халат + белый фон) перед сохранением.',
+                  '(белый халат + белый фон) в фоне: сохраняется исходное фото, '
+                  'обработанное подменяет его примерно через минуту. В ответе '
+                  'photo_ai_processing: queued / disabled / failed.',
     )
     invite_clinic_id = serializers.IntegerField(required=False, allow_null=True)
     invite_branch_id = serializers.IntegerField(required=False, allow_null=True)
