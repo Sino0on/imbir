@@ -40,10 +40,12 @@ from .serializers import (
                 description=(
                     'Если true и в этом же запросе передано новое фото (поле photo, файл) — '
                     'оно будет обработано через ИИ: на человека наденут белый медицинский халат '
-                    'и поместят на белый фон. При неудаче обработки сохраняется исходное фото '
-                    'как есть, и в ответе появляется "photo_ai_processing": "failed". Если '
-                    'функция выключена в настройках сайта (админка) — "photo_ai_processing": '
-                    '"disabled", фото тоже сохраняется как есть.'
+                    'и поместят на белый фон. Обработка идёт в фоне (около минуты): ответ '
+                    'приходит сразу с исходным фото и "photo_ai_processing": "queued", а '
+                    'обработанное фото подменяет исходное позже — перечитайте профиль. При '
+                    'неудаче ИИ остаётся исходное фото. Если очередь фоновых задач недоступна — '
+                    '"photo_ai_processing": "failed". Если функция выключена в настройках сайта '
+                    '(админка) — "photo_ai_processing": "disabled". Фото сохраняется в любом случае.'
                 ),
             ),
         ],
@@ -61,27 +63,20 @@ class DoctorProfileView(RetrieveUpdateAPIView):
     def update(self, request, *args, **kwargs):
         from references.models import SiteSettings
 
+        from .tasks import queue_doctor_photo_processing
+
         should_process = request.query_params.get('process_photo', '').strip().lower() in ('1', 'true', 'yes')
-        ai_enabled = SiteSettings.load().ai_doctor_photo_processing_enabled
         uploaded_photo = request.FILES.get('photo')
-        photo_bytes = None
-        if should_process and uploaded_photo and ai_enabled:
-            photo_bytes = uploaded_photo.read()
-            uploaded_photo.seek(0)  # чтобы обычное сохранение через сериализатор тоже отработало штатно
 
         response = super().update(request, *args, **kwargs)
 
-        if should_process and uploaded_photo and not ai_enabled and response.status_code == 200:
-            response.data['photo_ai_processing'] = 'disabled'
-
-        if photo_bytes and response.status_code == 200:
-            from .ai_photo import generate_doctor_coat_photo
-            processed = generate_doctor_coat_photo(photo_bytes, uploaded_photo.name)
-            if processed:
-                from django.core.files.base import ContentFile
-                profile = self.get_object()
-                profile.photo.save(f'{profile.user_id}_coat.png', ContentFile(processed), save=True)
-                response = Response(self.get_serializer(profile).data)
+        # ИИ-обработка (около минуты) — в фоне, см. doctor/tasks.py: держать
+        # запрос столько нельзя, nginx обрывает ответ на 60-й секунде.
+        if should_process and uploaded_photo and response.status_code == 200:
+            if not SiteSettings.load().ai_doctor_photo_processing_enabled:
+                response.data['photo_ai_processing'] = 'disabled'
+            elif queue_doctor_photo_processing(self.get_object()):
+                response.data['photo_ai_processing'] = 'queued'
             else:
                 response.data['photo_ai_processing'] = 'failed'
         return response

@@ -93,9 +93,6 @@ class DoctorRegisterView(APIView):
     def post(self, request):
         process_photo = str(request.data.get('process_photo', '')).strip().lower() in ('1', 'true', 'yes')
         uploaded_photo = request.FILES.get('photo')
-        photo_bytes = uploaded_photo.read() if (process_photo and uploaded_photo) else None
-        if uploaded_photo:
-            uploaded_photo.seek(0)  # чтобы обычное сохранение через сериализатор тоже отработало штатно
 
         serializer = DoctorRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -104,19 +101,19 @@ class DoctorRegisterView(APIView):
         doctor_profile = user.doctor_profile
         save_hybrid_documents(doctor_profile, 'documents', DoctorDocument, request)
 
+        # ИИ-обработка фото — в фоне (см. doctor/tasks.py). Раньше она шла прямо
+        # здесь, около минуты: клиент с таймаутом 15 с видел «Ошибка регистрации»
+        # при уже созданном аккаунте, а повтор упирался в «email уже существует».
         photo_ai_processing = None
-        if photo_bytes:
+        if process_photo and uploaded_photo and doctor_profile.photo:
+            from doctor.tasks import queue_doctor_photo_processing
             from references.models import SiteSettings
-            if SiteSettings.load().ai_doctor_photo_processing_enabled:
-                from doctor.ai_photo import generate_doctor_coat_photo
-                processed = generate_doctor_coat_photo(photo_bytes, uploaded_photo.name)
-                if processed:
-                    from django.core.files.base import ContentFile
-                    doctor_profile.photo.save(f'{user.id}_coat.png', ContentFile(processed), save=True)
-                else:
-                    photo_ai_processing = 'failed'
-            else:
+            if not SiteSettings.load().ai_doctor_photo_processing_enabled:
                 photo_ai_processing = 'disabled'
+            elif queue_doctor_photo_processing(doctor_profile):
+                photo_ai_processing = 'queued'
+            else:
+                photo_ai_processing = 'failed'
 
         refresh = RefreshToken.for_user(user)
         response_data = {
