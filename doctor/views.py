@@ -102,7 +102,7 @@ class DoctorAppointmentListView(ListAPIView):
             Appointment.objects
             .filter(doctor=doctor_profile)
             .select_related('patient', 'service')
-            .order_by('date', 'time')
+            .order_by('-date', '-time')
         )
 
         params = self.request.query_params
