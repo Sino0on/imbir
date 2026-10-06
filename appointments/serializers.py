@@ -56,7 +56,13 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
                 from services.models import Service
                 service = Service.objects.filter(id=service_id).first()
 
-            from .utils import find_overlapping_appointment
+            from .utils import find_overlapping_appointment, schedule_conflict
+            # Вся длительность услуги должна помещаться в рабочий день врача и не
+            # задевать перерыв — по тем же правилам, по которым считаются слоты.
+            problem = schedule_conflict(doctor, data['date'], data['time'], service)
+            if problem:
+                raise serializers.ValidationError({'time': problem})
+
             conflict = find_overlapping_appointment(doctor, data['date'], data['time'], service)
             if conflict:
                 raise serializers.ValidationError(
@@ -306,7 +312,13 @@ class AppointmentRescheduleSerializer(serializers.Serializer):
             raise serializers.ValidationError('Нельзя перенести завершённую запись.')
 
         if appointment.doctor:
-            from .utils import find_overlapping_appointment
+            from .utils import find_overlapping_appointment, schedule_conflict
+            problem = schedule_conflict(
+                appointment.doctor, data['date'], data['time'], appointment.service,
+            )
+            if problem:
+                raise serializers.ValidationError({'time': problem})
+
             conflict = find_overlapping_appointment(
                 appointment.doctor, data['date'], data['time'], appointment.service,
                 exclude_id=appointment.id,

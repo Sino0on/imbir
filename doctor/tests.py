@@ -54,3 +54,27 @@ class DoctorOwnProfileTests(APITestCase):
 
         self.assertEqual(response.data['position'], 'Заведующая отделением')
         self.assertEqual(response.data['additional_education'][1]['name'], 'Новая программа')
+
+class DoctorServiceDurationTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='doctor-services@example.com', password='password123',
+            first_name='Алина', role=User.Role.DOCTOR,
+        )
+        DoctorProfile.objects.create(user=self.user)
+        self.client.force_authenticate(user=self.user)
+
+    def test_duration_must_be_positive_and_can_be_cleared(self):
+        base = {'name': 'Массаж', 'category': 'procedures'}
+
+        response = self.client.post('/api/doctor/services/', {**base, 'duration': 0}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('duration', response.data)
+
+        response = self.client.post('/api/doctor/services/', {**base, 'duration': 60}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        detail_url = f"/api/doctor/services/{response.data['id']}/"
+
+        response = self.client.put(detail_url, {**base, 'duration': None}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data['duration'])

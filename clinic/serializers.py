@@ -367,6 +367,10 @@ class ClinicServiceWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Этот филиал не принадлежит вашей клинике.')
         return value
 
+    def validate_duration(self, value):
+        from services.validators import validate_service_duration
+        return validate_service_duration(value)
+
     def create(self, validated_data):
         doctor_ids = validated_data.pop('doctor_ids', [])
         clinic = self.context['clinic']

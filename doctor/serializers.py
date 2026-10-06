@@ -263,6 +263,10 @@ class DoctorServiceWriteSerializer(serializers.ModelSerializer):
             'schedule', 'lunch_break', 'is_active', 'clinic_id', 'branch_id',
         )
 
+    def validate_duration(self, value):
+        from services.validators import validate_service_duration
+        return validate_service_duration(value)
+
     @staticmethod
     def _resolve_branch(clinic, link_branch, branch_id):
         """Единая логика для обоих путей (авто-подстановка и явный clinic_id):

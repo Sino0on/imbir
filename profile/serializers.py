@@ -86,6 +86,7 @@ class PatientAppointmentSerializer(serializers.ModelSerializer):
             'id': obj.service.id,
             'name': obj.service.name,
             'price': obj.service.price,
+            'duration': obj.service.duration,
         }
 
     @extend_schema_field(serializers.BooleanField)

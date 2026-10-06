@@ -315,7 +315,10 @@ class DoctorAvailableSlotsView(APIView):
         from datetime import datetime, timedelta
         from django.utils import timezone
         from appointments.models import Appointment
-        from appointments.utils import appointment_duration_minutes, appointment_time_range
+        from appointments.utils import (
+            appointment_duration_minutes, appointment_time_range,
+            doctor_lunch_break, doctor_work_hours,
+        )
         from services.models import Service
 
         doctor_profile = get_object_or_404(
@@ -328,67 +331,46 @@ class DoctorAvailableSlotsView(APIView):
         if not date_str:
             return Response({'detail': 'Параметр date обязателен (YYYY-MM-DD).'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Helper to compute slots
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
             return Response({'detail': 'Некорректный формат даты. Используйте YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Locale-independent day name mapping
-        DAYS_OF_WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-        weekday_name = DAYS_OF_WEEK[target_date.weekday()]
-
-        schedule = doctor_profile.schedule or {}
-        day_schedule = schedule.get(weekday_name)
-
-        if not day_schedule or not isinstance(day_schedule, dict):
+        # Те же правила рабочего дня и перерыва проверяются при создании и
+        # переносе записи (appointments.utils.schedule_conflict).
+        work_hours = doctor_work_hours(doctor_profile, target_date)
+        if work_hours is None:
             return Response({'date': date_str, 'slots': []})
 
-        if not day_schedule.get('enabled', True):
-            return Response({'date': date_str, 'slots': []})
+        appointments = Appointment.objects.filter(
+            doctor=doctor_profile,
+            date=target_date,
+            status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED],
+        ).select_related('service')
 
-        start_str = day_schedule.get('from') or day_schedule.get('start')
-        end_str = day_schedule.get('to') or day_schedule.get('end')
-
-        if not start_str or not end_str:
-            return Response({'date': date_str, 'slots': []})
-
-        try:
-            start_time = datetime.strptime(start_str, '%H:%M').time()
-            end_time = datetime.strptime(end_str, '%H:%M').time()
-        except ValueError:
-            return Response({'date': date_str, 'slots': []})
+        # При переносе своя же запись не должна занимать время, на которое её
+        # переносят. Исключаем её, только если спрашивает её пациент или врач —
+        # иначе по ответу можно было бы вычислять время чужих записей.
+        exclude_id = request.query_params.get('exclude_appointment_id', '').strip()
+        if exclude_id.isdigit() and request.user.is_authenticated:
+            own = appointments.filter(pk=int(exclude_id)).filter(
+                Q(patient=request.user) | Q(doctor__user=request.user)
+            )
+            appointments = appointments.exclude(pk__in=own.values('pk'))
 
         busy_ranges = [
             appointment_time_range(apt.date, apt.time, apt.service)
-            for apt in Appointment.objects.filter(
-                doctor=doctor_profile,
-                date=target_date,
-                status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED],
-            ).select_related('service')
+            for apt in appointments
         ]
 
         service_id = request.query_params.get('service_id', '').strip()
-        requested_service = Service.objects.filter(id=service_id).first() if service_id else None
+        requested_service = Service.objects.filter(id=service_id).first() if service_id.isdigit() else None
         requested_duration = appointment_duration_minutes(requested_service)
 
-        lunch = doctor_profile.lunch_break or {}
-        lunch_start = None
-        lunch_end = None
-
-        lunch_start_str = lunch.get('from') or lunch.get('start')
-        lunch_end_str = lunch.get('to') or lunch.get('end')
-
-        if lunch_start_str and lunch_end_str:
-            try:
-                lunch_start = datetime.strptime(lunch_start_str, '%H:%M').time()
-                lunch_end = datetime.strptime(lunch_end_str, '%H:%M').time()
-            except ValueError:
-                pass
+        lunch = doctor_lunch_break(doctor_profile, target_date)
 
         slots = []
-        current_dt = datetime.combine(target_date, start_time)
-        end_dt = datetime.combine(target_date, end_time)
+        current_dt, end_dt = work_hours
 
         local_now = timezone.localtime(timezone.now())
         local_today = local_now.date()
@@ -409,11 +391,8 @@ class DoctorAvailableSlotsView(APIView):
             ):
                 available = False
 
-            if available and lunch_start and lunch_end:
-                lunch_start_dt = datetime.combine(target_date, lunch_start)
-                lunch_end_dt = datetime.combine(target_date, lunch_end)
-                if current_dt < lunch_end_dt and lunch_start_dt < slot_end_dt:
-                    available = False
+            if available and lunch and current_dt < lunch[1] and lunch[0] < slot_end_dt:
+                available = False
 
             if available and target_date < local_today:
                 available = False

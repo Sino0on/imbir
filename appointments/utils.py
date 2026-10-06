@@ -24,6 +24,67 @@ def appointment_time_range(date, time, service):
     return start_dt, end_dt
 
 
+WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+
+def _parse_hhmm(value):
+    try:
+        return datetime.strptime(value, '%H:%M').time()
+    except (TypeError, ValueError):
+        return None
+
+
+def doctor_work_hours(doctor, date):
+    """(start_datetime, end_datetime) рабочего дня врача на эту дату или None, если
+    в этот день он не принимает (выходной, нет графика или его не разобрать)."""
+    day = (doctor.schedule or {}).get(WEEKDAYS[date.weekday()])
+    if not isinstance(day, dict) or not day.get('enabled', True):
+        return None
+    start = _parse_hhmm(day.get('from') or day.get('start'))
+    end = _parse_hhmm(day.get('to') or day.get('end'))
+    if not start or not end:
+        return None
+    return datetime.combine(date, start), datetime.combine(date, end)
+
+
+def doctor_lunch_break(doctor, date):
+    """(start_datetime, end_datetime) перерыва врача на эту дату или None."""
+    lunch = doctor.lunch_break
+    if not isinstance(lunch, dict):
+        return None
+    start = _parse_hhmm(lunch.get('from') or lunch.get('start'))
+    end = _parse_hhmm(lunch.get('to') or lunch.get('end'))
+    if not start or not end:
+        return None
+    return datetime.combine(date, start), datetime.combine(date, end)
+
+
+def schedule_conflict(doctor, date, time, service):
+    """Текст ошибки, если запись [time, time + длительность услуги) не помещается в
+    рабочий день врача или задевает его перерыв; None, если всё в порядке.
+    Те же правила, что у свободных слотов (DoctorAvailableSlotsView)."""
+    work_hours = doctor_work_hours(doctor, date)
+    if work_hours is None:
+        return 'Врач не принимает в этот день — выберите другую дату.'
+
+    start, end = appointment_time_range(date, time, service)
+    minutes = appointment_duration_minutes(service)
+    work_start, work_end = work_hours
+    if start < work_start or end > work_end:
+        return (
+            f'Приём длится {minutes} мин и не помещается в рабочее время врача '
+            f'({work_start:%H:%M}–{work_end:%H:%M}) — выберите другое время.'
+        )
+
+    lunch = doctor_lunch_break(doctor, date)
+    if lunch and start < lunch[1] and lunch[0] < end:
+        return (
+            f'Приём длится {minutes} мин и попадает на перерыв врача '
+            f'({lunch[0]:%H:%M}–{lunch[1]:%H:%M}) — выберите другое время.'
+        )
+    return None
+
+
 def find_overlapping_appointment(doctor, date, time, service, exclude_id=None):
     """Первая активная запись этого врача на эту дату, чей интервал [start, end)
     пересекается с новым — с учётом длительности услуги каждой из записей.

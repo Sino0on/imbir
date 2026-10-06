@@ -7,6 +7,17 @@ import datetime
 
 from unittest.mock import patch
 
+from django.utils import timezone
+
+
+def _next_weekday(weekday):
+    """Ближайшая будущая дата с этим днём недели (0 — понедельник). Слоты на
+    прошедшие дни всегда заняты, поэтому жёстко прописанная дата ломала тесты,
+    как только наступала."""
+    today = timezone.localdate()
+    return today + datetime.timedelta(days=(weekday - today.weekday() - 1) % 7 + 1)
+
+
 class AppointmentRescheduleTests(APITestCase):
     def setUp(self):
         # Create users
@@ -17,7 +28,9 @@ class AppointmentRescheduleTests(APITestCase):
             email='doctor@example.com', password='password123', first_name='Doc', role=User.Role.DOCTOR
         )
         self.doctor = DoctorProfile.objects.create(
-            user=self.doctor_user, is_published=True, city='Бишкек'
+            user=self.doctor_user, is_published=True, city='Бишкек',
+            # 2026-08-05, куда переносят запись ниже, — среда.
+            schedule={'wednesday': {'from': '09:00', 'to': '18:00', 'enabled': True}},
         )
 
         self.other_user = User.objects.create_user(
@@ -333,7 +346,7 @@ class AppointmentOverlapTests(APITestCase):
         )
         self.doctor = DoctorProfile.objects.create(
             user=self.doctor_user, is_published=True, city='Бишкек',
-            # 2026-09-01 — вторник; окно шире того, что используют тесты ниже.
+            # self.day — вторник; окно шире того, что используют тесты ниже.
             schedule={'tuesday': {'from': '09:00', 'to': '18:00', 'enabled': True}},
         )
         self.patient1 = User.objects.create_user(
@@ -348,20 +361,21 @@ class AppointmentOverlapTests(APITestCase):
             name='Приём (час)', category='general', duration=60, is_active=True,
         )
         self.create_url = '/api/appointments/'
+        self.day = _next_weekday(1).isoformat()
 
     def test_second_patient_cannot_book_overlapping_slot(self):
         self.client.force_authenticate(user=self.patient1)
         r1 = self.client.post(self.create_url, {
             'doctor_id': self.doctor_user.id,
             'service_id': self.service_60min.id,
-            'date': '2026-09-01', 'time': '10:00',
+            'date': self.day, 'time': '10:00',
         })
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
 
         self.client.force_authenticate(user=self.patient2)
         r2 = self.client.post(self.create_url, {
             'doctor_id': self.doctor_user.id,
-            'date': '2026-09-01', 'time': '10:30',  # внутри 10:00-11:00 первой записи
+            'date': self.day, 'time': '10:30',  # внутри 10:00-11:00 первой записи
         })
         self.assertEqual(r2.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -370,14 +384,14 @@ class AppointmentOverlapTests(APITestCase):
         r1 = self.client.post(self.create_url, {
             'doctor_id': self.doctor_user.id,
             'service_id': self.service_60min.id,
-            'date': '2026-09-01', 'time': '10:00',
+            'date': self.day, 'time': '10:00',
         })
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
 
         self.client.force_authenticate(user=self.patient2)
         r2 = self.client.post(self.create_url, {
             'doctor_id': self.doctor_user.id,
-            'date': '2026-09-01', 'time': '11:00',  # ровно после окончания часовой записи
+            'date': self.day, 'time': '11:00',  # ровно после окончания часовой записи
         })
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
 
@@ -386,17 +400,17 @@ class AppointmentOverlapTests(APITestCase):
         self.client.post(self.create_url, {
             'doctor_id': self.doctor_user.id,
             'service_id': self.service_60min.id,
-            'date': '2026-09-01', 'time': '10:00',
+            'date': self.day, 'time': '10:00',
         })
 
         self.client.force_authenticate(user=self.patient2)
         other = self.client.post(self.create_url, {
             'doctor_id': self.doctor_user.id,
-            'date': '2026-09-01', 'time': '12:00',
+            'date': self.day, 'time': '12:00',
         }).data
 
         response = self.client.post(f"/api/appointments/{other['id']}/reschedule/", {
-            'date': '2026-09-01', 'time': '10:15',
+            'date': self.day, 'time': '10:15',
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -405,11 +419,11 @@ class AppointmentOverlapTests(APITestCase):
         self.client.post(self.create_url, {
             'doctor_id': self.doctor_user.id,
             'service_id': self.service_60min.id,
-            'date': '2026-09-01', 'time': '10:00',
+            'date': self.day, 'time': '10:00',
         })
 
         response = self.client.get(
-            f'/api/doctors/{self.doctor_user.id}/available-slots/', {'date': '2026-09-01'},
+            f'/api/doctors/{self.doctor_user.id}/available-slots/', {'date': self.day},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         slots_by_time = {s['time']: s['available'] for s in response.data['slots']}
@@ -422,13 +436,117 @@ class AppointmentOverlapTests(APITestCase):
         self.client.force_authenticate(user=self.patient1)
         self.client.post(self.create_url, {
             'doctor_id': self.doctor_user.id,
-            'date': '2026-09-01', 'time': '11:30',  # 30-минутная запись по умолчанию
+            'date': self.day, 'time': '11:30',  # 30-минутная запись по умолчанию
         })
 
         # Спрашиваем часовую услугу в 11:00 — она бы заняла и 11:30, где уже занято.
         response = self.client.get(
             f'/api/doctors/{self.doctor_user.id}/available-slots/',
-            {'date': '2026-09-01', 'service_id': self.service_60min.id},
+            {'date': self.day, 'service_id': self.service_60min.id},
         )
         slots_by_time = {s['time']: s['available'] for s in response.data['slots']}
         self.assertFalse(slots_by_time.get('11:00'))
+
+
+class ServiceDurationScheduleTests(APITestCase):
+    """Длительность услуги должна целиком помещаться в рабочий день врача и не
+    задевать его перерыв — и в слотах, и при создании/переносе записи."""
+
+    def setUp(self):
+        from services.models import Service
+
+        self.day = _next_weekday(2).isoformat()  # среда
+        self.sunday = _next_weekday(6).isoformat()
+        self.doctor_user = User.objects.create_user(
+            email='duration-doctor@example.com', password='password123',
+            first_name='Doc', role=User.Role.DOCTOR,
+        )
+        self.doctor = DoctorProfile.objects.create(
+            user=self.doctor_user, is_published=True, city='Бишкек',
+            schedule={
+                'wednesday': {'from': '09:00', 'to': '18:00', 'enabled': True},
+                'sunday': {'from': '09:00', 'to': '18:00', 'enabled': False},
+            },
+            lunch_break={'from': '13:00', 'to': '14:00'},
+        )
+        self.patient = User.objects.create_user(
+            email='duration-patient@example.com', password='password123',
+            first_name='Ivan', role=User.Role.PATIENT,
+        )
+        self.other_patient = User.objects.create_user(
+            email='duration-other@example.com', password='password123',
+            first_name='Petr', role=User.Role.PATIENT,
+        )
+        self.massage = Service.objects.create(
+            name='Массаж', category='general', duration=60, is_active=True,
+        )
+
+    def book(self, time, service=None, date=None):
+        data = {
+            'doctor_id': self.doctor_user.id, 'date': date or self.day, 'time': time,
+            'guest_name': 'Тест', 'guest_phone': '+996 700 000 000',
+        }
+        if service:
+            data['service_id'] = service.id
+        return self.client.post('/api/appointments/', data)
+
+    def slots(self, service=None, **extra):
+        params = {'date': self.day, **extra}
+        if service:
+            params['service_id'] = service.id
+        response = self.client.get(f'/api/doctors/{self.doctor_user.id}/available-slots/', params)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return {s['time']: s['available'] for s in response.data['slots']}
+
+    def test_slots_hide_times_where_the_service_does_not_fit(self):
+        default, massage = self.slots(), self.slots(self.massage)
+        self.assertTrue(default['12:30'] and default['17:30'])
+        self.assertFalse(massage['12:30'])  # 12:30–13:30 задевает перерыв
+        self.assertFalse(massage['17:30'])  # 17:30–18:30 после конца дня
+        self.assertTrue(massage['12:00'] and massage['17:00'])
+
+    def test_create_rejects_service_running_past_working_hours(self):
+        response = self.book('17:30', self.massage)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('рабочее время', str(response.data['time']))
+
+    def test_create_rejects_service_overlapping_lunch(self):
+        response = self.book('12:30', self.massage)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('перерыв', str(response.data['time']))
+
+    def test_create_rejects_day_off(self):
+        response = self.book('10:00', date=self.sunday)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_accepts_times_that_fit(self):
+        self.assertEqual(self.book('17:00', self.massage).status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.book('12:30').status_code, status.HTTP_201_CREATED)  # 30 мин по умолчанию
+
+    def test_reschedule_checks_the_service_duration(self):
+        self.client.force_authenticate(user=self.patient)
+        created = self.book('10:00', self.massage)
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        url = f"/api/appointments/{created.data['id']}/reschedule/"
+
+        self.assertEqual(
+            self.client.post(url, {'date': self.day, 'time': '17:30'}).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(url, {'date': self.day, 'time': '15:00'}).status_code,
+            status.HTTP_200_OK,
+        )
+
+    def test_reschedule_slots_ignore_own_appointment_only_for_its_owner(self):
+        self.client.force_authenticate(user=self.patient)
+        created = self.book('10:00', self.massage)
+        own_id = created.data['id']
+
+        self.assertTrue(self.slots(self.massage, exclude_appointment_id=own_id)['10:30'])
+
+        self.client.force_authenticate(user=self.other_patient)
+        self.assertFalse(self.slots(self.massage, exclude_appointment_id=own_id)['10:30'])
+
+        self.client.force_authenticate(user=None)
+        self.assertFalse(self.slots(self.massage, exclude_appointment_id=own_id)['10:30'])

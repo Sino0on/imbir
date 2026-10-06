@@ -345,6 +345,29 @@ class ClinicServiceProfileApiTests(APITestCase):
         self.assertEqual(response.data['schedule']['tuesday']['to'], '16:00')
         self.assertEqual(response.data['lunch_break']['from'], '12:30')
 
+    def test_service_duration_must_be_positive_and_can_be_cleared(self):
+        self.client.force_authenticate(user=self.clinic_user)
+        base = {'name': 'Массаж', 'category': 'procedures'}
+
+        response = self.client.post('/api/clinic/services/', {**base, 'duration': 0}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('duration', response.data)
+
+        response = self.client.post('/api/clinic/services/', {**base, 'duration': 45}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        detail_url = f"/api/clinic/services/{response.data['id']}/"
+
+        # JSON: null очищает длительность.
+        response = self.client.put(detail_url, {'duration': None}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data['duration'])
+
+        # multipart (когда вместе меняют фото): пустая строка тоже очищает.
+        self.client.put(detail_url, {'duration': 30}, format='json')
+        response = self.client.put(detail_url, {'duration': ''}, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data['duration'])
+
     def test_service_rejects_foreign_branch_and_is_hidden_from_other_clinic(self):
         self.client.force_authenticate(user=self.clinic_user)
         response = self.client.post('/api/clinic/services/', {
