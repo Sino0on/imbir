@@ -302,7 +302,9 @@ class DoctorAvailableSlotsView(APIView):
         tags=['Doctors Catalog'],
         summary='Свободные слоты времени врача',
         description=(
-            'Возвращает список 30-минутных интервалов с флагом доступности (available: true/false). '
+            'Возвращает слоты с флагом доступности (available: true/false). Шаг сетки равен '
+            'длительности запрошенной услуги (30 минут без услуги или без длительности); '
+            'после занятого времени или перерыва сетка продолжается от их конца. '
             'Слот занят, если пересекается с интервалом [время, время + длительность услуги) '
             'уже существующей записи — длительность берётся из услуги каждой записи '
             '(30 минут по умолчанию, если услуга не указана).'
@@ -376,23 +378,23 @@ class DoctorAvailableSlotsView(APIView):
         local_today = local_now.date()
         local_time = local_now.time()
 
-        while current_dt < end_dt:
+        # Шаг сетки = длительность услуги: приёмы идут встык (у услуги на 45 мин —
+        # 09:00, 09:45, 10:30…). Если слот задевает чужую запись или перерыв,
+        # следующий начинается не позже их конца — иначе сетка разъезжается с
+        # записями, сделанными по другой длительности, и свободное окно теряется.
+        blockers = list(busy_ranges)
+        if lunch:
+            blockers.append(lunch)
+
+        while current_dt + timedelta(minutes=requested_duration) <= end_dt:
             slot_time = current_dt.time()
-            available = True
             slot_end_dt = current_dt + timedelta(minutes=requested_duration)
 
-            # Вся длительность услуги должна помещаться в рабочие часы врача.
-            if slot_end_dt > end_dt:
-                available = False
-
-            if available and any(
-                current_dt < busy_end and busy_start < slot_end_dt
-                for busy_start, busy_end in busy_ranges
-            ):
-                available = False
-
-            if available and lunch and current_dt < lunch[1] and lunch[0] < slot_end_dt:
-                available = False
+            overlapping = [
+                (busy_start, busy_end) for busy_start, busy_end in blockers
+                if current_dt < busy_end and busy_start < slot_end_dt
+            ]
+            available = not overlapping
 
             if available and target_date < local_today:
                 available = False
@@ -405,7 +407,10 @@ class DoctorAvailableSlotsView(APIView):
                 'available': available
             })
 
-            current_dt += timedelta(minutes=30)
+            if overlapping:
+                current_dt = min(slot_end_dt, max(busy_end for _, busy_end in overlapping))
+            else:
+                current_dt = slot_end_dt
 
         return Response({'date': date_str, 'slots': slots})
 

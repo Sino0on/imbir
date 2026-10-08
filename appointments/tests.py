@@ -501,9 +501,42 @@ class ServiceDurationScheduleTests(APITestCase):
     def test_slots_hide_times_where_the_service_does_not_fit(self):
         default, massage = self.slots(), self.slots(self.massage)
         self.assertTrue(default['12:30'] and default['17:30'])
-        self.assertFalse(massage['12:30'])  # 12:30–13:30 задевает перерыв
-        self.assertFalse(massage['17:30'])  # 17:30–18:30 после конца дня
-        self.assertTrue(massage['12:00'] and massage['17:00'])
+        # Часовая сетка: 12:30 и 17:30 в ней нет, перерыв 13:00–14:00 занят,
+        # последний приём 17:00–18:00 укладывается в день.
+        self.assertNotIn('12:30', massage)
+        self.assertNotIn('17:30', massage)
+        self.assertFalse(massage['13:00'])
+        self.assertTrue(massage['12:00'] and massage['14:00'] and massage['17:00'])
+
+    def test_slot_grid_follows_service_duration(self):
+        from services.models import Service
+
+        consult = Service.objects.create(
+            name='Консультация', category='general', duration=45, is_active=True,
+        )
+        slots = self.slots(consult)
+        # Шаг 45 мин. 12:45 и 13:30 задевают перерыв 13:00–14:00, после него
+        # сетка продолжается ровно с 14:00; 17:45–18:30 в день уже не влезает.
+        self.assertEqual(
+            list(slots),
+            ['09:00', '09:45', '10:30', '11:15', '12:00', '12:45',
+             '13:30', '14:00', '14:45', '15:30', '16:15', '17:00'],
+        )
+        self.assertEqual([t for t, ok in slots.items() if not ok], ['12:45', '13:30'])
+
+    def test_slot_grid_continues_right_after_a_booking(self):
+        from services.models import Service
+
+        consult = Service.objects.create(
+            name='Консультация', category='general', duration=45, is_active=True,
+        )
+        self.assertEqual(self.book('10:00').status_code, status.HTTP_201_CREATED)  # 10:00–10:30
+        slots = self.slots(consult)
+        # 09:45–10:30 задевает запись; следующий слот — сразу в 10:30, а не в 11:15.
+        self.assertTrue(slots['09:00'])
+        self.assertFalse(slots['09:45'])
+        self.assertTrue(slots['10:30'])
+        self.assertEqual(self.book('10:30', consult).status_code, status.HTTP_201_CREATED)
 
     def test_create_rejects_service_running_past_working_hours(self):
         response = self.book('17:30', self.massage)
@@ -543,10 +576,10 @@ class ServiceDurationScheduleTests(APITestCase):
         created = self.book('10:00', self.massage)
         own_id = created.data['id']
 
-        self.assertTrue(self.slots(self.massage, exclude_appointment_id=own_id)['10:30'])
+        self.assertTrue(self.slots(self.massage, exclude_appointment_id=own_id)['10:00'])
 
         self.client.force_authenticate(user=self.other_patient)
-        self.assertFalse(self.slots(self.massage, exclude_appointment_id=own_id)['10:30'])
+        self.assertFalse(self.slots(self.massage, exclude_appointment_id=own_id)['10:00'])
 
         self.client.force_authenticate(user=None)
-        self.assertFalse(self.slots(self.massage, exclude_appointment_id=own_id)['10:30'])
+        self.assertFalse(self.slots(self.massage, exclude_appointment_id=own_id)['10:00'])
