@@ -40,6 +40,24 @@ class UnreadCountTests(APITestCase):
         response = self.client.get(self.unread_url)
         self.assertEqual(response.data['unread_count'], 0)
 
+        # 3. Sent by user 2: user 1 should now have 1 unread message
+        ChatMessage.objects.create(room=self.room, sender=self.user_2, content='Reply from 2')
+        response = self.client.get(self.unread_url)
+        self.assertEqual(response.data['unread_count'], 1)
+
+        # 4. Sent another by user 2: user 1 should now have 2 unread messages
+        ChatMessage.objects.create(room=self.room, sender=self.user_2, content='Another reply')
+        response = self.client.get(self.unread_url)
+        self.assertEqual(response.data['unread_count'], 2)
+
+        # 5. Retrieve messages (this action marks incoming messages as read)
+        msg_response = self.client.get(self.messages_url)
+        self.assertEqual(msg_response.status_code, status.HTTP_200_OK)
+
+        # 6. Unread count should go back to 0
+        response = self.client.get(self.unread_url)
+        self.assertEqual(response.data['unread_count'], 0)
+
 
 class ChatMessageModerationTests(APITestCase):
     def setUp(self):
@@ -68,21 +86,3 @@ class ChatMessageModerationTests(APITestCase):
         self.assertEqual(response.data[0]['content'], 'Updated')
         self.assertTrue(response.data[0]['edited_at'])
         self.assertTrue(response.data[0]['is_deleted'])
-
-        # 3. Sent by user 2: user 1 should now have 1 unread message
-        ChatMessage.objects.create(room=self.room, sender=self.user_2, content='Reply from 2')
-        response = self.client.get(self.unread_url)
-        self.assertEqual(response.data['unread_count'], 1)
-
-        # 4. Sent another by user 2: user 1 should now have 2 unread messages
-        ChatMessage.objects.create(room=self.room, sender=self.user_2, content='Another reply')
-        response = self.client.get(self.unread_url)
-        self.assertEqual(response.data['unread_count'], 2)
-
-        # 5. Retrieve messages (this action marks incoming messages as read)
-        msg_response = self.client.get(self.messages_url)
-        self.assertEqual(msg_response.status_code, status.HTTP_200_OK)
-
-        # 6. Unread count should go back to 0
-        response = self.client.get(self.unread_url)
-        self.assertEqual(response.data['unread_count'], 0)
