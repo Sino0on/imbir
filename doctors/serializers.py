@@ -1,7 +1,12 @@
+from datetime import date, timedelta
+
 from rest_framework import serializers
 from references.serializers import SpecializationSerializer
 from users.models import DoctorProfile
 from .models import Interview
+
+# Любой понедельник: график у врача недельный, а doctor_work_hours ждёт дату.
+_SCHEDULE_REF_MONDAY = date(2024, 1, 1)
 
 
 def _branch_data(branch):
@@ -76,6 +81,8 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
     interviews = InterviewSerializer(many=True, read_only=True)
     primary_specializations = SpecializationSerializer(many=True, read_only=True)
     narrow_specializations = SpecializationSerializer(many=True, read_only=True)
+    schedule = serializers.SerializerMethodField()
+    lunch_break = serializers.SerializerMethodField()
 
     class Meta:
         model = DoctorProfile
@@ -88,6 +95,7 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
             'workplaces', 'clinic', 'consultation_price',
             'equipment', 'patient_conditions', 'payment_methods',
             'phone', 'email', 'location', 'interviews',
+            'schedule', 'lunch_break',
         )
 
     def get_full_name(self, obj):
@@ -119,6 +127,36 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
         if not link:
             return None
         return _workplace_data(link, request)
+
+    def get_schedule(self, obj):
+        """График по дням недели — календарь записи гасит по нему выходные.
+        enabled считается теми же правилами, что и свободные слоты
+        (doctor_work_hours): день без графика или с неразборчивым временем —
+        тоже выходной, иначе календарь предлагал бы дни без единого слота."""
+        from appointments.utils import WEEKDAYS, doctor_work_hours
+
+        schedule = {}
+        for offset, day in enumerate(WEEKDAYS):
+            ref_date = _SCHEDULE_REF_MONDAY + timedelta(days=offset)
+            hours = doctor_work_hours(obj, ref_date)
+            if hours is None:
+                schedule[day] = {'enabled': False, 'from': None, 'to': None}
+                continue
+            start, end = hours
+            schedule[day] = {
+                'enabled': True,
+                'from': f'{start:%H:%M}',
+                'to': '24:00' if end.date() > ref_date else f'{end:%H:%M}',
+            }
+        return schedule
+
+    def get_lunch_break(self, obj):
+        from appointments.utils import doctor_lunch_break
+
+        lunch = doctor_lunch_break(obj, _SCHEDULE_REF_MONDAY)
+        if not lunch:
+            return None
+        return {'from': f'{lunch[0]:%H:%M}', 'to': f'{lunch[1]:%H:%M}'}
 
 
 class DoctorListSerializer(serializers.ModelSerializer):

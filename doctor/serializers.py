@@ -150,19 +150,15 @@ class DoctorAppointmentSerializer(serializers.ModelSerializer):
         return {'id': obj.clinic.user_id, 'name': obj.clinic.name}
 
     def get_patient(self, obj):
+        from appointments.serializers import visit_contact
+
+        # Контакт, указанный в форме записи (на кого запись, номер для связи),
+        # впереди данных аккаунта. Технический адрес пациента, записанного по
+        # телефону, — не почта (public_email).
+        contact = visit_contact(obj, account_email=public_email)
         if obj.patient:
-            return {
-                'id': obj.patient.id,
-                'full_name': obj.patient.full_name,
-                'phone': obj.patient.phone,
-                # Технический адрес пациента, записанного по телефону, не почта.
-                'email': public_email(obj.patient.email),
-            }
-        return {
-            'full_name': obj.guest_name,
-            'phone': obj.guest_phone,
-            'email': obj.guest_email,
-        }
+            return {'id': obj.patient.id, **contact}
+        return contact
 
     def get_service(self, obj):
         if not obj.service:

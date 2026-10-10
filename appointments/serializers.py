@@ -2,6 +2,54 @@ from rest_framework import serializers
 from .models import Appointment
 
 
+def _normalize_name(value):
+    return ' '.join((value or '').split()).casefold()
+
+
+def _drop_account_contacts(validated_data, user):
+    """Обнуляет guest_* авторизованной записи, совпадающие с данными аккаунта.
+    Форма записи подставляет их из профиля, и без этого у каждой записи лежала
+    бы копия профиля, которая молча расходилась бы с ним после его правки."""
+    from users.utils import phone_digits
+
+    name = (validated_data.get('guest_name') or '').strip()
+    account_names = {
+        _normalize_name(user.full_name),
+        _normalize_name(f'{user.first_name} {user.last_name}'),
+    }
+    validated_data['guest_name'] = '' if _normalize_name(name) in account_names else name
+
+    phone = (validated_data.get('guest_phone') or '').strip()
+    if phone and phone_digits(phone) == phone_digits(user.phone):
+        phone = ''
+    validated_data['guest_phone'] = phone
+
+    email = (validated_data.get('guest_email') or '').strip()
+    if email and email.lower() == (user.email or '').lower():
+        email = ''
+    validated_data['guest_email'] = email
+
+
+def visit_contact(appointment, account_email=None):
+    """Контакт пациента на этот визит: что он указал в форме записи (guest_*),
+    а чего не указал — из аккаунта. У гостевой записи — только guest_*.
+    account_email — как показывать почту аккаунта (например, public_email,
+    чтобы не светить технический адрес *@phone.imbir.kg)."""
+    patient = appointment.patient
+    if not patient:
+        return {
+            'full_name': appointment.guest_name,
+            'phone': appointment.guest_phone,
+            'email': appointment.guest_email,
+        }
+    email = account_email(patient.email) if account_email else patient.email
+    return {
+        'full_name': appointment.guest_name or patient.full_name,
+        'phone': appointment.guest_phone or patient.phone,
+        'email': appointment.guest_email or email,
+    }
+
+
 class AppointmentCreateSerializer(serializers.ModelSerializer):
     doctor_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     clinic_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
@@ -135,6 +183,10 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         request = self.context['request']
         if request.user.is_authenticated:
             validated_data['patient'] = request.user
+            # Контакт на этот визит (мать записывает ребёнка, у аккаунта нет
+            # телефона) храним в guest_*, но только то, что отличается от
+            # аккаунта: совпадающее и так берётся из профиля пациента.
+            _drop_account_contacts(validated_data, request.user)
 
         if doctor_id:
             validated_data['doctor'] = DoctorProfile.objects.filter(user_id=doctor_id).first()
@@ -177,7 +229,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
 
         date_str = appointment.date.strftime('%d.%m.%Y')
         time_str = appointment.time.strftime('%H:%M')
-        patient_name = appointment.patient.full_name if appointment.patient else appointment.guest_name
+        patient_name = visit_contact(appointment)['full_name']
         title = 'Новая запись'
         body = f'{patient_name} записался(-ась) на {date_str} в {time_str}.'
         payload = appointment_payload(appointment)
@@ -210,12 +262,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
     def get_patient(self, obj):
         if not obj.patient:
             return None
-        return {
-            'id': obj.patient.id,
-            'full_name': obj.patient.full_name,
-            'phone': obj.patient.phone,
-            'email': obj.patient.email,
-        }
+        # Контакт на визит из формы записи — впереди данных аккаунта.
+        return {'id': obj.patient.id, **visit_contact(obj)}
 
     def get_doctor(self, obj):
         if not obj.doctor:
