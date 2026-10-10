@@ -24,7 +24,10 @@ from .serializers import (
     VerifyEmailConfirmSerializer, VerifyPhoneConfirmSerializer,
     EmailCheckSerializer,
 )
-from users.utils import save_hybrid_documents, send_sms_nikita, send_telegram_debug
+from users.utils import (
+    link_guest_appointments, make_phone_placeholder_email,
+    save_hybrid_documents, send_sms_nikita, send_telegram_debug,
+)
 
 _TOKEN_RESPONSE = inline_serializer('TokenResponse', fields={
     'access': serializers.CharField(),
@@ -321,9 +324,9 @@ class PhoneRegisterConfirmView(APIView):
         last_name = serializer.validated_data['last_name']
         verification = serializer.validated_data['verification']
 
-        # Generate a unique placeholder email based on phone digits only
-        phone_digits = ''.join(c for c in phone if c.isdigit())
-        placeholder_email = f"{phone_digits}@phone.imbir.kg"
+        # Технический email по цифрам номера. Если такая заглушка уже занята
+        # (прежний владелец номера сменил телефон), берётся свободный вариант.
+        placeholder_email = make_phone_placeholder_email(phone)
 
         # Create user
         user = User.objects.create_user(
@@ -338,6 +341,10 @@ class PhoneRegisterConfirmView(APIView):
         # Mark code as used
         verification.is_used = True
         verification.save()
+
+        # Номер подтверждён кодом — забираем гостевые записи, сделанные на него
+        # до регистрации, чтобы они появились в «Истории записей».
+        link_guest_appointments(user, phone=phone)
 
         # Login immediately and return tokens
         refresh = RefreshToken.for_user(user)
@@ -401,6 +408,9 @@ class EmailRegisterConfirmView(APIView):
 
         verification.is_used = True
         verification.save()
+
+        # Email подтверждён кодом — привязываем гостевые записи на этот адрес.
+        link_guest_appointments(user, email=email)
 
         refresh = RefreshToken.for_user(user)
         return Response({

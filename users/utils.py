@@ -173,3 +173,105 @@ def send_telegram_debug(text):
         logger.error(f"Failed to send Telegram debug message: {e}")
         return False
 
+
+
+# Домен технических адресов: у пациента, зарегистрированного по телефону, нет
+# почты, а User.email обязателен и уникален — туда пишется заглушка вида
+# 996700111222@phone.imbir.kg. Показывать её человеку нельзя.
+PHONE_PLACEHOLDER_DOMAIN = 'phone.imbir.kg'
+
+
+def phone_digits(phone):
+    """Только цифры номера: '+996 700 111 222' и '+996700111222' дают одно и то же."""
+    return ''.join(c for c in (phone or '') if c.isdigit())
+
+
+def is_placeholder_email(email):
+    return bool(email) and email.lower().endswith('@' + PHONE_PLACEHOLDER_DOMAIN)
+
+
+def public_email(email):
+    """Email для ответа API: технический адрес-заглушку заменяем пустой строкой."""
+    return '' if is_placeholder_email(email) else (email or '')
+
+
+def make_phone_placeholder_email(phone, exclude_user_id=None):
+    """Свободный технический email для номера.
+
+    Обычно это <цифры>@phone.imbir.kg. Но заглушка может остаться занятой
+    другим аккаунтом (он сменил телефон, а старый номер достался новому
+    владельцу SIM) — тогда добавляем суффикс, иначе create_user падал на
+    уникальности email с 500.
+    """
+    from users.models import User
+
+    digits = phone_digits(phone) or 'user'
+    qs = User.objects.all()
+    if exclude_user_id is not None:
+        qs = qs.exclude(pk=exclude_user_id)
+    candidate = f'{digits}@{PHONE_PLACEHOLDER_DOMAIN}'
+    n = 1
+    while qs.filter(email__iexact=candidate).exists():
+        n += 1
+        candidate = f'{digits}.{n}@{PHONE_PLACEHOLDER_DOMAIN}'
+    return candidate
+
+
+def link_guest_appointments(user, phone=None, email=None):
+    """Привязывает к аккаунту гостевые записи (patient=NULL) с тем же
+    телефоном или email. Вызывать только после того, как владение контактом
+    подтверждено кодом, — иначе чужие записи можно забрать, указав чужой номер.
+
+    Телефон сравнивается по цифрам: гостевая форма шлёт '+996 700123456', а
+    регистрация — '+996700123456'. Email — без учёта регистра.
+    Возвращает число привязанных записей.
+    """
+    from appointments.models import Appointment
+
+    ids = []
+    digits = phone_digits(phone)
+    if digits:
+        # Номер всегда кончается цифрой — по ней грубо сужаем выборку в БД,
+        # точное сравнение по цифрам делаем уже здесь.
+        candidates = Appointment.objects.filter(
+            patient__isnull=True, guest_phone__endswith=digits[-1],
+        ).values_list('id', 'guest_phone')
+        ids.extend(pk for pk, guest_phone in candidates if phone_digits(guest_phone) == digits)
+    if email:
+        ids.extend(
+            Appointment.objects.filter(patient__isnull=True, guest_email__iexact=email.strip())
+            .values_list('id', flat=True)
+        )
+    if not ids:
+        return 0
+    return Appointment.objects.filter(id__in=set(ids), patient__isnull=True).update(patient=user)
+
+
+def clean_unique_phone(value, user=None):
+    """Валидатор телефона при правке профиля: пустую строку храним как NULL
+    (иначе два аккаунта с '' упираются в unique), а занятый другим аккаунтом
+    номер — понятная 400 вместо IntegrityError и 500."""
+    from rest_framework import serializers
+    from users.models import User
+
+    phone = (value or '').strip()
+    if not phone:
+        return None
+    qs = User.objects.filter(phone=phone)
+    if user is not None and user.pk:
+        qs = qs.exclude(pk=user.pk)
+    if qs.exists():
+        raise serializers.ValidationError(User._meta.get_field('phone').error_messages['unique'])
+    return phone
+
+
+def sync_placeholder_email(user, old_phone):
+    """После смены телефона перевыпускает технический email под новый номер,
+    чтобы старая заглушка не держала прежний номер (на него потом не
+    зарегистрироваться). Настоящую почту не трогает. True — email изменён."""
+    if not is_placeholder_email(user.email) or not user.phone:
+        return False
+    if phone_digits(user.phone) == phone_digits(old_phone):
+        return False
+    user.email = make_phone_placeholder_email(user.phone, exclude_user_id=user.pk)
+    return True

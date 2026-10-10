@@ -10,6 +10,7 @@ from doctors.models import Interview
 
 
 from users.serializers import HybridImageField
+from users.utils import clean_unique_phone, public_email
 
 
 class DoctorOwnProfileSerializer(serializers.ModelSerializer):
@@ -78,6 +79,11 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
             }
             for d in obj.documents.all().order_by('uploaded_at')
         ]
+
+    def validate_phone(self, value):
+        # Занятый другим аккаунтом номер — 400 с понятным текстом, а не
+        # IntegrityError на user.save() и 500.
+        return clean_unique_phone(value, getattr(self.instance, 'user', None))
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
@@ -149,7 +155,8 @@ class DoctorAppointmentSerializer(serializers.ModelSerializer):
                 'id': obj.patient.id,
                 'full_name': obj.patient.full_name,
                 'phone': obj.patient.phone,
-                'email': obj.patient.email,
+                # Технический адрес пациента, записанного по телефону, не почта.
+                'email': public_email(obj.patient.email),
             }
         return {
             'full_name': obj.guest_name,
@@ -176,6 +183,11 @@ class DoctorPatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'full_name', 'phone', 'email', 'visits_count', 'last_visit', 'diagnosis')
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['email'] = public_email(instance.email)
+        return data
 
     def get_diagnosis(self, obj):
         doctor_profile = self.context.get('doctor_profile')

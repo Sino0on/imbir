@@ -8,6 +8,7 @@ from drf_spectacular.utils import extend_schema_field, inline_serializer
 from appointments.models import Appointment
 from reviews.models import Review
 from users.models import PatientProfile
+from users.utils import clean_unique_phone, public_email, sync_placeholder_email
 
 
 class PatientProfileSerializer(serializers.ModelSerializer):
@@ -34,17 +35,34 @@ class PatientProfileSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return request.build_absolute_uri(obj.user.avatar.url) if request else obj.user.avatar.url
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Технический адрес *@phone.imbir.kg (регистрация по телефону) — не
+        # почта пациента, в «Настройках профиля» его не показываем.
+        data['email'] = public_email(instance.user.email)
+        return data
+
+    def validate_phone(self, value):
+        # Без проверки занятый номер ронял user.save() с IntegrityError (500).
+        return clean_unique_phone(value, getattr(self.instance, 'user', None))
+
     def update(self, instance, validated_data):
         avatar_file = validated_data.pop('avatar_upload', None)
         user_data = validated_data.pop('user', {})
 
         user = instance.user
+        old_phone = user.phone
         for attr, value in user_data.items():
             setattr(user, attr, value)
         if avatar_file:
             user.avatar = avatar_file
-        if user_data or avatar_file:
-            user.save(update_fields=[*user_data.keys(), 'avatar'] if avatar_file else list(user_data.keys()))
+        update_fields = list(user_data.keys())
+        if avatar_file:
+            update_fields.append('avatar')
+        if 'phone' in user_data and sync_placeholder_email(user, old_phone):
+            update_fields.append('email')
+        if update_fields:
+            user.save(update_fields=update_fields)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

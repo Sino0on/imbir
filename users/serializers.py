@@ -6,7 +6,9 @@ from .models import (
     PasswordResetCode, PhoneVerificationCode, EmailVerificationCode, LoginCode,
 )
 from references.models import Specialization
-from users.utils import get_relative_path_from_url
+from users.utils import (
+    clean_unique_phone, get_relative_path_from_url, public_email, sync_placeholder_email,
+)
 
 class HybridImageField(serializers.ImageField):
     def to_internal_value(self, data):
@@ -104,9 +106,21 @@ class UserMeSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return request.build_absolute_uri(obj.avatar.url) if request else obj.avatar.url
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Технический адрес *@phone.imbir.kg (регистрация по телефону) не
+        # показываем: это не почта пациента.
+        data['email'] = public_email(instance.email)
+        return data
+
+    def validate_phone(self, value):
+        return clean_unique_phone(value, self.instance)
+
     def update(self, instance, validated_data):
+        old_phone = instance.phone
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        sync_placeholder_email(instance, old_phone)
         instance.save()
         return instance
 
