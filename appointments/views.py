@@ -12,8 +12,9 @@ from .serializers import (
     AppointmentSerializer,
     AppointmentStatusUpdateSerializer,
     AppointmentRescheduleSerializer,
+    is_patient_side,
 )
-from .utils import generate_meet_link
+from .utils import appointment_duration_minutes, generate_meet_link
 
 
 class AppointmentCreateView(CreateAPIView):
@@ -116,12 +117,38 @@ class AppointmentRescheduleView(APIView):
         new_date = serializer.validated_data['date']
         new_time = serializer.validated_data['time']
 
+        actor_is_patient = is_patient_side(appointment, request.user)
+
         appointment.date = new_date
         appointment.time = new_time
 
+        # Пациент перенёс уже подтверждённую запись — новое время врач ещё не
+        # видел, поэтому запись снова ждёт подтверждения, а не остаётся
+        # «подтверждённой» на время, которое никто не подтверждал.
+        if actor_is_patient and appointment.status == Appointment.Status.CONFIRMED:
+            appointment.status = Appointment.Status.PENDING
+
         # If online, regenerate Google Meet link
         if appointment.is_online:
-            appointment.google_meet_link = generate_meet_link(new_date, new_time)
+            appointment.google_meet_link = generate_meet_link(
+                new_date, new_time,
+                duration_minutes=appointment_duration_minutes(appointment.service),
+            )
+            # Консультация на новое время начинается с чистого листа: иначе после
+            # переноса уже начатой/завершённой встречи в комнату не пустит
+            # (consultation_status=finished), а запись дорожек не стартует —
+            # handle_track_published считает её уже запущенной по старому egress_id.
+            appointment.consultation_status = Appointment.ConsultationStatus.CREATED
+            appointment.doctor_joined = False
+            appointment.patient_joined = False
+            appointment.started_at = None
+            appointment.ended_at = None
+            for role in ('doctor', 'patient'):
+                setattr(appointment, f'{role}_egress_id', '')
+                setattr(appointment, f'{role}_egress_status', '')
+                # Ссылка на старую запись иначе выдала бы новую дорожку за
+                # готовую ещё до прихода её вебхука (tasks._role_ready).
+                setattr(appointment, f'{role}_recording_url', '')
 
         appointment.save()
 
@@ -139,4 +166,35 @@ class AppointmentRescheduleView(APIView):
             except Exception:
                 pass
 
+        self._notify_reschedule(appointment, actor_is_patient)
+
         return Response(AppointmentSerializer(appointment, context={'request': request}).data)
+
+    def _notify_reschedule(self, appointment, actor_is_patient):
+        """Перенос раньше был «тихим»: о новом времени узнавали только из чата и
+        только для онлайн-записей. Теперь пишем второй стороне — врачу и клинике,
+        если перенёс пациент, и пациенту (гостю — SMS/почтой), если врач/клиника."""
+        from notifications.models import Notification
+        from notifications.utils import notify, notify_guest, appointment_payload
+
+        date_str = appointment.date.strftime('%d.%m.%Y')
+        time_str = appointment.time.strftime('%H:%M')
+        payload = appointment_payload(appointment)
+        title = 'Запись перенесена'
+
+        # Отдельного типа «перенос» нет (новый вариант choices — это миграция),
+        # поэтому SYSTEM: payload всё равно ведёт на конкретную запись.
+        if actor_is_patient:
+            patient_name = appointment.patient.full_name if appointment.patient else appointment.guest_name
+            body = f'{patient_name} перенёс(-ла) запись на {date_str} в {time_str}.'
+            if appointment.status == Appointment.Status.PENDING:
+                body += ' Подтвердите новое время.'
+            doctor_user = appointment.doctor.user if appointment.doctor else None
+            clinic_user = appointment.clinic.user if appointment.clinic else None
+            notify(doctor_user, Notification.Type.SYSTEM, title, body, payload)
+            if clinic_user and clinic_user != doctor_user:
+                notify(clinic_user, Notification.Type.SYSTEM, title, body, payload)
+        else:
+            body = f'Ваша запись перенесена на {date_str} в {time_str}.'
+            notify(appointment.patient, Notification.Type.SYSTEM, title, body, payload)
+            notify_guest(appointment, title, body)

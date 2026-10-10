@@ -128,13 +128,20 @@ class DoctorScheduleSerializer(serializers.ModelSerializer):
 class DoctorAppointmentSerializer(serializers.ModelSerializer):
     patient = serializers.SerializerMethodField()
     service = serializers.SerializerMethodField()
+    # Место приёма — у врача из нескольких клиник иначе не понять, куда придёт пациент.
+    clinic = serializers.SerializerMethodField()
 
     class Meta:
         model = Appointment
         fields = (
             'id', 'date', 'time', 'is_online', 'google_meet_link', 'status', 'notes',
-            'patient', 'service', 'created_at',
+            'patient', 'service', 'clinic', 'created_at',
         )
+
+    def get_clinic(self, obj):
+        if not obj.clinic:
+            return None
+        return {'id': obj.clinic.user_id, 'name': obj.clinic.name}
 
     def get_patient(self, obj):
         if obj.patient:

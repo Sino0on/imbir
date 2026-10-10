@@ -33,9 +33,45 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         
         if not doctor_id and not clinic_id:
             raise serializers.ValidationError('Укажите doctor_id или clinic_id.')
-            
+
         from users.models import DoctorProfile, ClinicProfile
-        
+        from services.models import Service
+        from .utils import appointment_start_is_past
+
+        # Для любой записи, в том числе без врача (только в клинику).
+        if appointment_start_is_past(data['date'], data['time']):
+            raise serializers.ValidationError(
+                {'time': 'Это время уже прошло — выберите другое.'}
+            )
+
+        # Услугу, которую не нашли или сняли с записи, раньше молча выкидывали —
+        # запись создавалась «ни на что». Теперь это ошибка.
+        service = None
+        service_id = data.get('service_id')
+        if service_id:
+            service = Service.objects.filter(id=service_id, is_active=True).first()
+            if service is None:
+                raise serializers.ValidationError(
+                    {'service_id': 'Услуга не найдена или сейчас недоступна для записи.'}
+                )
+
+        clinic = None
+        if clinic_id:
+            try:
+                clinic = ClinicProfile.objects.select_related('user').get(user_id=clinic_id)
+            except ClinicProfile.DoesNotExist:
+                raise serializers.ValidationError({'clinic_id': 'Клиника не найдена.'})
+
+            if not clinic.user.is_active or not clinic.is_published:
+                raise serializers.ValidationError({'clinic_id': 'Выбранная клиника не принимает записи (не опубликована).'})
+
+        # clinic_id — публичный id клиники (ClinicProfile.user_id), а service.clinic_id —
+        # pk профиля, поэтому сравниваем с clinic.pk.
+        if service and clinic and service.clinic_id and service.clinic_id != clinic.pk:
+            raise serializers.ValidationError(
+                {'service_id': 'Эта услуга оказывается в другой клинике.'}
+            )
+
         if doctor_id:
             try:
                 doctor = DoctorProfile.objects.select_related('user').get(user_id=doctor_id)
@@ -50,11 +86,15 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
                     {'is_online': 'Этот врач не проводит онлайн-консультации.'}
                 )
 
-            service_id = data.get('service_id')
-            service = None
-            if service_id:
-                from services.models import Service
-                service = Service.objects.filter(id=service_id).first()
+            if clinic and not doctor.clinic_links.filter(clinic=clinic, is_active=True).exists():
+                raise serializers.ValidationError(
+                    {'clinic_id': 'Этот врач не принимает в выбранной клинике.'}
+                )
+
+            if service and not self._service_available_for_doctor(service, doctor):
+                raise serializers.ValidationError(
+                    {'service_id': 'Этот врач не оказывает выбранную услугу.'}
+                )
 
             from .utils import find_overlapping_appointment, schedule_conflict
             # Вся длительность услуги должна помещаться в рабочий день врача и не
@@ -69,21 +109,24 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
                     {'time': 'Врач уже занят в это время — выберите другой слот.'}
                 )
 
-        if clinic_id:
-            try:
-                clinic = ClinicProfile.objects.select_related('user').get(user_id=clinic_id)
-            except ClinicProfile.DoesNotExist:
-                raise serializers.ValidationError({'clinic_id': 'Клиника не найдена.'})
-                
-            if not clinic.user.is_active or not clinic.is_published:
-                raise serializers.ValidationError({'clinic_id': 'Выбранная клиника не принимает записи (не опубликована).'})
-                
+        # Запись только в клинику (без врача) пока не проверяется по графику и
+        # пересечениям — у клиники нет своей сетки слотов (см. K6/K9).
         return data
+
+    @staticmethod
+    def _service_available_for_doctor(service, doctor):
+        """Услуга врача — или услуга клиники, не закреплённая ни за одним врачом
+        (её, как и форма записи на фронте, может оказать любой врач этой клиники)."""
+        if doctor.services.filter(pk=service.pk).exists():
+            return True
+        if service.clinic_id is None or service.doctors.exists():
+            return False
+        return doctor.clinic_links.filter(clinic_id=service.clinic_id, is_active=True).exists()
 
     def create(self, validated_data):
         from users.models import DoctorProfile, ClinicProfile
         from services.models import Service
-        from .utils import generate_meet_link
+        from .utils import appointment_duration_minutes, generate_meet_link
 
         doctor_id = validated_data.pop('doctor_id', None)
         clinic_id = validated_data.pop('clinic_id', None)
@@ -104,6 +147,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             validated_data['google_meet_link'] = generate_meet_link(
                 validated_data['date'],
                 validated_data['time'],
+                duration_minutes=appointment_duration_minutes(validated_data.get('service')),
             )
 
         appointment = Appointment.objects.create(**validated_data)
@@ -216,6 +260,21 @@ _ALLOWED_STATUS_TRANSITIONS = {
 _PATIENT_ALLOWED_STATUSES = {Appointment.Status.CANCELLED}
 
 
+def is_patient_side(appointment, user):
+    """Действие совершает пациентская сторона записи, а не её врач или клиника.
+    У авторизованной записи это её владелец; у гостевой — любой, кто не врач и
+    не клиника этой записи (у гостя нет аккаунта, а AppointmentDetailView/
+    AppointmentRescheduleView пускают к гостевой записи без авторизации)."""
+    is_authenticated = bool(user) and getattr(user, 'is_authenticated', False)
+    if appointment.patient_id is not None:
+        return is_authenticated and appointment.patient_id == user.id
+    if not is_authenticated:
+        return True
+    is_doctor = appointment.doctor is not None and appointment.doctor.user_id == user.id
+    is_clinic = appointment.clinic is not None and appointment.clinic.user_id == user.id
+    return not (is_doctor or is_clinic)
+
+
 class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
@@ -237,13 +296,15 @@ class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
 
         request = self.context.get('request')
         user = getattr(request, 'user', None)
-        is_patient = (
-            bool(user) and user.is_authenticated
-            and appointment.patient_id is not None
-            and appointment.patient_id == user.id
-        )
-        if is_patient and value not in _PATIENT_ALLOWED_STATUSES:
+        if is_patient_side(appointment, user) and value not in _PATIENT_ALLOWED_STATUSES:
             raise serializers.ValidationError('Пациент может только отменить запись.')
+
+        # Завершить можно только начавшийся приём — иначе пациент получал
+        # «Приём завершён, оставьте отзыв» ещё до визита и мог оставить отзыв.
+        if value == Appointment.Status.COMPLETED:
+            from .utils import appointment_start_is_past
+            if not appointment_start_is_past(appointment.date, appointment.time):
+                raise serializers.ValidationError('Нельзя завершить приём, который ещё не начался.')
 
         return value
 
@@ -254,7 +315,7 @@ class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
 
     def _notify_status_change(self, appointment):
         from notifications.models import Notification
-        from notifications.utils import notify, appointment_payload
+        from notifications.utils import notify, notify_guest, appointment_payload
 
         date_str = appointment.date.strftime('%d.%m.%Y')
         time_str = appointment.time.strftime('%H:%M')
@@ -262,23 +323,17 @@ class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
 
         request = self.context.get('request')
         actor = getattr(request, 'user', None)
-        actor_is_patient = (
-            bool(actor) and getattr(actor, 'is_authenticated', False)
-            and appointment.patient_id is not None
-            and appointment.patient_id == actor.id
-        )
+        actor_is_patient = is_patient_side(appointment, actor)
 
         patient_user = appointment.patient
         doctor_user = appointment.doctor.user if appointment.doctor else None
         clinic_user = appointment.clinic.user if appointment.clinic else None
 
         if appointment.status == Appointment.Status.CONFIRMED:
-            notify(
-                patient_user, Notification.Type.APPOINTMENT_CONFIRMED,
-                'Запись подтверждена',
-                f'Ваша запись на {date_str} в {time_str} подтверждена.',
-                payload,
-            )
+            title = 'Запись подтверждена'
+            body = f'Ваша запись на {date_str} в {time_str} подтверждена.'
+            notify(patient_user, Notification.Type.APPOINTMENT_CONFIRMED, title, body, payload)
+            notify_guest(appointment, title, body)
         elif appointment.status == Appointment.Status.CANCELLED:
             title = 'Запись отменена'
             if actor_is_patient:
@@ -288,6 +343,7 @@ class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
             else:
                 body = f'Ваша запись на {date_str} в {time_str} отменена.'
                 notify(patient_user, Notification.Type.APPOINTMENT_CANCELLED, title, body, payload)
+                notify_guest(appointment, title, body)
         elif appointment.status == Appointment.Status.COMPLETED:
             notify(
                 patient_user, Notification.Type.APPOINTMENT_COMPLETED,
@@ -310,6 +366,12 @@ class AppointmentRescheduleSerializer(serializers.Serializer):
             raise serializers.ValidationError('Нельзя перенести отменённую запись.')
         if appointment.status == Appointment.Status.COMPLETED:
             raise serializers.ValidationError('Нельзя перенести завершённую запись.')
+
+        from .utils import appointment_start_is_past
+        if appointment_start_is_past(data['date'], data['time']):
+            raise serializers.ValidationError(
+                {'time': 'Это время уже прошло — выберите другое.'}
+            )
 
         if appointment.doctor:
             from .utils import find_overlapping_appointment, schedule_conflict

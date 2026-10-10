@@ -34,15 +34,35 @@ def _parse_hhmm(value):
         return None
 
 
+# Конец рабочего дня, который означает «до полуночи»: пресет «24/7» в кабинете
+# врача сохраняет 00:00–23:59, и последний слот (23:30–00:00) не помещался бы
+# в день, кончающийся в 23:59. А '24:00' strptime вообще не разбирает.
+_END_OF_DAY_VALUES = {'23:59', '24:00'}
+
+
 def doctor_work_hours(doctor, date):
     """(start_datetime, end_datetime) рабочего дня врача на эту дату или None, если
-    в этот день он не принимает (выходной, нет графика или его не разобрать)."""
+    в этот день он не принимает (выходной, нет графика или его не разобрать).
+
+    Конец '23:59'/'24:00' считается полуночью следующего дня. Ночные смены
+    (конец раньше начала, например 20:00–08:00) и перерыв на конкретный день
+    пока не поддерживаются: lunch_break у врача один на все дни, а смена через
+    полночь — продуктовое решение (к какому дню относить слоты и выходные),
+    а не правка формата."""
     day = (doctor.schedule or {}).get(WEEKDAYS[date.weekday()])
     if not isinstance(day, dict) or not day.get('enabled', True):
         return None
     start = _parse_hhmm(day.get('from') or day.get('start'))
-    end = _parse_hhmm(day.get('to') or day.get('end'))
-    if not start or not end:
+    raw_end = day.get('to') or day.get('end')
+    if not start:
+        return None
+    if isinstance(raw_end, str) and raw_end.strip() in _END_OF_DAY_VALUES:
+        return (
+            datetime.combine(date, start),
+            datetime.combine(date + timedelta(days=1), datetime.min.time()),
+        )
+    end = _parse_hhmm(raw_end)
+    if not end:
         return None
     return datetime.combine(date, start), datetime.combine(date, end)
 
@@ -59,6 +79,16 @@ def doctor_lunch_break(doctor, date):
     return datetime.combine(date, start), datetime.combine(date, end)
 
 
+def appointment_start_is_past(date, time):
+    """True, если начало записи уже наступило по местному времени (TIME_ZONE) —
+    записаться или перенести запись на такое время нельзя. Граница та же, что
+    у слотов (DoctorAvailableSlotsView): слот на текущую минуту уже недоступен."""
+    from django.utils import timezone
+
+    local_now = timezone.localtime(timezone.now()).replace(tzinfo=None)
+    return datetime.combine(date, time) <= local_now
+
+
 def schedule_conflict(doctor, date, time, service):
     """Текст ошибки, если запись [time, time + длительность услуги) не помещается в
     рабочий день врача или задевает его перерыв; None, если всё в порядке.
@@ -71,9 +101,11 @@ def schedule_conflict(doctor, date, time, service):
     minutes = appointment_duration_minutes(service)
     work_start, work_end = work_hours
     if start < work_start or end > work_end:
+        # Конец дня «до полуночи» — это 00:00 следующих суток, пишем его как 24:00.
+        work_end_label = '24:00' if work_end.date() > date else f'{work_end:%H:%M}'
         return (
             f'Приём длится {minutes} мин и не помещается в рабочее время врача '
-            f'({work_start:%H:%M}–{work_end:%H:%M}) — выберите другое время.'
+            f'({work_start:%H:%M}–{work_end_label}) — выберите другое время.'
         )
 
     lunch = doctor_lunch_break(doctor, date)
@@ -107,9 +139,11 @@ def find_overlapping_appointment(doctor, date, time, service, exclude_id=None):
     return None
 
 
-def generate_meet_link(appointment_date, appointment_time, title='Онлайн-приём'):
+def generate_meet_link(appointment_date, appointment_time, title='Онлайн-приём', duration_minutes=None):
     """
     Creates a Google Calendar event with a Meet link on behalf of a real Google user.
+    duration_minutes — длительность события, appointment_duration_minutes(услуги);
+    если не передана — DEFAULT_APPOINTMENT_DURATION_MINUTES.
     Requires OAuth2 env vars: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET,
     GOOGLE_OAUTH_REFRESH_TOKEN, GOOGLE_CALENDAR_CALENDAR_ID.
 
@@ -140,7 +174,7 @@ def generate_meet_link(appointment_date, appointment_time, title='Онлайн-�
         service = build('calendar', 'v3', credentials=creds)
 
         start_dt = datetime.combine(appointment_date, appointment_time)
-        end_dt = start_dt + timedelta(hours=1)
+        end_dt = start_dt + timedelta(minutes=duration_minutes or DEFAULT_APPOINTMENT_DURATION_MINUTES)
 
         event_body = {
             'summary': title,
