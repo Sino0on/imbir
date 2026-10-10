@@ -29,6 +29,23 @@ def _resolve_specialization_ids(names):
     ]
 
 
+def _visible_profiles(qs):
+    """Только опубликованные профили активных пользователей — как в каталоге."""
+    return qs.filter(is_published=True, user__is_active=True)
+
+
+def _visible_services(qs):
+    """
+    Активные услуги, кроме услуг снятой с публикации или заблокированной клиники.
+    Старые услуги без клиники (clinic=NULL) не отсекаем — они видны и в каталоге.
+    """
+    return (
+        qs.filter(is_active=True)
+        .exclude(clinic__is_published=False)
+        .exclude(clinic__user__is_active=False)
+    )
+
+
 def _ranked_by_specializations(qs, spec_ids, limit):
     """Для DoctorProfile/ClinicProfile — у обоих есть primary/narrow_specializations и rating."""
     match_q = Q(primary_specializations__in=spec_ids) | Q(narrow_specializations__in=spec_ids)
@@ -62,20 +79,18 @@ def query_recommendations(specialization_names, entity_types, limit=DEFAULT_LIMI
 
     if 'doctors' in wanted:
         result['doctors'] = _ranked_by_specializations(
-            DoctorProfile.objects.filter(is_published=True, user__is_active=True),
-            spec_ids, limit,
+            _visible_profiles(DoctorProfile.objects.all()), spec_ids, limit,
         )
     if 'clinics' in wanted:
         result['clinics'] = _ranked_by_specializations(
-            ClinicProfile.objects.filter(is_published=True, user__is_active=True),
-            spec_ids, limit,
+            _visible_profiles(ClinicProfile.objects.all()), spec_ids, limit,
         )
     if 'services' in wanted:
         # У услуги нет своих специализаций — сопоставляем через специализации
         # привязанных к ней врачей (Service.doctors уже существует).
         match_q = Q(doctors__primary_specializations__in=spec_ids) | Q(doctors__narrow_specializations__in=spec_ids)
         result['services'] = list(
-            Service.objects.filter(is_active=True)
+            _visible_services(Service.objects.all())
             .filter(match_q)
             .annotate(
                 primary_matches=Count(
@@ -104,20 +119,22 @@ def serialize_recommendations(ids, request):
     clinic_ids = ids.get('clinics') or []
     service_ids = ids.get('services') or []
 
+    # id сохранены в истории в момент ответа ИИ: с тех пор врача/клинику могли
+    # снять с публикации, а услугу — отключить. Такие карточки не показываем.
     if doctor_ids:
-        qs = DoctorProfile.objects.filter(pk__in=doctor_ids).select_related('user')
+        qs = _visible_profiles(DoctorProfile.objects.filter(pk__in=doctor_ids)).select_related('user')
         by_id = {d.pk: d for d in qs}
         ordered = [by_id[i] for i in doctor_ids if i in by_id]
         out['doctors'] = RecoDoctorSerializer(ordered, many=True, context=ctx).data
 
     if clinic_ids:
-        qs = ClinicProfile.objects.filter(pk__in=clinic_ids).select_related('user')
+        qs = _visible_profiles(ClinicProfile.objects.filter(pk__in=clinic_ids)).select_related('user')
         by_id = {c.pk: c for c in qs}
         ordered = [by_id[i] for i in clinic_ids if i in by_id]
         out['clinics'] = RecoClinicSerializer(ordered, many=True, context=ctx).data
 
     if service_ids:
-        qs = Service.objects.filter(pk__in=service_ids).select_related('clinic')
+        qs = _visible_services(Service.objects.filter(pk__in=service_ids)).select_related('clinic')
         by_id = {s.pk: s for s in qs}
         ordered = [by_id[i] for i in service_ids if i in by_id]
         out['services'] = RecoServiceSerializer(ordered, many=True, context=ctx).data

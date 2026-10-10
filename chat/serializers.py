@@ -21,10 +21,11 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 class ChatRoomSerializer(serializers.ModelSerializer):
     participants = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatRoom
-        fields = ('id', 'participants', 'last_message', 'created_at')
+        fields = ('id', 'participants', 'last_message', 'unread_count', 'created_at')
 
     def get_participants(self, obj):
         return [{'id': u.id, 'full_name': u.full_name} for u in obj.participants.all()]
@@ -37,6 +38,19 @@ class ChatRoomSerializer(serializers.ModelSerializer):
             'content': 'Сообщение удалено' if msg.is_deleted else msg.content,
             'created_at': msg.created_at,
         }
+
+    def get_unread_count(self, obj):
+        # Непрочитанные входящие текущего пользователя: не свои и не удалённые.
+        # Идём по obj.messages.all(), чтобы список комнат брал prefetch, а не
+        # делал запрос на каждую комнату.
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return 0
+        return sum(
+            1 for m in obj.messages.all()
+            if not m.is_read and not m.is_deleted and m.sender_id != user.id
+        )
 
 
 class CreateRoomSerializer(serializers.Serializer):

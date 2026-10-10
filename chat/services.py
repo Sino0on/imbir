@@ -48,3 +48,32 @@ def send_system_message(room, content):
         logger.exception('Не удалось разослать системное сообщение в комнату %s', room.id)
 
     return msg
+
+
+def mark_room_read(room_id, reader):
+    """
+    Помечает прочитанными входящие сообщения комнаты для reader и рассылает
+    участникам событие «прочитано» (у отправителя галочки становятся зелёными,
+    у самого reader обновляются счётчики непрочитанного). Рассылка best-effort,
+    как и у системных сообщений. Возвращает id помеченных сообщений.
+    """
+    unread = ChatMessage.objects.filter(room_id=room_id, is_read=False).exclude(sender=reader)
+    message_ids = list(unread.values_list('id', flat=True))
+    if not message_ids:
+        return []
+    ChatMessage.objects.filter(pk__in=message_ids).update(is_read=True)
+
+    try:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'chat_{room_id}',
+            {
+                'type': 'chat_messages_read',
+                'message_ids': message_ids,
+                'reader_id': reader.id,
+            },
+        )
+    except Exception:
+        logger.exception('Не удалось разослать отметку о прочтении в комнату %s', room_id)
+
+    return message_ids

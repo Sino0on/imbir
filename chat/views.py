@@ -8,6 +8,7 @@ from openai import OpenAI
 from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 
 from .models import ChatRoom, ChatMessage, AIMessage
+from .services import mark_room_read
 from .serializers import (
     ChatRoomSerializer, ChatMessageSerializer, CreateRoomSerializer,
     AIMessageSerializer, SendAIMessageSerializer,
@@ -73,7 +74,7 @@ class RoomListCreateView(APIView):
 
     def get(self, request):
         rooms = ChatRoom.objects.filter(participants=request.user).prefetch_related('participants', 'messages')
-        return Response(ChatRoomSerializer(rooms, many=True).data)
+        return Response(ChatRoomSerializer(rooms, many=True, context={'request': request}).data)
 
     def post(self, request):
         serializer = CreateRoomSerializer(data=request.data)
@@ -100,7 +101,7 @@ class RoomListCreateView(APIView):
             room = ChatRoom.objects.create()
             room.participants.add(request.user, other)
 
-        return Response(ChatRoomSerializer(room).data, status=status.HTTP_201_CREATED)
+        return Response(ChatRoomSerializer(room, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema_view(
@@ -117,9 +118,10 @@ class RoomMessagesView(APIView):
         room = ChatRoom.objects.filter(pk=pk, participants=request.user).first()
         if not room:
             return Response({'detail': 'Комната не найдена.'}, status=404)
+        # Помечаем входящие как прочитанные и сообщаем об этом в сокет комнаты,
+        # чтобы у отправителя галочки стали «прочитано» без перезагрузки.
+        mark_room_read(room.pk, request.user)
         messages = room.messages.select_related('sender').all()
-        # Помечаем входящие как прочитанные
-        messages.exclude(sender=request.user).filter(is_read=False).update(is_read=True)
         return Response(ChatMessageSerializer(messages, many=True).data)
 
 
@@ -232,7 +234,8 @@ class UnreadMessagesCountView(APIView):
     def get(self, request):
         unread_count = ChatMessage.objects.filter(
             room__participants=request.user,
-            is_read=False
+            is_read=False,
+            is_deleted=False,
         ).exclude(
             sender=request.user
         ).count()

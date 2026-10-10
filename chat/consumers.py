@@ -1,4 +1,6 @@
 import json
+from urllib.parse import parse_qs
+
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
@@ -23,6 +25,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         self.user = user
+        # Кадр messages_read шлём только клиентам, которые его понимают
+        # (?receipts=1): старый фронт любой незнакомый кадр рисует как новое
+        # пустое сообщение.
+        params = parse_qs(self.scope.get('query_string', b'').decode())
+        self.read_receipts = params.get('receipts') == ['1']
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
@@ -49,6 +56,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'is_typing': bool(data.get('is_typing', False)),
                 },
             )
+            return
+
+        # Клиент держит комнату открытой и получил входящее — помечаем прочитанным.
+        # Событие «прочитано» рассылает mark_room_read.
+        if msg_type == 'read':
+            await self.mark_read()
             return
 
         if msg_type == 'edit':
@@ -93,6 +106,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'sender_name': self.user.full_name,
                 'content': content,
                 'created_at': message['created_at'],
+                'is_read': False,
             },
         )
 
@@ -106,6 +120,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'sender': sender,
             'content': event['content'],
             'created_at': event['created_at'],
+            # Новое сообщение ещё никто не прочитал — отправитель сразу видит
+            # серую галочку (системные рассылки поле не передают).
+            'is_read': event.get('is_read', False),
+        }))
+
+    async def chat_messages_read(self, event):
+        if not getattr(self, 'read_receipts', False):
+            return
+        await self.send(text_data=json.dumps({
+            'type': 'messages_read',
+            'message_ids': event['message_ids'],
+            'reader_id': event['reader_id'],
         }))
 
     async def chat_message_edited(self, event):
@@ -144,6 +170,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         room = ChatRoom.objects.get(pk=room_id)
         msg = ChatMessage.objects.create(room=room, sender=user, content=content)
         return {'id': msg.id, 'created_at': msg.created_at.isoformat()}
+
+    @database_sync_to_async
+    def mark_read(self):
+        from .services import mark_room_read
+        return mark_room_read(self.room_id, self.user)
 
     @database_sync_to_async
     def edit_message(self, message_id, content):
