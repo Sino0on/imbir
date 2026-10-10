@@ -239,6 +239,56 @@ def _check_contact_verified(email, phone):
         )
 
 
+INVITE_NOT_FOUND_ERROR = 'Приглашение не найдено или отозвано клиникой'
+INVITE_EXPIRED_ERROR = 'Инвайт истёк'
+
+
+def resolve_clinic_invite(invite_id=None, clinic_user_id=None, branch_id=None):
+    """Находит инвайт клиники по ссылке. Возвращает (invite, error).
+
+    Новые ссылки несут id самого инвайта (?invite=<uuid>) — берём ровно его.
+    Раньше по ссылке искался «последний активный инвайт клиники»: удалённая
+    ссылка продолжала работать, просроченная свежая перекрывала старую
+    действующую, а ссылка главного офиса могла привязать к филиалу.
+
+    Старые ссылки (?invite_clinic_id=<user_id клиники>[&invite_branch_id=])
+    поддерживаются как fallback: ищем действующий инвайт именно этого филиала
+    (без invite_branch_id — главного офиса)."""
+    qs = ClinicInvite.objects.select_related('clinic__user', 'branch')
+
+    if invite_id:
+        invite = qs.filter(pk=invite_id).first()
+        if not invite or not invite.is_active:
+            return None, INVITE_NOT_FOUND_ERROR
+        if not invite.is_valid:
+            return None, INVITE_EXPIRED_ERROR
+        return invite, None
+
+    if not clinic_user_id:
+        return None, INVITE_NOT_FOUND_ERROR
+
+    qs = qs.filter(clinic__user_id=clinic_user_id, is_active=True)
+    qs = qs.filter(branch_id=branch_id) if branch_id else qs.filter(branch__isnull=True)
+    invites = list(qs.order_by('-created_at'))
+    if not invites:
+        return None, 'Активный инвайт для клиники не найден'
+    for invite in invites:
+        if invite.is_valid:
+            return invite, None
+    return None, INVITE_EXPIRED_ERROR
+
+
+def split_full_name(full_name):
+    """ФИО вводится одной строкой в порядке «Фамилия Имя Отчество» (так же
+    разбирает его форма специалиста клиники). Всё после имени — отчество:
+    «Садыкова Алина Тимур кызы» → отчество «Тимур кызы»."""
+    parts = (full_name or '').strip().split()
+    last_name = parts[0] if len(parts) > 0 else ''
+    first_name = parts[1] if len(parts) > 1 else ''
+    patronymic = ' '.join(parts[2:])
+    return last_name, first_name, patronymic
+
+
 class DoctorRegisterSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=8)
     step1 = serializers.CharField()
@@ -259,6 +309,9 @@ class DoctorRegisterSerializer(serializers.Serializer):
                   'обработанное подменяет его примерно через минуту. В ответе '
                   'photo_ai_processing: queued / disabled / failed.',
     )
+    # id конкретного инвайта из ссылки (?invite=<uuid>). invite_clinic_id /
+    # invite_branch_id остаются для старых ссылок и старого фронта.
+    invite = serializers.UUIDField(required=False, allow_null=True)
     invite_clinic_id = serializers.IntegerField(required=False, allow_null=True)
     invite_branch_id = serializers.IntegerField(required=False, allow_null=True)
 
@@ -298,20 +351,16 @@ class DoctorRegisterSerializer(serializers.Serializer):
             if not s7.get(field):
                 raise serializers.ValidationError({'step7': msg})
 
+        invite_id = data.get('invite')
         invite_clinic_id = data.get('invite_clinic_id')
-        if invite_clinic_id:
-            qs = ClinicInvite.objects.select_related('clinic', 'branch').filter(
-                clinic__user_id=invite_clinic_id,
-                is_active=True,
+        if invite_id or invite_clinic_id:
+            invite, error = resolve_clinic_invite(
+                invite_id=invite_id,
+                clinic_user_id=invite_clinic_id,
+                branch_id=data.get('invite_branch_id'),
             )
-            invite_branch_id = data.get('invite_branch_id')
-            if invite_branch_id:
-                qs = qs.filter(branch_id=invite_branch_id)
-            invite = qs.order_by('-created_at').first()
-            if not invite:
-                raise serializers.ValidationError({'invite_clinic_id': 'Активный инвайт для клиники не найден'})
-            if not invite.is_valid:
-                raise serializers.ValidationError({'invite_clinic_id': 'Инвайт истёк'})
+            if error:
+                raise serializers.ValidationError({'invite' if invite_id else 'invite_clinic_id': error})
             data['_invite'] = invite
         else:
             data['_invite'] = None
@@ -337,9 +386,7 @@ class DoctorRegisterSerializer(serializers.Serializer):
         s7 = validated_data['_s7']
         invite = validated_data.get('_invite')
 
-        full_name_parts = s1['full_name'].strip().split()
-        last_name = full_name_parts[0] if len(full_name_parts) > 0 else ''
-        first_name = full_name_parts[1] if len(full_name_parts) > 1 else ''
+        last_name, first_name, patronymic = split_full_name(s1['full_name'])
 
         location = s2.get('location') or {}
 
@@ -349,6 +396,7 @@ class DoctorRegisterSerializer(serializers.Serializer):
                 password=validated_data['password'],
                 first_name=first_name,
                 last_name=last_name,
+                patronymic=patronymic or None,
                 phone=s1.get('phone') or None,
                 role=User.Role.DOCTOR,
             )
@@ -374,6 +422,10 @@ class DoctorRegisterSerializer(serializers.Serializer):
                 license_date=s4.get('license_date'),
                 license_authority=s4.get('license_authority', ''),
                 additional_services=s5.get('additional_services', ''),
+                # Должность и категория — в свои поля профиля, которые читает
+                # кабинет (раньше фронт клал должность в additional_services).
+                position=str(s5.get('position') or '')[:255],
+                qualification_category=str(s5.get('qualification_category') or '')[:100],
                 equipment=s6.get('equipment', []),
                 patient_conditions=s6.get('patient_conditions', []),
                 payment_methods=s6.get('payment_methods', []),
@@ -729,6 +781,29 @@ class EmailCheckSerializer(serializers.Serializer):
     """Просто проверяет формат email — существование намеренно не валидируется
     здесь, это и есть ответ, который возвращает EmailAvailabilityView."""
     email = serializers.EmailField()
+
+
+class PhoneCheckSerializer(serializers.Serializer):
+    """Как EmailCheckSerializer: номер в том же виде, в каком он уйдёт в
+    регистрацию врача/клиники (с кодом страны, например +996700000001)."""
+    phone = serializers.CharField(max_length=20)
+
+    def validate_phone(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Укажите номер телефона.')
+        return value
+
+
+class InviteAcceptSerializer(serializers.Serializer):
+    invite = serializers.UUIDField(required=False, allow_null=True)
+    invite_clinic_id = serializers.IntegerField(required=False, allow_null=True)
+    invite_branch_id = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate(self, data):
+        if not data.get('invite') and not data.get('invite_clinic_id'):
+            raise serializers.ValidationError({'invite': 'Укажите приглашение.'})
+        return data
 
 
 class EmailRegisterConfirmSerializer(serializers.Serializer):

@@ -11,7 +11,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 import random
 from .models import (
     DoctorDocument, ClinicPhoto, ClinicDocument, PasswordResetCode, PhoneVerificationCode,
-    EmailVerificationCode, LoginCode, ClinicInvite,
+    EmailVerificationCode, LoginCode, DoctorClinicLink,
 )
 from clinics.serializers import ClinicListSerializer, ClinicBranchSerializer
 from .serializers import (
@@ -22,7 +22,8 @@ from .serializers import (
     EmailRegisterRequestSerializer, EmailRegisterConfirmSerializer,
     LoginOTPRequestSerializer, LoginOTPVerifySerializer,
     VerifyEmailConfirmSerializer, VerifyPhoneConfirmSerializer,
-    EmailCheckSerializer,
+    EmailCheckSerializer, PhoneCheckSerializer, InviteAcceptSerializer,
+    resolve_clinic_invite,
 )
 from users.utils import (
     link_guest_appointments, make_phone_placeholder_email,
@@ -525,21 +526,53 @@ class VerifyPhoneConfirmView(APIView):
 _INVITE_VALIDATE_RESPONSE = inline_serializer('InviteValidateResponse', fields={
     'data': inline_serializer('InviteValidateData', fields={
         'valid': serializers.BooleanField(),
+        'invite_id': serializers.UUIDField(allow_null=True),
         'clinic': ClinicListSerializer(allow_null=True),
         'branch': ClinicBranchSerializer(allow_null=True),
     }),
 })
 
 
+def _invite_lookup_params(source):
+    """Параметры ссылки-приглашения из query/body: invite (uuid инвайта) или
+    старые invite_clinic_id/invite_branch_id. Мусор вместо uuid/числа — как
+    отсутствие параметра: битая ссылка даёт «недействительно», а не 500."""
+    import uuid
+
+    def _positive_int(value):
+        try:
+            value = int(str(value).strip())
+        except (TypeError, ValueError):
+            return None
+        return value if value > 0 else None
+
+    invite_id = str(source.get('invite') or '').strip()
+    try:
+        invite_id = uuid.UUID(invite_id) if invite_id else None
+    except ValueError:
+        invite_id = None
+    return {
+        'invite_id': invite_id,
+        'clinic_user_id': _positive_int(source.get('invite_clinic_id')),
+        'branch_id': _positive_int(source.get('invite_branch_id')),
+    }
+
+
 @extend_schema(
     parameters=[
         OpenApiParameter(
-            name='invite_clinic_id', type=int, location=OpenApiParameter.QUERY, required=True,
-            description='user_id клиники — то же значение, что потом уходит в /register/doctor/.',
+            name='invite', type=str, location=OpenApiParameter.QUERY, required=False,
+            description='id инвайта (uuid) из ссылки /register/doctor?invite=… — проверяется '
+                        'ровно этот инвайт. Если передан, invite_clinic_id не нужен.',
+        ),
+        OpenApiParameter(
+            name='invite_clinic_id', type=int, location=OpenApiParameter.QUERY, required=False,
+            description='Старый формат ссылки: user_id клиники — то же значение, что потом '
+                        'уходит в /register/doctor/. Обязателен, если не передан invite.',
         ),
         OpenApiParameter(
             name='invite_branch_id', type=int, location=OpenApiParameter.QUERY, required=False,
-            description='id филиала, если приглашение выдано на конкретный филиал.',
+            description='Старый формат ссылки: id филиала (без него — главный офис).',
         ),
     ],
     responses={200: _INVITE_VALIDATE_RESPONSE},
@@ -557,27 +590,91 @@ class InviteValidateView(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request):
-        clinic_id = request.query_params.get('invite_clinic_id', '').strip()
-        branch_id = request.query_params.get('invite_branch_id', '').strip()
-
-        if not clinic_id:
+        if (
+            not request.query_params.get('invite', '').strip()
+            and not request.query_params.get('invite_clinic_id', '').strip()
+        ):
             return Response(
                 {'detail': 'Параметр invite_clinic_id обязателен.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        qs = ClinicInvite.objects.select_related('clinic__user', 'branch').filter(
-            clinic__user_id=clinic_id, is_active=True,
-        )
-        if branch_id:
-            qs = qs.filter(branch_id=branch_id)
-        invite = qs.order_by('-created_at').first()
+        params = _invite_lookup_params(request.query_params)
+        invite = None
+        if params['invite_id'] or params['clinic_user_id']:
+            invite, _error = resolve_clinic_invite(**params)
 
-        if not invite or not invite.is_valid:
-            return Response({'data': {'valid': False, 'clinic': None, 'branch': None}})
+        if invite is None:
+            return Response({'data': {'valid': False, 'invite_id': None, 'clinic': None, 'branch': None}})
 
         return Response({'data': {
             'valid': True,
+            'invite_id': str(invite.pk),
+            'clinic': ClinicListSerializer(invite.clinic, context={'request': request}).data,
+            'branch': ClinicBranchSerializer(invite.branch).data if invite.branch else None,
+        }})
+
+
+@extend_schema(
+    request=InviteAcceptSerializer,
+    responses={200: inline_serializer('InviteAcceptResponse', fields={
+        'data': inline_serializer('InviteAcceptData', fields={
+            'already_linked': serializers.BooleanField(),
+            'clinic': ClinicListSerializer(),
+            'branch': ClinicBranchSerializer(allow_null=True),
+        }),
+    })},
+    tags=['auth'],
+    summary='Принять ссылку-приглашение клиники уже зарегистрированным врачом',
+    description=(
+        'Врач с аккаунтом не может пройти регистрацию по ссылке повторно («email уже '
+        'используется»). Эндпоинт создаёт связь врача с клиникой (или восстанавливает '
+        'отключённую) с филиалом из инвайта. Если врач уже работает в клинике, связь не '
+        'меняется — already_linked=true.'
+    ),
+)
+class InviteAcceptView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        from users.models import DoctorProfile
+
+        doctor = None
+        if request.user.role == User.Role.DOCTOR:
+            doctor = DoctorProfile.objects.filter(user=request.user).first()
+        if doctor is None:
+            return Response(
+                {'detail': 'Принять приглашение клиники может только врач.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = InviteAcceptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        invite, error = resolve_clinic_invite(
+            invite_id=data.get('invite'),
+            clinic_user_id=data.get('invite_clinic_id'),
+            branch_id=data.get('invite_branch_id'),
+        )
+        if error:
+            return Response(
+                {'invite' if data.get('invite') else 'invite_clinic_id': [error]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        link, created = DoctorClinicLink.objects.get_or_create(
+            doctor=doctor, clinic=invite.clinic,
+            defaults={'branch': invite.branch, 'is_active': True},
+        )
+        already_linked = not created and link.is_active
+        if not created and not link.is_active:
+            # Отвязанного раньше врача возвращаем — с филиалом из нового инвайта.
+            link.is_active = True
+            link.branch = invite.branch
+            link.save(update_fields=['is_active', 'branch'])
+
+        return Response({'data': {
+            'already_linked': already_linked,
             'clinic': ClinicListSerializer(invite.clinic, context={'request': request}).data,
             'branch': ClinicBranchSerializer(invite.branch).data if invite.branch else None,
         }})
@@ -605,6 +702,52 @@ class EmailAvailabilityView(APIView):
 
         available = not User.objects.filter(email__iexact=email).exists()
         return Response({'data': {'email': email, 'available': available}})
+
+
+_PHONE_AVAILABILITY_RESPONSE = inline_serializer('PhoneAvailabilityResponse', fields={
+    'data': inline_serializer('PhoneAvailabilityData', fields={
+        'phone': serializers.CharField(),
+        'available': serializers.BooleanField(),
+    }),
+})
+
+
+@extend_schema_view(
+    get=extend_schema(
+        parameters=[OpenApiParameter(
+            name='phone', type=str, location=OpenApiParameter.QUERY, required=True,
+            description='Номер с кодом страны, как он уйдёт в регистрацию: +996700000001.',
+        )],
+        responses={200: _PHONE_AVAILABILITY_RESPONSE},
+        tags=['auth'],
+        summary='Проверка занятости телефона',
+        description='Свободен ли телефон для регистрации врача/клиники — без отправки кода '
+                    'и без побочных эффектов. Пара к /api/auth/email/check/.',
+    ),
+    post=extend_schema(
+        request=PhoneCheckSerializer,
+        responses={200: _PHONE_AVAILABILITY_RESPONSE},
+        tags=['auth'],
+        summary='Проверка занятости телефона',
+    ),
+)
+class PhoneAvailabilityView(APIView):
+    permission_classes = (AllowAny,)
+
+    def _check(self, data):
+        serializer = PhoneCheckSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        phone = serializer.validated_data['phone']
+        # Та же проверка, что в DoctorRegisterSerializer/ClinicRegisterSerializer —
+        # иначе о занятом номере врач/клиника узнают только после всех шагов анкеты.
+        available = not User.objects.filter(phone=phone).exists()
+        return Response({'data': {'phone': phone, 'available': available}})
+
+    def get(self, request):
+        return self._check({'phone': request.query_params.get('phone', '')})
+
+    def post(self, request):
+        return self._check(request.data)
 
 
 
