@@ -157,7 +157,7 @@ class GlobalSearchView(APIView):
         # Search services
         services = Service.objects.filter(
             is_active=True
-        ).select_related('clinic').prefetch_related('doctors__user').filter(
+        ).select_related('clinic', 'branch').prefetch_related('doctors__user').filter(
             Q(name__icontains=query)
             | Q(category__icontains=query)
             | Q(description__icontains=query)
