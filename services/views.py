@@ -30,6 +30,15 @@ class ServiceListView(ListAPIView):
                 | Q(category__icontains=search)
             )
 
+        # Город услуги — город клиники, а у частной услуги без клиники — город
+        # врача. Без параметра (или city=all) по городу не фильтруем, как раньше.
+        city = params.get('city', '').strip()
+        if city and city.lower() != 'all':
+            qs = qs.filter(
+                Q(clinic__city__icontains=city)
+                | Q(clinic__isnull=True, doctors__city__icontains=city)
+            ).distinct()
+
         category = params.get('category', '').strip()
         if category:
             qs = qs.filter(category__icontains=category)

@@ -11,7 +11,7 @@ from .serializers import ClinicListSerializer, ClinicDetailSerializer
 @extend_schema(
     parameters=[
         OpenApiParameter(name='search', type=str, description='Поиск по названию клиники'),
-        OpenApiParameter(name='city', type=str, description='Фильтр по городу'),
+        OpenApiParameter(name='city', type=str, description='Фильтр по городу; all — все города'),
         OpenApiParameter(
             name='specialization',
             type=str,
@@ -50,8 +50,12 @@ class ClinicListView(ListAPIView):
         if search:
             qs = qs.filter(name__icontains=search)
 
+        # city=all — явно «все города»: без фильтра и без подстановки города,
+        # определённого middleware по IP. Без параметра city — как раньше.
         city = params.get('city', '').strip()
-        if not city and hasattr(self.request, 'city'):
+        if city.lower() == 'all':
+            city = ''
+        elif not city and hasattr(self.request, 'city'):
             city = self.request.city
         if city:
             qs = qs.filter(city__icontains=city)

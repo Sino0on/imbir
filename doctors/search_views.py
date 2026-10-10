@@ -20,12 +20,40 @@ from clinics.serializers import ClinicListSerializer
 from services.serializers import ServiceListSerializer
 
 
+CITY_PARAMETER = OpenApiParameter(
+    name='city', type=str,
+    description='Город (необязательно). Без параметра или all — по всем городам.',
+)
+
+
+def _get_city(request):
+    """Город из ?city= — тот, что выбрал пользователь. Город по IP здесь не
+    подставляем: без параметра поиск, как и раньше, идёт по всем городам."""
+    city = request.query_params.get('city', '').strip()
+    return '' if city.lower() == 'all' else city
+
+
+def _filter_by_city(doctors, clinics, services, city):
+    if not city:
+        return doctors, clinics, services
+    return (
+        doctors.filter(city__icontains=city),
+        clinics.filter(city__icontains=city),
+        # Город услуги — город клиники, у частной услуги — город врача.
+        services.filter(
+            Q(clinic__city__icontains=city)
+            | Q(clinic__isnull=True, doctors__city__icontains=city)
+        ).distinct(),
+    )
+
+
 class GlobalSearchSuggestView(APIView):
     permission_classes = (AllowAny,)
 
     @extend_schema(
         parameters=[
             OpenApiParameter(name='q', type=str, description='Поисковый запрос (ФИО врача, специализация, название клиники или услуги)', required=True),
+            CITY_PARAMETER,
         ],
         tags=['Global Search'],
         summary='Быстрый автокомплит-поиск (короткий ответ)',
@@ -52,7 +80,7 @@ class GlobalSearchSuggestView(APIView):
             | Q(user__last_name__icontains=query)
             | Q(primary_specializations__name__icontains=query)
             | Q(narrow_specializations__name__icontains=query)
-        ).distinct()[:5]
+        ).distinct()
 
         # Search clinics
         clinics = ClinicProfile.objects.filter(
@@ -60,7 +88,7 @@ class GlobalSearchSuggestView(APIView):
             is_published=True
         ).filter(
             name__icontains=query
-        )[:5]
+        )
 
         # Search services
         services = Service.objects.filter(
@@ -69,7 +97,12 @@ class GlobalSearchSuggestView(APIView):
             Q(name__icontains=query)
             | Q(category__icontains=query)
             | Q(description__icontains=query)
-        )[:5]
+        )
+
+        doctors, clinics, services = _filter_by_city(
+            doctors, clinics, services, _get_city(request)
+        )
+        doctors, clinics, services = doctors[:5], clinics[:5], services[:5]
 
         return Response({
             "doctors": SuggestDoctorSerializer(doctors, many=True, context={'request': request}).data,
@@ -84,6 +117,7 @@ class GlobalSearchView(APIView):
     @extend_schema(
         parameters=[
             OpenApiParameter(name='q', type=str, description='Поисковый запрос (ФИО врача, специализация, название клиники или услуги)', required=True),
+            CITY_PARAMETER,
         ],
         tags=['Global Search'],
         summary='Расширенный глобальный поиск (подробный ответ)',
@@ -110,7 +144,7 @@ class GlobalSearchView(APIView):
             | Q(user__last_name__icontains=query)
             | Q(primary_specializations__name__icontains=query)
             | Q(narrow_specializations__name__icontains=query)
-        ).distinct()[:20]
+        ).distinct()
 
         # Search clinics
         clinics = ClinicProfile.objects.filter(
@@ -118,7 +152,7 @@ class GlobalSearchView(APIView):
             is_published=True
         ).filter(
             name__icontains=query
-        )[:20]
+        )
 
         # Search services
         services = Service.objects.filter(
@@ -127,7 +161,12 @@ class GlobalSearchView(APIView):
             Q(name__icontains=query)
             | Q(category__icontains=query)
             | Q(description__icontains=query)
-        )[:20]
+        )
+
+        doctors, clinics, services = _filter_by_city(
+            doctors, clinics, services, _get_city(request)
+        )
+        doctors, clinics, services = doctors[:20], clinics[:20], services[:20]
 
         return Response({
             "doctors": DoctorListSerializer(doctors, many=True, context={'request': request}).data,

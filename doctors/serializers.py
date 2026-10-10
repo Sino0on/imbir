@@ -56,7 +56,7 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
             'is_online_available', 'city', 'languages', 'about',
             'education', 'work_experience', 'skills',
             'primary_specializations', 'narrow_specializations',
-            'workplaces', 'clinic',
+            'workplaces', 'clinic', 'consultation_price',
             'equipment', 'patient_conditions', 'payment_methods',
             'phone', 'email', 'location', 'interviews',
         )
@@ -138,6 +138,7 @@ class DoctorListSerializer(serializers.ModelSerializer):
             'id', 'full_name', 'specialty', 'photo',
             'rating', 'reviews_count', 'experience_years',
             'is_online_available', 'city', 'workplaces', 'clinic',
+            'consultation_price',
         )
 
     def get_full_name(self, obj):

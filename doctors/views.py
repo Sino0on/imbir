@@ -21,7 +21,7 @@ from .serializers import DoctorListSerializer, DoctorDetailSerializer, PublicInt
 @extend_schema(
     parameters=[
         OpenApiParameter(name='search', type=str, description='Поиск по имени и специализации'),
-        OpenApiParameter(name='city', type=str, description='Фильтр по городу'),
+        OpenApiParameter(name='city', type=str, description='Фильтр по городу; all — все города'),
         OpenApiParameter(
             name='specialization', type=str,
             description='Фильтр по специализации. Несколько значений — через запятую '
@@ -64,8 +64,12 @@ class DoctorListView(ListAPIView):
                 | Q(narrow_specializations__name__icontains=search)
             ).distinct()
 
+        # city=all — явно «все города»: без фильтра и без подстановки города,
+        # определённого middleware по IP. Без параметра city — как раньше.
         city = params.get('city', '').strip()
-        if not city and hasattr(self.request, 'city'):
+        if city.lower() == 'all':
+            city = ''
+        elif not city and hasattr(self.request, 'city'):
             city = self.request.city
         if city:
             qs = qs.filter(city__icontains=city)

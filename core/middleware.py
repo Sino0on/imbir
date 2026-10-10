@@ -41,8 +41,11 @@ class CityFromIPMiddleware:
 
         if city:
             city = city.strip()
-            # Save to session if session middleware is active
-            if hasattr(request, 'session'):
+            # Save to session if session middleware is active.
+            # city=all — разовый запрос «по всем городам», а не выбор города:
+            # в сессию его не пишем, иначе следующие запросы без city
+            # фильтровались бы по городу «all».
+            if hasattr(request, 'session') and city.lower() != 'all':
                 request.session['detected_city'] = city
         else:
             # 2. Check if we already have it in session
