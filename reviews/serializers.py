@@ -70,7 +70,7 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
         fields = ('target_type', 'target_id', 'appointment_id', 'rating', 'text')
 
     def validate(self, data):
-        from users.models import DoctorProfile, ClinicProfile
+        from users.models import DoctorProfile, ClinicProfile, User
         from appointments.models import Appointment
 
         request = self.context['request']
@@ -78,11 +78,20 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
         target_id = data.pop('target_id')
         appointment_id = data.pop('appointment_id', None)
 
+        # Оценивают только пациенты. Раньше хватало любого аккаунта: врач
+        # ставил себе 5★ со своей же публичной страницы (rating и reviews_count
+        # пересчитываются сразу), клиника — себе, врач — конкуренту.
+        if request.user.role != User.Role.PATIENT:
+            raise serializers.ValidationError('Отзывы могут оставлять только пациенты.')
+
         if target_type == Review.TargetType.DOCTOR:
             try:
                 data['doctor'] = DoctorProfile.objects.get(user_id=target_id, is_published=True)
             except DoctorProfile.DoesNotExist:
                 raise serializers.ValidationError({'target_id': 'Врач не найден.'})
+            # На случай профиля, оставшегося у аккаунта после смены роли.
+            if data['doctor'].user_id == request.user.id:
+                raise serializers.ValidationError({'target_id': 'Нельзя оставить отзыв самому себе.'})
             if Review.objects.filter(author=request.user, doctor=data['doctor']).exists():
                 raise serializers.ValidationError(
                     {'target_id': 'Вы уже оставили отзыв этому врачу.'}
@@ -92,6 +101,8 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
                 data['clinic'] = ClinicProfile.objects.get(user_id=target_id, is_published=True)
             except ClinicProfile.DoesNotExist:
                 raise serializers.ValidationError({'target_id': 'Клиника не найдена.'})
+            if data['clinic'].user_id == request.user.id:
+                raise serializers.ValidationError({'target_id': 'Нельзя оставить отзыв самому себе.'})
             if Review.objects.filter(author=request.user, clinic=data['clinic']).exists():
                 raise serializers.ValidationError(
                     {'target_id': 'Вы уже оставили отзыв этой клинике.'}

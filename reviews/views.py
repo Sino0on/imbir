@@ -1,3 +1,7 @@
+import logging
+
+from django.conf import settings
+from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg, Count
 from rest_framework import status, permissions
@@ -9,6 +13,8 @@ from rest_framework.views import APIView
 from core.pagination import StandardPagination
 from .models import Review
 from .serializers import ReviewSerializer, ReviewCreateSerializer
+
+logger = logging.getLogger(__name__)
 
 
 class IsAuthor(permissions.BasePermission):
@@ -118,4 +124,83 @@ class ReviewReplyView(APIView):
             ReviewSerializer(review, context={'request': request}).data,
             status=status.HTTP_200_OK
         )
+
+
+def _complaint_recipients():
+    """Куда слать жалобы на отзывы: контактный адрес из настроек сайта, иначе
+    ADMINS из settings, иначе активные суперпользователи с почтой."""
+    from references.models import SiteSettings
+    from users.models import User
+
+    contact_email = (SiteSettings.load().contact_email or '').strip()
+    if contact_email:
+        return [contact_email]
+    admins = [email for _, email in getattr(settings, 'ADMINS', []) if email]
+    if admins:
+        return admins
+    return list(
+        User.objects
+        .filter(is_superuser=True, is_active=True)
+        .exclude(email='')
+        .values_list('email', flat=True)
+    )
+
+
+class ReviewComplaintView(APIView):
+    """
+    POST /api/reviews/{id}/complaint/ — жалоба врача или клиники на отзыв о
+    себе (reason обязателен, comment — нет). Отдельной модели нет: жалоба
+    уходит письмом администратору, а решение по отзыву принимается в админке.
+    Раньше кнопка «Пожаловаться» в кабинете просто закрывала модалку, и жалоба
+    никуда не попадала.
+    """
+    permission_classes = [IsAuthenticated, IsReviewTarget]
+
+    def post(self, request, pk):
+        review = get_object_or_404(
+            Review.objects.select_related('author', 'doctor__user', 'clinic'), pk=pk,
+        )
+        self.check_object_permissions(request, review)
+
+        reason = str(request.data.get('reason') or '').strip()[:200]
+        comment = str(request.data.get('comment') or '').strip()[:2000]
+        if not reason:
+            return Response({'reason': 'Укажите причину жалобы.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        failed = Response(
+            {'detail': 'Не удалось отправить жалобу. Попробуйте позже.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+        recipients = _complaint_recipients()
+        if not recipients:
+            logger.error('Жалоба на отзыв %s: некому отправить — нет contact_email, ADMINS и суперпользователей', review.id)
+            return failed
+
+        if review.doctor:
+            target = review.doctor.user.full_name
+        else:
+            target = review.clinic.name if review.clinic else '—'
+        body = '\n'.join([
+            f'Жалоба на отзыв #{review.id}',
+            f'От: {request.user.full_name} ({request.user.email})',
+            f'Отзыв о: {target}',
+            f'Автор отзыва: {review.author.full_name} ({review.author.email})',
+            f'Оценка: {review.rating}★',
+            f'Текст отзыва: {review.text or "—"}',
+            '',
+            f'Причина: {reason}',
+            f'Комментарий: {comment or "—"}',
+        ])
+        try:
+            send_mail(
+                f'Жалоба на отзыв #{review.id}', body,
+                settings.DEFAULT_FROM_EMAIL or 'noreply@imbir.kg', recipients,
+            )
+        except Exception:
+            # Молча отвечать «принято» нельзя: врач решит, что жалоба на
+            # рассмотрении, а до администратора она не дошла.
+            logger.exception('Не удалось отправить жалобу на отзыв %s', review.id)
+            return failed
+
+        return Response({'detail': 'Жалоба отправлена.'}, status=status.HTTP_200_OK)
 

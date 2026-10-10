@@ -80,12 +80,33 @@ class PatientReviewListView(ListAPIView):
     pagination_class = StandardPagination
 
     def get_queryset(self):
-        return (
+        qs = (
             Review.objects
             .filter(author=self.request.user)
             .select_related('doctor__user', 'clinic')
             .order_by('-created_at')
         )
+
+        # target_type + target_id (id пользователя врача/клиники, как в
+        # target.id ответа) — «оставлял ли я отзыв на эту цель». Раньше фронт
+        # искал свой отзыв в первой странице из 20 и у пациента с большим
+        # числом отзывов промахивался: форма показывалась снова, отправка
+        # получала 400. Без параметров — весь список, как раньше.
+        params = self.request.query_params
+        target_type = params.get('target_type', '').strip()
+        if target_type:
+            qs = qs.filter(target_type=target_type)
+        target_id = params.get('target_id', '').strip()
+        if target_id:
+            try:
+                tid = int(target_id)
+            except ValueError:
+                return qs.none()
+            if target_type == Review.TargetType.DOCTOR:
+                qs = qs.filter(doctor__user_id=tid)
+            elif target_type == Review.TargetType.CLINIC:
+                qs = qs.filter(clinic__user_id=tid)
+        return qs
 
 
 _FavoritesResponseSerializer = inline_serializer('FavoritesResponse', fields={
