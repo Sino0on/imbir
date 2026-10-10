@@ -413,7 +413,11 @@ class DoctorAvailableSlotsView(APIView):
         ]
 
         service_id = request.query_params.get('service_id', '').strip()
-        requested_service = Service.objects.filter(id=service_id).first() if service_id.isdigit() else None
+        # Выключенную услугу записать нельзя (её отклонит и создание записи) — её
+        # длительность не должна менять сетку.
+        requested_service = (
+            Service.objects.filter(id=service_id, is_active=True).first() if service_id.isdigit() else None
+        )
         requested_duration = appointment_duration_minutes(requested_service)
 
         lunch = doctor_lunch_break(doctor_profile, target_date)

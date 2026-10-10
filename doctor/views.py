@@ -138,7 +138,7 @@ class DoctorAppointmentListView(AppointmentOrderingMixin, ListAPIView):
         qs = self.apply_ordering(
             Appointment.objects
             .filter(doctor=doctor_profile)
-            .select_related('patient', 'service')
+            .select_related('patient', 'service', 'clinic')
         )
 
         params = self.request.query_params

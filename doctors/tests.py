@@ -56,6 +56,14 @@ class DoctorAvailableSlotsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['slots']), 0)
 
+    def test_inactive_service_does_not_change_the_grid(self):
+        from services.models import Service
+
+        service = Service.objects.create(name='Старая услуга', category='general', duration=90, is_active=False)
+        response = self.client.get(self.url, {'date': '2026-07-06', 'service_id': service.id})
+        times = [s['time'] for s in response.data['slots']]
+        self.assertEqual(times[:3], ['09:00', '09:30', '10:00'])
+
 
 class DoctorInterviewsAPITests(APITestCase):
     def setUp(self):
