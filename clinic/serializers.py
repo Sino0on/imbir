@@ -6,6 +6,7 @@ from services.models import Service
 from references.models import Specialization
 from references.serializers import SpecializationSerializer
 from users.models import ClinicBranch, ClinicInvite, ClinicProfile, DoctorClinicLink, DoctorInvitation, DoctorProfile
+from core.validators import CoordinateField, WebsiteField
 from users.serializers import HybridImageField
 
 # Поля профиля врача, которые заполняет клиника при найме (не логин/график/цена приёма —
@@ -122,6 +123,12 @@ class DoctorInvitationCreateSerializer(serializers.Serializer):
 class ClinicOwnProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', read_only=True)
     logo = HybridImageField(required=False, allow_null=True)
+    # Сайт без схемы («imbir.kg») дополняем https://, координаты из Google Maps
+    # (14 знаков после запятой) округляем до 6 — иначе модельные URLField и
+    # DecimalField(9, 6) отклоняют всё сохранение профиля 400-й ошибкой.
+    website = WebsiteField()
+    latitude = CoordinateField()
+    longitude = CoordinateField()
     branches = ClinicBranchUpdateSerializer(many=True, read_only=True)
     photos = serializers.SerializerMethodField()
     documents = serializers.SerializerMethodField()
@@ -165,7 +172,7 @@ class ClinicOwnProfileSerializer(serializers.ModelSerializer):
                 'url': request.build_absolute_uri(p.image.url) if request else p.image.url,
                 'uploaded_at': p.uploaded_at,
             }
-            for p in obj.photos.all().order_by('uploaded_at')
+            for p in obj.photos.all().order_by('uploaded_at', 'id')
         ]
 
     def get_documents(self, obj):
@@ -176,7 +183,7 @@ class ClinicOwnProfileSerializer(serializers.ModelSerializer):
                 'url': request.build_absolute_uri(d.file.url) if request else d.file.url,
                 'uploaded_at': d.uploaded_at,
             }
-            for d in obj.documents.all().order_by('uploaded_at')
+            for d in obj.documents.all().order_by('uploaded_at', 'id')
         ]
 
 

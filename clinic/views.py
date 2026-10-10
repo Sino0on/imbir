@@ -1,5 +1,6 @@
 import os
 import uuid
+from urllib.parse import unquote
 from django.db.models import Count, Q, Sum
 from django.core.files.storage import default_storage
 from django.utils import timezone
@@ -13,6 +14,7 @@ from rest_framework.views import APIView
 
 from appointments.models import Appointment
 from core.pagination import StandardPagination
+from core.validators import document_upload_path
 from reviews.models import Review
 from services.models import Service
 from users.models import (
@@ -48,6 +50,14 @@ class ClinicProfileView(RetrieveUpdateAPIView):
 
     def get_object(self):
         return ClinicProfile.objects.prefetch_related('branches').get(user=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        # PUT работает как частичное обновление: разделы кабинета и загрузка
+        # логотипа (multipart) шлют только свои поля. При полном PUT отсутствующий
+        # в multipart BooleanField (emergency_24_7) читается как False, а
+        # *_specialization_ids с default=list — как пустой список.
+        kwargs['partial'] = True
+        return super().update(request, *args, **kwargs)
 
 
 # ── Branches ─────────────────────────────────────────────────────────────────
@@ -278,13 +288,12 @@ class ClinicDoctorDocumentListCreateView(APIView):
         url_str = (request.data.get('url') or '').strip()
 
         if uploaded_file:
-            ext = os.path.splitext(uploaded_file.name)[1].lower()
-            filename = f'doctors/documents/{uuid.uuid4().hex}{ext}'
-            saved_path = default_storage.save(filename, uploaded_file)
+            # Исходное имя файла сохраняем в пути — по нему документы различают в списке
+            saved_path = default_storage.save(document_upload_path('doctors/documents', uploaded_file), uploaded_file)
             doc = DoctorDocument.objects.create(doctor=doctor, file=saved_path)
         elif url_str:
             from users.utils import get_relative_path_from_url
-            rel_path = get_relative_path_from_url(url_str)
+            rel_path = unquote(get_relative_path_from_url(url_str) or '')
             doc = DoctorDocument.objects.create(doctor=doctor, file=rel_path)
         else:
             return Response({'detail': 'Необходимо передать file (multipart) или url (строка).'}, status=status.HTTP_400_BAD_REQUEST)
@@ -548,7 +557,7 @@ class ClinicPhotoListCreateView(APIView):
             'id': p.id,
             'url': request.build_absolute_uri(p.image.url),
             'uploaded_at': p.uploaded_at,
-        } for p in clinic.photos.all().order_by('uploaded_at')]
+        } for p in clinic.photos.all().order_by('uploaded_at', 'id')]
         return Response(data)
 
     def post(self, request):
@@ -621,13 +630,13 @@ class ClinicDocumentListCreateView(APIView):
         url_str = request.data.get('url', '').strip()
 
         if uploaded_file:
-            ext = os.path.splitext(uploaded_file.name)[1].lower()
-            filename = f'clinics/documents/{uuid.uuid4().hex}{ext}'
-            saved_path = default_storage.save(filename, uploaded_file)
+            # Исходное имя файла сохраняем в пути — по нему документы различают в списке
+            saved_path = default_storage.save(document_upload_path('clinics/documents', uploaded_file), uploaded_file)
             doc = ClinicDocument.objects.create(clinic=clinic, file=saved_path)
         elif url_str:
             from users.utils import get_relative_path_from_url
-            doc = ClinicDocument.objects.create(clinic=clinic, file=get_relative_path_from_url(url_str))
+            # Кириллица в имени приходит в URL закодированной (%D0%9B...)
+            doc = ClinicDocument.objects.create(clinic=clinic, file=unquote(get_relative_path_from_url(url_str) or ''))
         else:
             return Response({'detail': 'Необходимо передать file или url.'}, status=status.HTTP_400_BAD_REQUEST)
 

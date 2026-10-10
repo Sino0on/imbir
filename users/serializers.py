@@ -397,6 +397,45 @@ class DoctorRegisterSerializer(serializers.Serializer):
 
 
 
+def _clinic_website(value):
+    """Сайт из step2: «imbir.kg» → «https://imbir.kg»; мусор — понятная 400."""
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    from core.validators import WEBSITE_ERROR, normalize_website
+    value = '' if value is None else str(value)
+    try:
+        value = normalize_website(value)
+    except DjangoValidationError:
+        raise serializers.ValidationError({'step2': {'website': WEBSITE_ERROR}})
+    if len(value) > ClinicProfile._meta.get_field('website').max_length:
+        raise serializers.ValidationError({'step2': {'website': WEBSITE_ERROR}})
+    return value
+
+
+def _clinic_coordinate(value, field_name):
+    """Координата из step2.location: округляем до 6 знаков, как в модели."""
+    from core.validators import round_coordinate
+    try:
+        value = round_coordinate(value)
+    except ValueError:
+        raise serializers.ValidationError({'step2': {field_name: 'Координата должна быть числом.'}})
+    if value is not None and abs(value) >= 1000:
+        raise serializers.ValidationError({'step2': {field_name: 'Некорректная координата.'}})
+    return value
+
+
+def _clinic_experience_years(value):
+    """Стаж клиники из step1 (необязательный): пусто → 0."""
+    if value in (None, ''):
+        return 0
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        raise serializers.ValidationError({'step1': {'experience_years': 'Стаж должен быть целым числом лет.'}})
+    if value < 0 or value > 200:
+        raise serializers.ValidationError({'step1': {'experience_years': 'Некорректный стаж.'}})
+    return value
+
+
 class ClinicRegisterSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=8)
     step1 = serializers.CharField()
@@ -433,6 +472,17 @@ class ClinicRegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError({'step2': {'phone': 'Пользователь с таким номером телефона уже зарегистрирован'}})
 
         _check_contact_verified(email, phone)
+
+        # Те же правила, что у PUT /api/clinic/profile/ (ClinicOwnProfileSerializer):
+        # иначе «imbir.kg» или координаты из Google Maps проходят регистрацию,
+        # а затем каждое сохранение профиля (и логотип сразу после регистрации)
+        # падает с 400 на URLField / DecimalField(9, 6).
+        s2['website'] = _clinic_website(s2.get('website'))
+        location = s2.get('location')
+        if isinstance(location, dict):
+            location['lat'] = _clinic_coordinate(location.get('lat'), 'lat')
+            location['lng'] = _clinic_coordinate(location.get('lng'), 'lng')
+        s1['experience_years'] = _clinic_experience_years(s1.get('experience_years'))
 
         if not s7.get('agree_terms'):
             raise serializers.ValidationError({'step7': 'Необходимо принять условия использования'})
@@ -482,6 +532,7 @@ class ClinicRegisterSerializer(serializers.Serializer):
                 clinic_type=s1.get('type', ''),
                 description=s1.get('description', ''),
                 logo=validated_data.get('logo'),
+                experience_years=s1.get('experience_years', 0),
                 # Step 2
                 country=s2.get('country', ''),
                 city=s2.get('city', ''),

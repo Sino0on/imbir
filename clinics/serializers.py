@@ -17,7 +17,7 @@ class ClinicListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClinicProfile
         fields = (
-            'id', 'name', 'logo', 'city', 'clinic_type',
+            'id', 'name', 'logo', 'city', 'address', 'clinic_type', 'experience_years',
             'rating', 'reviews_count', 'doctors_count',
             'primary_specializations',
         )
@@ -64,7 +64,9 @@ class ClinicDetailSerializer(serializers.ModelSerializer):
     def get_photos(self, obj):
         request = self.context.get('request')
         result = []
-        for photo in obj.photos.all():
+        # Порядок загрузки: первое фото — главный баннер страницы клиники.
+        # Сортируем в Python, чтобы не терять prefetch_related('photos').
+        for photo in sorted(obj.photos.all(), key=lambda p: (p.uploaded_at, p.id)):
             url = photo.image.url
             result.append(request.build_absolute_uri(url) if request else url)
         return result

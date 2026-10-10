@@ -1,5 +1,4 @@
-import os
-import uuid
+from urllib.parse import unquote
 from django.shortcuts import get_object_or_404
 from django.db.models import Count, Max, Q
 from django.core.files.storage import default_storage
@@ -13,6 +12,7 @@ from rest_framework.views import APIView
 
 from appointments.models import Appointment
 from core.pagination import StandardPagination
+from core.validators import document_upload_path
 from reviews.models import Review
 from services.models import Service
 from users.models import DoctorClinicLink, DoctorDocument, DoctorInvitation, DoctorProfile, User
@@ -68,6 +68,11 @@ class DoctorProfileView(RetrieveUpdateAPIView):
         should_process = request.query_params.get('process_photo', '').strip().lower() in ('1', 'true', 'yes')
         uploaded_photo = request.FILES.get('photo')
 
+        # PUT работает как частичное обновление: смена фото (multipart) и разделы
+        # кабинета шлют только свои поля. При полном PUT отсутствующие в multipart
+        # BooleanField (is_online_available, emergency_24_7) читаются как False,
+        # а *_specialization_ids с default=list — как пустой список.
+        kwargs['partial'] = True
         response = super().update(request, *args, **kwargs)
 
         # ИИ-обработка (около минуты) — в фоне, см. doctor/tasks.py: держать
@@ -356,13 +361,13 @@ class DoctorDocumentListCreateView(APIView):
         url_str = request.data.get('url', '').strip()
 
         if uploaded_file:
-            ext = os.path.splitext(uploaded_file.name)[1].lower()
-            filename = f'doctors/documents/{uuid.uuid4().hex}{ext}'
-            saved_path = default_storage.save(filename, uploaded_file)
+            # Исходное имя файла сохраняем в пути — по нему документы различают в списке
+            saved_path = default_storage.save(document_upload_path('doctors/documents', uploaded_file), uploaded_file)
             doc = DoctorDocument.objects.create(doctor=profile, file=saved_path)
         elif url_str:
             from users.utils import get_relative_path_from_url
-            rel_path = get_relative_path_from_url(url_str)
+            # Кириллица в имени приходит в URL закодированной (%D0%9B...)
+            rel_path = unquote(get_relative_path_from_url(url_str) or '')
             doc = DoctorDocument.objects.create(doctor=profile, file=rel_path)
         else:
             return Response({'detail': 'Необходимо передать file (multipart) или url (строка).'}, status=status.HTTP_400_BAD_REQUEST)
