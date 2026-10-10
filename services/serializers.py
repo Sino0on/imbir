@@ -2,8 +2,19 @@ from rest_framework import serializers
 from .models import Service
 
 
+def _branch_data(service):
+    """Филиал, где проводится процедура: {id, name, address} или None (тогда
+    процедура идёт по основному адресу клиники). Раньше филиал пациенту не
+    отдавался вовсе, и он видел только адрес главного здания клиники."""
+    branch = service.branch
+    if branch is None:
+        return None
+    return {'id': branch.id, 'name': branch.name, 'address': branch.address}
+
+
 class ServiceListSerializer(serializers.ModelSerializer):
     clinic = serializers.SerializerMethodField()
+    branch = serializers.SerializerMethodField()
     rating = serializers.SerializerMethodField()
     reviews_count = serializers.SerializerMethodField()
     photo = serializers.SerializerMethodField()
@@ -11,7 +22,10 @@ class ServiceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = ('id', 'name', 'category', 'price', 'duration',
-                  'clinic', 'rating', 'reviews_count', 'photo')
+                  'clinic', 'branch', 'rating', 'reviews_count', 'photo')
+
+    def get_branch(self, obj):
+        return _branch_data(obj)
 
     def get_clinic(self, obj):
         if not obj.clinic:
@@ -70,6 +84,7 @@ class ServiceDoctorSerializer(serializers.ModelSerializer):
 
 class ServiceDetailSerializer(serializers.ModelSerializer):
     clinic = serializers.SerializerMethodField()
+    branch = serializers.SerializerMethodField()
     doctor = serializers.SerializerMethodField()
     doctors = ServiceDoctorSerializer(many=True, read_only=True)
     photo = serializers.SerializerMethodField()
@@ -79,8 +94,11 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'name', 'category', 'description',
             'price', 'duration', 'photo',
-            'clinic', 'doctor', 'doctors',
+            'clinic', 'branch', 'doctor', 'doctors',
         )
+
+    def get_branch(self, obj):
+        return _branch_data(obj)
 
     def get_photo(self, obj):
         if not obj.photo:

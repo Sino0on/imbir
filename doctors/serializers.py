@@ -4,6 +4,35 @@ from users.models import DoctorProfile
 from .models import Interview
 
 
+def _branch_data(branch):
+    """Филиал для публичного ответа: {id, name, address} или None."""
+    if branch is None:
+        return None
+    return {'id': branch.id, 'name': branch.name, 'address': branch.address}
+
+
+def _workplace_data(link, request):
+    """Место работы врача по связи с клиникой. Если врач принимает в филиале,
+    address — адрес филиала (раньше пациенту везде показывали основной адрес
+    клиники и он ехал не туда), а сам филиал — в branch. Филиал без адреса
+    не перебивает адрес клиники."""
+    clinic = link.clinic
+    logo_url = None
+    if clinic.logo:
+        logo_url = (
+            request.build_absolute_uri(clinic.logo.url)
+            if request else clinic.logo.url
+        )
+    branch = link.branch
+    return {
+        'id': clinic.user_id,
+        'name': clinic.name,
+        'logo': logo_url,
+        'address': (branch.address if branch and branch.address else clinic.address),
+        'branch': _branch_data(branch),
+    }
+
+
 class InterviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Interview
@@ -81,42 +110,15 @@ class DoctorDetailSerializer(serializers.ModelSerializer):
 
     def get_workplaces(self, obj):
         request = self.context.get('request')
-        links = obj.clinic_links.filter(is_active=True).select_related('clinic')
-        result = []
-        for link in links:
-            clinic = link.clinic
-            logo_url = None
-            if clinic.logo:
-                logo_url = (
-                    request.build_absolute_uri(clinic.logo.url)
-                    if request else clinic.logo.url
-                )
-            result.append({
-                'id': clinic.user_id,
-                'name': clinic.name,
-                'logo': logo_url,
-                'address': clinic.address,
-            })
-        return result
+        links = obj.clinic_links.filter(is_active=True).select_related('clinic', 'branch')
+        return [_workplace_data(link, request) for link in links]
 
     def get_clinic(self, obj):
         request = self.context.get('request')
-        link = obj.clinic_links.filter(is_active=True).select_related('clinic').first()
+        link = obj.clinic_links.filter(is_active=True).select_related('clinic', 'branch').first()
         if not link:
             return None
-        clinic = link.clinic
-        logo_url = None
-        if clinic.logo:
-            logo_url = (
-                request.build_absolute_uri(clinic.logo.url)
-                if request else clinic.logo.url
-            )
-        return {
-            'id': clinic.user_id,
-            'name': clinic.name,
-            'logo': logo_url,
-            'address': clinic.address,
-        }
+        return _workplace_data(link, request)
 
 
 class DoctorListSerializer(serializers.ModelSerializer):
@@ -156,39 +158,12 @@ class DoctorListSerializer(serializers.ModelSerializer):
 
     def get_workplaces(self, obj):
         request = self.context.get('request')
-        links = obj.clinic_links.filter(is_active=True).select_related('clinic')
-        result = []
-        for link in links:
-            clinic = link.clinic
-            logo_url = None
-            if clinic.logo:
-                logo_url = (
-                    request.build_absolute_uri(clinic.logo.url)
-                    if request else clinic.logo.url
-                )
-            result.append({
-                'id': clinic.user_id,
-                'name': clinic.name,
-                'logo': logo_url,
-                'address': clinic.address,
-            })
-        return result
+        links = obj.clinic_links.filter(is_active=True).select_related('clinic', 'branch')
+        return [_workplace_data(link, request) for link in links]
 
     def get_clinic(self, obj):
         request = self.context.get('request')
-        link = obj.clinic_links.filter(is_active=True).select_related('clinic').first()
+        link = obj.clinic_links.filter(is_active=True).select_related('clinic', 'branch').first()
         if not link:
             return None
-        clinic = link.clinic
-        logo_url = None
-        if clinic.logo:
-            logo_url = (
-                request.build_absolute_uri(clinic.logo.url)
-                if request else clinic.logo.url
-            )
-        return {
-            'id': clinic.user_id,
-            'name': clinic.name,
-            'logo': logo_url,
-            'address': clinic.address,
-        }
+        return _workplace_data(link, request)

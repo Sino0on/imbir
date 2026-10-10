@@ -16,7 +16,7 @@ class ServiceListView(ListAPIView):
         qs = (
             Service.objects
             .filter(is_active=True)
-            .select_related('clinic')
+            .select_related('clinic', 'branch')
             .prefetch_related('doctors__user')
         )
 
@@ -90,4 +90,4 @@ class ServiceListView(ListAPIView):
 class ServiceDetailView(RetrieveAPIView):
     permission_classes = (AllowAny,)
     serializer_class = ServiceDetailSerializer
-    queryset = Service.objects.filter(is_active=True).select_related('clinic').prefetch_related('doctors__user')
+    queryset = Service.objects.filter(is_active=True).select_related('clinic', 'branch').prefetch_related('doctors__user')
