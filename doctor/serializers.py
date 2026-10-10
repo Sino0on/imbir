@@ -20,6 +20,10 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(source='user.phone', required=False, allow_blank=True)
     photo = HybridImageField(required=False, allow_null=True)
     documents = serializers.SerializerMethodField()
+    # Активные привязки к клиникам — для выбора клиники в форме услуги.
+    # Публичная карточка врача тут не годится: снятому с публикации врачу она
+    # отдаёт 404, а после принятия приглашения может быть закеширована.
+    clinics = serializers.SerializerMethodField()
     interviews = InterviewSerializer(many=True, read_only=True)
     primary_specializations = SpecializationSerializer(many=True, read_only=True)
     primary_specialization_ids = serializers.PrimaryKeyRelatedField(
@@ -60,6 +64,8 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
             'education', 'additional_education', 'work_experience', 'skills', 'interviews',
             # Статус и счётчики
             'is_published', 'profile_views', 'rating', 'reviews_count',
+            # Места работы (только чтение)
+            'clinics',
         )
         # is_published — читаем, но не пишем отсюда: полный PUT-профиль не должен
         # быть способом публикации/снятия с публикации (это модерационное поле,
@@ -68,6 +74,21 @@ class DoctorOwnProfileSerializer(serializers.ModelSerializer):
         # трактует отсутствие поля как False, а не как "оставить как было").
         read_only_fields = ('profile_views', 'rating', 'reviews_count', 'documents', 'interviews', 'is_published')
 
+    def get_clinics(self, obj):
+        # id — публичный id клиники (= ClinicProfile.user_id), тот же, что
+        # ждёт clinic_id в DoctorServiceWriteSerializer.
+        links = obj.clinic_links.filter(is_active=True).select_related('clinic', 'branch')
+        return [
+            {
+                'id': link.clinic.user_id,
+                'name': link.clinic.name,
+                'branch': (
+                    {'id': link.branch.id, 'name': link.branch.name, 'address': link.branch.address}
+                    if link.branch else None
+                ),
+            }
+            for link in links
+        ]
 
     def get_documents(self, obj):
         request = self.context.get('request')
