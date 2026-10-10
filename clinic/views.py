@@ -1,5 +1,7 @@
 import os
+import re
 import uuid
+from datetime import timedelta
 from urllib.parse import unquote
 from django.db.models import Count, Q, Sum
 from django.core.files.storage import default_storage
@@ -15,6 +17,7 @@ from rest_framework.views import APIView
 from appointments.models import Appointment
 from core.pagination import StandardPagination
 from core.validators import document_upload_path
+from doctor.views import AppointmentOrderingMixin
 from reviews.models import Review
 from services.models import Service
 from users.models import (
@@ -106,7 +109,7 @@ class BranchUpdateView(RetrieveUpdateDestroyAPIView):
 # ── Appointments ─────────────────────────────────────────────────────────────
 
 @extend_schema(tags=['Clinic Cabinet'])
-class ClinicAppointmentListView(ListCreateAPIView):
+class ClinicAppointmentListView(AppointmentOrderingMixin, ListCreateAPIView):
     permission_classes = (IsClinic,)
     serializer_class = ClinicAppointmentSerializer
     pagination_class = StandardPagination
@@ -114,11 +117,10 @@ class ClinicAppointmentListView(ListCreateAPIView):
 
     def get_queryset(self):
         clinic = ClinicProfile.objects.get(user=self.request.user)
-        qs = (
+        qs = self.apply_ordering(
             Appointment.objects
             .filter(clinic=clinic)
             .select_related('patient', 'doctor__user', 'service')
-            .order_by('-date', '-time')
         )
 
         params = self.request.query_params
@@ -168,11 +170,15 @@ class ClinicStatsView(APIView):
 
     def get(self, request):
         clinic = ClinicProfile.objects.get(user=request.user)
-        now = timezone.now()
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        # Месяц — по дате приёма и по местному времени (Asia/Bishkek):
+        # timezone.now() в UTC относил записи 1-го числа до 06:00 к прошлому месяцу.
+        today = timezone.localdate()
+        month_start = today.replace(day=1)
+        next_month_start = (month_start + timedelta(days=32)).replace(day=1)
 
-        appts = Appointment.objects.filter(clinic=clinic)
-        appts_month = appts.filter(created_at__gte=month_start)
+        # Отменённые записи в счётчики не входят — приёма не было.
+        appts = Appointment.objects.filter(clinic=clinic).exclude(status=Appointment.Status.CANCELLED)
+        appts_month = appts.filter(date__gte=month_start, date__lt=next_month_start)
 
         agg = appts_month.aggregate(
             revenue=Sum('service__price', filter=Q(status=Appointment.Status.COMPLETED)),
@@ -186,9 +192,33 @@ class ClinicStatsView(APIView):
             'average_rating': float(clinic.rating),
             'reviews_count': clinic.reviews_count,
             'doctors_count': DoctorClinicLink.objects.filter(clinic=clinic, is_active=True).count(),
-            'patients_total': appts.filter(patient__isnull=False).values('patient').distinct().count(),
+            'patients_total': _count_patients(appts),
             'revenue_this_month': float(agg['revenue'] or 0),
         })
+
+
+def _normalize_phone(phone):
+    return re.sub(r'\D', '', phone or '')
+
+
+def _count_patients(appts):
+    """Пациенты клиники: зарегистрированные (по id) плюс гости, записавшиеся без
+    аккаунта (по номеру телефона, только цифры). Гость, чей номер совпадает с
+    номером зарегистрированного пациента, второй раз не считается."""
+    patient_rows = appts.filter(patient__isnull=False).values_list('patient_id', 'patient__phone').distinct()
+    patient_ids = set()
+    patient_phones = set()
+    for patient_id, phone in patient_rows:
+        patient_ids.add(patient_id)
+        if _normalize_phone(phone):
+            patient_phones.add(_normalize_phone(phone))
+
+    guest_phones = {
+        _normalize_phone(phone)
+        for phone in appts.filter(patient__isnull=True).values_list('guest_phone', flat=True).distinct()
+    }
+    guest_phones.discard('')
+    return len(patient_ids) + len(guest_phones - patient_phones)
 
 
 # ── Reviews ──────────────────────────────────────────────────────────────────

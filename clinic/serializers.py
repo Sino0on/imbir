@@ -200,9 +200,11 @@ class ClinicAppointmentSerializer(serializers.ModelSerializer):
     def get_doctor(self, obj):
         if not obj.doctor:
             return None
+        # Телефон врача — чтобы клиника могла связаться с ним по записи.
         return {
             'id': obj.doctor.user.id,
             'full_name': obj.doctor.user.full_name,
+            'phone': obj.doctor.user.phone or '',
         }
 
     def get_patient(self, obj):
@@ -211,8 +213,9 @@ class ClinicAppointmentSerializer(serializers.ModelSerializer):
                 'id': obj.patient.id,
                 'full_name': obj.patient.full_name,
                 'phone': obj.patient.phone,
+                'email': obj.patient.email,
             }
-        return {'full_name': obj.guest_name, 'phone': obj.guest_phone}
+        return {'full_name': obj.guest_name, 'phone': obj.guest_phone, 'email': obj.guest_email}
 
     def get_service(self, obj):
         if not obj.service:

@@ -1,6 +1,6 @@
 from urllib.parse import unquote
 from django.shortcuts import get_object_or_404
-from django.db.models import Count, Max, Q
+from django.db.models import Count, F, Max, Q
 from django.core.files.storage import default_storage
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer, OpenApiParameter
@@ -96,18 +96,49 @@ class DoctorScheduleView(RetrieveUpdateAPIView):
         return DoctorProfile.objects.get(user=self.request.user)
 
 
-class DoctorAppointmentListView(ListAPIView):
+# Сортировки списка записей кабинета (?ordering=). При равенстве — по id, чтобы
+# порядок между страницами был стабильным.
+APPOINTMENT_ORDERINGS = {
+    'created_at': ('created_at', 'id'),
+    '-created_at': ('-created_at', '-id'),
+    'date': ('date', 'time', 'id'),
+    '-date': ('-date', '-time', '-id'),
+}
+
+
+class AppointmentOrderingMixin:
+    """?ordering= для списка записей кабинета (врача и клиники). Без параметра
+    или с неизвестным значением — прежний порядок по дате приёма. Применённую
+    сортировку кладём в ответ полем ordering: по нему фронт понимает, что порядок
+    уже серверный и дочитывать все страницы ради сортировки не нужно."""
+    default_ordering = ('-date', '-time')
+
+    def apply_ordering(self, qs):
+        ordering = self.request.query_params.get('ordering', '').strip()
+        if ordering in APPOINTMENT_ORDERINGS:
+            self.applied_ordering = ordering
+            return qs.order_by(*APPOINTMENT_ORDERINGS[ordering])
+        self.applied_ordering = None
+        return qs.order_by(*self.default_ordering)
+
+    def get_paginated_response(self, data):
+        response = super().get_paginated_response(data)
+        if getattr(self, 'applied_ordering', None):
+            response.data['ordering'] = self.applied_ordering
+        return response
+
+
+class DoctorAppointmentListView(AppointmentOrderingMixin, ListAPIView):
     permission_classes = (IsDoctor,)
     serializer_class = DoctorAppointmentSerializer
     pagination_class = StandardPagination
 
     def get_queryset(self):
         doctor_profile = DoctorProfile.objects.get(user=self.request.user)
-        qs = (
+        qs = self.apply_ordering(
             Appointment.objects
             .filter(doctor=doctor_profile)
             .select_related('patient', 'service')
-            .order_by('-date', '-time')
         )
 
         params = self.request.query_params
@@ -148,17 +179,29 @@ class DoctorPatientListView(ListAPIView):
 
     def get_queryset(self):
         doctor_profile = DoctorProfile.objects.get(user=self.request.user)
-        doctor_filter = Q(appointments__doctor=doctor_profile)
+        # Пациент — тот, у кого есть хотя бы одна неотменённая запись к врачу:
+        # записавшийся и отменивший в списке не нужен.
+        active_statuses = [
+            Appointment.Status.PENDING, Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED,
+        ]
+        doctor_filter = Q(appointments__doctor=doctor_profile, appointments__status__in=active_statuses)
+        # Последний визит — уже состоявшийся: завершённый приём или неотменённый
+        # с датой не позже сегодняшней. Будущая запись визитом ещё не считается.
+        visit_filter = doctor_filter & (
+            Q(appointments__status=Appointment.Status.COMPLETED)
+            | Q(appointments__date__lte=timezone.localdate())
+        )
 
         qs = (
             User.objects
-            .filter(doctor_filter)
+            .filter(id__in=Appointment.objects.filter(
+                doctor=doctor_profile, status__in=active_statuses,
+            ).values('patient_id'))
             .annotate(
                 visits_count=Count('appointments', filter=doctor_filter),
-                last_visit=Max('appointments__date', filter=doctor_filter),
+                last_visit=Max('appointments__date', filter=visit_filter),
             )
-            .distinct()
-            .order_by('-last_visit')
+            .order_by(F('last_visit').desc(nulls_last=True), '-id')
         )
 
         search = self.request.query_params.get('search', '').strip()
@@ -207,7 +250,11 @@ class DoctorStatsView(APIView):
             confirmed=Count('id', filter=Q(status=Appointment.Status.CONFIRMED)),
             completed=Count('id', filter=Q(status=Appointment.Status.COMPLETED)),
             cancelled=Count('id', filter=Q(status=Appointment.Status.CANCELLED)),
-            patients_count=Count('patient', distinct=True, filter=Q(patient__isnull=False)),
+            # Как в списке «Пациенты»: только с неотменёнными записями.
+            patients_count=Count(
+                'patient', distinct=True,
+                filter=Q(patient__isnull=False) & ~Q(status=Appointment.Status.CANCELLED),
+            ),
         )
 
         total = agg['total'] or 0
