@@ -9,12 +9,14 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
+from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiParameter, inline_serializer
 
 from users.models import DoctorProfile
 from core.pagination import StandardPagination
 from .models import Interview
+from .search_views import filter_doctors_by_search
 from .serializers import DoctorListSerializer, DoctorDetailSerializer, PublicInterviewSerializer
 
 
@@ -50,19 +52,17 @@ class DoctorListView(ListAPIView):
             DoctorProfile.objects
             .filter(user__is_active=True, is_published=True)
             .select_related('user')
-            .order_by('-rating', '-reviews_count')
+            # id — уникальный хвост сортировки: при равных рейтинге и числе
+            # отзывов порядок был не определён, и «Показать ещё» дублировало
+            # одних врачей и пропускало других.
+            .order_by('-rating', '-reviews_count', 'id')
         )
 
         params = self.request.query_params
 
         search = params.get('search', '').strip()
         if search:
-            qs = qs.filter(
-                Q(user__first_name__icontains=search)
-                | Q(user__last_name__icontains=search)
-                | Q(primary_specializations__name__icontains=search)
-                | Q(narrow_specializations__name__icontains=search)
-            ).distinct()
+            qs = filter_doctors_by_search(qs, search)
 
         # city=all — явно «все города»: без фильтра и без подстановки города,
         # определённого middleware по IP. Без параметра city — как раньше.
@@ -80,11 +80,13 @@ class DoctorListView(ListAPIView):
         specialization_values = list(dict.fromkeys(specialization_values))
 
         if specialization_values:
+            # Точное совпадение названия из справочника: с icontains фильтр
+            # «Хирург» показывал и нейрохирургов, и сосудистых хирургов.
             spec_filter = Q()
             for value in specialization_values:
                 spec_filter |= (
-                    Q(primary_specializations__name__icontains=value)
-                    | Q(narrow_specializations__name__icontains=value)
+                    Q(primary_specializations__name__iexact=value)
+                    | Q(narrow_specializations__name__iexact=value)
                 )
             qs = qs.filter(spec_filter).distinct()
 
@@ -161,9 +163,50 @@ class DoctorDetailView(RetrieveAPIView):
             ),
             user__id=self.kwargs['pk'],
         )
-        DoctorProfile.objects.filter(pk=obj.pk).update(profile_views=F('profile_views') + 1)
-        obj.profile_views += 1
+        # Просмотр здесь больше не засчитывается: страницу врача фронт отдаёт из
+        # ISR-кеша, и до бэка доходил лишь редкий фоновый GET. Счётчик —
+        # в DoctorProfileViewView (POST /api/doctors/{id}/view/).
         return obj
+
+
+class ProfileViewThrottle(SimpleRateThrottle):
+    """Ограничение для счётчика просмотров анкет: с одного адреса засчитывается
+    не больше 10 просмотров одной и той же анкеты в час — защита от накрутки."""
+    scope = 'profile_view'
+    rate = '10/hour'
+
+    def get_cache_key(self, request, view):
+        ident = f"{view.profile_kind}:{view.kwargs.get('pk')}:{self.get_ident(request)}"
+        return self.cache_format % {'scope': self.scope, 'ident': ident}
+
+
+class BaseProfileViewView(APIView):
+    """POST — засчитать просмотр публичной анкеты. Фронт шлёт его один раз за
+    сессию браузера при открытии страницы. Просмотры владельцем анкеты не
+    считаются."""
+    permission_classes = (AllowAny,)
+    throttle_classes = (ProfileViewThrottle,)
+    profile_kind = ''
+    model = None
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        profile = get_object_or_404(
+            self.model.objects.filter(user__is_active=True, is_published=True),
+            user__id=pk,
+        )
+        if request.user.id != pk:
+            self.model.objects.filter(pk=profile.pk).update(profile_views=F('profile_views') + 1)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(
+    request=None, responses={204: None},
+    tags=['Doctors Catalog'], summary='Засчитать просмотр анкеты врача',
+)
+class DoctorProfileViewView(BaseProfileViewView):
+    profile_kind = 'doctor'
+    model = DoctorProfile
 
 
 @extend_schema(tags=['Doctors Catalog'], summary='Список видео-интервью врачей')

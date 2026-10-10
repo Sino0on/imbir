@@ -252,7 +252,11 @@ class ClinicDoctorListView(ListCreateAPIView):
 
     def get_queryset(self):
         clinic = ClinicProfile.objects.get(user=self.request.user)
-        return DoctorClinicLink.objects.filter(clinic=clinic).select_related('doctor__user')
+        # Только действующие связи — как в карточке врача и счётчике врачей:
+        # иначе в списке висел отключённый врач, карточка которого отвечает 404.
+        return DoctorClinicLink.objects.filter(
+            clinic=clinic, is_active=True,
+        ).select_related('doctor__user').order_by('id')
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()

@@ -70,3 +70,48 @@ class ClinicSpecializationFilterTests(APITestCase):
             names,
             {'Кардио Клиника', 'Терапия Клиника', 'Дерма Клиника'},
         )
+
+
+class ClinicPriceFilterTests(APITestCase):
+    """K37/K57: клиника проходит фильтр по цене, только если у неё есть одна
+    активная услуга, цена которой попадает в диапазон целиком."""
+    url = '/api/clinics/'
+
+    def setUp(self):
+        from services.models import Service
+
+        self.in_range = self._clinic('В диапазоне')
+        Service.objects.create(name='Приём', category='Приём', price=700, clinic=self.in_range)
+
+        # Одна услуга дешевле, другая дороже — ни одной внутри 500–1000.
+        self.split = self._clinic('Разброс')
+        Service.objects.create(name='Дешёвая', category='Приём', price=100, clinic=self.split)
+        Service.objects.create(name='Дорогая', category='Приём', price=10000, clinic=self.split)
+
+        self.inactive = self._clinic('Отключённая услуга')
+        Service.objects.create(
+            name='Отключена', category='Приём', price=700, clinic=self.inactive, is_active=False,
+        )
+
+    def _clinic(self, name):
+        user = User.objects.create_user(
+            email=f'{name}@example.com', password='password123', first_name=name,
+            role=User.Role.CLINIC,
+        )
+        return ClinicProfile.objects.create(user=user, name=name, city='Бишкек', is_published=True)
+
+    def _names(self, params):
+        response = self.client.get(self.url, {'city': 'Бишкек', **params})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return [clinic['name'] for clinic in response.data['data']]
+
+    def test_range_requires_single_service_inside(self):
+        self.assertEqual(self._names({'min_price': 500, 'max_price': 1000}), ['В диапазоне'])
+
+    def test_inactive_services_ignored(self):
+        self.assertNotIn('Отключённая услуга', self._names({'min_price': 500}))
+
+    def test_clinic_listed_once_with_several_matching_services(self):
+        from services.models import Service
+        Service.objects.create(name='Ещё приём', category='Приём', price=800, clinic=self.in_range)
+        self.assertEqual(self._names({'min_price': 500, 'max_price': 1000}), ['В диапазоне'])

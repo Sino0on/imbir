@@ -1,10 +1,13 @@
-from django.db.models import F, Q
+from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny
 
 from users.models import ClinicProfile
 from core.pagination import StandardPagination
+from doctors.search_views import filter_clinics_by_search
+from doctors.views import BaseProfileViewView
+from services.models import Service
 from .serializers import ClinicListSerializer, ClinicDetailSerializer
 
 
@@ -41,14 +44,16 @@ class ClinicListView(ListAPIView):
             ClinicProfile.objects
             .filter(user__is_active=True, is_published=True)
             .select_related('user')
-            .order_by('-rating', '-reviews_count')
+            # id — уникальный хвост сортировки, см. DoctorListView: без него
+            # «Показать ещё» дублировало и пропускало клиники.
+            .order_by('-rating', '-reviews_count', 'id')
         )
 
         params = self.request.query_params
 
         search = params.get('search', '').strip()
         if search:
-            qs = qs.filter(name__icontains=search)
+            qs = filter_clinics_by_search(qs, search)
 
         # city=all — явно «все города»: без фильтра и без подстановки города,
         # определённого middleware по IP. Без параметра city — как раньше.
@@ -68,11 +73,13 @@ class ClinicListView(ListAPIView):
         specialization_values = list(dict.fromkeys(specialization_values))
 
         if specialization_values:
+            # Точное совпадение названия из справочника, а не подстрока —
+            # см. DoctorListView.
             specialization_filter = Q()
             for value in specialization_values:
                 specialization_filter |= (
-                    Q(primary_specializations__name__icontains=value)
-                    | Q(narrow_specializations__name__icontains=value)
+                    Q(primary_specializations__name__iexact=value)
+                    | Q(narrow_specializations__name__iexact=value)
                 )
             qs = qs.filter(specialization_filter).distinct()
 
@@ -97,25 +104,29 @@ class ClinicListView(ListAPIView):
             except ValueError:
                 pass
 
-        has_joined_services = False
+        # Оба края диапазона — условия на одну и ту же активную услугу. Раньше
+        # это были два отдельных .filter() по связи «многие»: клиника с услугами
+        # за 100 и за 10 000 проходила фильтр 500–1000, хотя услуги в нём нет;
+        # учитывались и отключённые услуги.
+        price_filter = {}
         min_price = params.get('min_price')
         if min_price:
             try:
-                qs = qs.filter(services__price__gte=float(min_price))
-                has_joined_services = True
+                price_filter['price__gte'] = float(min_price)
             except ValueError:
                 pass
 
         max_price = params.get('max_price')
         if max_price:
             try:
-                qs = qs.filter(services__price__lte=float(max_price))
-                has_joined_services = True
+                price_filter['price__lte'] = float(max_price)
             except ValueError:
                 pass
 
-        if has_joined_services:
-            qs = qs.distinct()
+        if price_filter:
+            qs = qs.filter(pk__in=Service.objects.filter(
+                is_active=True, clinic__isnull=False, **price_filter,
+            ).values('clinic_id'))
 
         return qs
 
@@ -133,6 +144,15 @@ class ClinicDetailView(RetrieveAPIView):
             .filter(user__is_active=True, is_published=True),
             user__id=self.kwargs['pk'],
         )
-        ClinicProfile.objects.filter(pk=obj.pk).update(profile_views=F('profile_views') + 1)
-        obj.profile_views += 1
+        # Просмотр засчитывается не здесь, а в ClinicProfileViewView — см.
+        # DoctorDetailView.
         return obj
+
+
+@extend_schema(
+    request=None, responses={204: None},
+    tags=['Clinics Catalog'], summary='Засчитать просмотр страницы клиники',
+)
+class ClinicProfileViewView(BaseProfileViewView):
+    profile_kind = 'clinic'
+    model = ClinicProfile

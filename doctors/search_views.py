@@ -27,6 +27,44 @@ CITY_PARAMETER = OpenApiParameter(
 )
 
 
+# Сколько слов запроса учитываем: на каждое слово — свой подзапрос, слишком
+# длинная строка иначе раздувала бы SQL.
+MAX_SEARCH_WORDS = 5
+
+
+def filter_doctors_by_search(qs, query):
+    """Поиск врачей по ФИО и специализации. Запрос делится на слова, и каждое
+    слово должно найтись (И) хотя бы в одном из полей (ИЛИ): фамилии, имени,
+    отчестве или названии специализации. Раньше вся строка целиком сравнивалась
+    с каждым полем по отдельности, и «Иванов Иван» не находил никого, а по
+    отчеству не искали вовсе.
+
+    Специализации проверяются подзапросом, а не JOIN'ом: иначе на каждое слово
+    добавлялись бы свои JOIN'ы по M2M и строки размножались."""
+    for word in query.split()[:MAX_SEARCH_WORDS]:
+        spec_match = DoctorProfile.objects.filter(
+            Q(primary_specializations__name__icontains=word)
+            | Q(narrow_specializations__name__icontains=word)
+        ).values('pk')
+        qs = qs.filter(
+            Q(user__last_name__icontains=word)
+            | Q(user__first_name__icontains=word)
+            | Q(user__patronymic__icontains=word)
+            | Q(pk__in=spec_match)
+        )
+    return qs
+
+
+def filter_clinics_by_search(qs, query):
+    """Поиск клиник по названию и по специализациям: раньше искали только по
+    названию, и запрос «Кардиология» не находил ни одной клиники."""
+    spec_match = ClinicProfile.objects.filter(
+        Q(primary_specializations__name__icontains=query)
+        | Q(narrow_specializations__name__icontains=query)
+    ).values('pk')
+    return qs.filter(Q(name__icontains=query) | Q(pk__in=spec_match))
+
+
 def _get_city(request):
     """Город из ?city= — тот, что выбрал пользователь. Город по IP здесь не
     подставляем: без параметра поиск, как и раньше, идёт по всем городам."""
@@ -76,19 +114,13 @@ class GlobalSearchSuggestView(APIView):
         doctors = DoctorProfile.objects.filter(
             user__is_active=True,
             is_published=True
-        ).select_related('user').filter(
-            Q(user__first_name__icontains=query)
-            | Q(user__last_name__icontains=query)
-            | Q(primary_specializations__name__icontains=query)
-            | Q(narrow_specializations__name__icontains=query)
-        ).distinct()
+        ).select_related('user')
+        doctors = filter_doctors_by_search(doctors, query)
 
-        # Search clinics
-        clinics = ClinicProfile.objects.filter(
-            user__is_active=True, 
-            is_published=True
-        ).filter(
-            name__icontains=query
+        # Search clinics (по названию и специализациям)
+        clinics = filter_clinics_by_search(
+            ClinicProfile.objects.filter(user__is_active=True, is_published=True),
+            query,
         )
 
         # Search services (услуги скрытых клиник не показываем)
@@ -140,19 +172,13 @@ class GlobalSearchView(APIView):
         doctors = DoctorProfile.objects.filter(
             user__is_active=True,
             is_published=True
-        ).select_related('user').filter(
-            Q(user__first_name__icontains=query)
-            | Q(user__last_name__icontains=query)
-            | Q(primary_specializations__name__icontains=query)
-            | Q(narrow_specializations__name__icontains=query)
-        ).distinct()
+        ).select_related('user')
+        doctors = filter_doctors_by_search(doctors, query)
 
-        # Search clinics
-        clinics = ClinicProfile.objects.filter(
-            user__is_active=True, 
-            is_published=True
-        ).filter(
-            name__icontains=query
+        # Search clinics (по названию и специализациям)
+        clinics = filter_clinics_by_search(
+            ClinicProfile.objects.filter(user__is_active=True, is_published=True),
+            query,
         )
 
         # Search services (услуги скрытых клиник не показываем)

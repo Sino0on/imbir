@@ -205,6 +205,7 @@ class PatientAppointmentSerializer(serializers.ModelSerializer):
 
 from users.models import DoctorProfile, ClinicProfile
 from services.models import Service
+from services.views import VISIBLE_CLINIC_Q
 
 _FavoriteTargetClinicSerializer = inline_serializer('FavoriteTargetClinic', fields={
     'id': serializers.IntegerField(),
@@ -271,9 +272,33 @@ class FavoriteServiceSerializer(serializers.ModelSerializer):
 
 
 class FavoritesListSerializer(serializers.Serializer):
-    doctors = FavoriteDoctorSerializer(source='favorite_doctors', many=True)
-    clinics = FavoriteClinicSerializer(source='favorite_clinics', many=True)
-    services = FavoriteServiceSerializer(source='favorite_services', many=True)
+    # Только то, что сейчас видно в каталоге: снятые с публикации или
+    # заблокированные врачи и клиники, отключённые услуги и услуги скрытых
+    # клиник раньше оставались в избранном и вели на 404.
+    doctors = serializers.SerializerMethodField()
+    clinics = serializers.SerializerMethodField()
+    services = serializers.SerializerMethodField()
+
+    @extend_schema_field(FavoriteDoctorSerializer(many=True))
+    def get_doctors(self, obj):
+        doctors = obj.favorite_doctors.filter(
+            is_published=True, user__is_active=True,
+        ).select_related('user')
+        return FavoriteDoctorSerializer(doctors, many=True, context=self.context).data
+
+    @extend_schema_field(FavoriteClinicSerializer(many=True))
+    def get_clinics(self, obj):
+        clinics = obj.favorite_clinics.filter(
+            is_published=True, user__is_active=True,
+        ).select_related('user')
+        return FavoriteClinicSerializer(clinics, many=True, context=self.context).data
+
+    @extend_schema_field(FavoriteServiceSerializer(many=True))
+    def get_services(self, obj):
+        services = obj.favorite_services.filter(
+            VISIBLE_CLINIC_Q, is_active=True,
+        ).select_related('clinic')
+        return FavoriteServiceSerializer(services, many=True, context=self.context).data
 
 
 class FavoriteActionSerializer(serializers.Serializer):
