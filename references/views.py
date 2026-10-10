@@ -238,6 +238,8 @@ _USER_STATUS_RESPONSE = inline_serializer('UserAccountStatusResponse', fields={
         'reviews_count': serializers.IntegerField(),
         'average_rating': serializers.FloatField(allow_null=True),
         'percent': serializers.FloatField(allow_null=True),
+        'positive_percent': serializers.FloatField(allow_null=True),
+        'negative_percent': serializers.FloatField(allow_null=True),
         'status': AccountStatusSerializer(allow_null=True),
     }),
 })
@@ -252,7 +254,9 @@ _USER_STATUS_RESPONSE = inline_serializer('UserAccountStatusResponse', fields={
         'справочника AccountStatus.percent. Например, средний рейтинг 5.0 → 100% → '
         'статус с percent=90 ("Витамин С" в текущем справочнике), а 25% → статус '
         'с percent=10 ("Острый Скальпель"). Если у пользователя нет ни одного '
-        'отзыва — status будет null.'
+        'отзыва — status будет null. Отдельно positive_percent и negative_percent — '
+        'доля отзывов на 4–5★ и на 1–2★ среди всех отзывов пользователя (3★ — '
+        'нейтральные и не входят ни в одну из долей).'
     ),
 )
 class UserAccountStatusView(APIView):
@@ -263,6 +267,8 @@ class UserAccountStatusView(APIView):
 
         agg = Review.objects.filter(author_id=user_id).aggregate(
             avg_rating=Avg('rating'), count=Count('id'),
+            positive=Count('id', filter=Q(rating__gte=4)),
+            negative=Count('id', filter=Q(rating__lte=2)),
         )
         reviews_count = agg['count'] or 0
         avg_rating = agg['avg_rating']
@@ -273,6 +279,8 @@ class UserAccountStatusView(APIView):
                 'reviews_count': 0,
                 'average_rating': None,
                 'percent': None,
+                'positive_percent': None,
+                'negative_percent': None,
                 'status': None,
             }})
 
@@ -284,6 +292,11 @@ class UserAccountStatusView(APIView):
             'reviews_count': reviews_count,
             'average_rating': round(float(avg_rating), 2),
             'percent': percent,
+            # percent — средний балл в процентах, по нему выбирается статус.
+            # Подписям «Положительных/Отрицательных отзывов» нужна доля самих
+            # отзывов, а не средний балл.
+            'positive_percent': round(agg['positive'] * 100 / reviews_count, 2),
+            'negative_percent': round(agg['negative'] * 100 / reviews_count, 2),
             'status': (
                 AccountStatusSerializer(account_status, context={'request': request}).data
                 if account_status else None

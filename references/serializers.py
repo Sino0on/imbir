@@ -24,6 +24,9 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
             'facebook_url', 'instagram_url', 'twitter_url', 'linkedin_url',
             'contact_email', 'contact_phone', 'address',
             'terms_text', 'privacy_policy_text',
+            # Дата последнего сохранения настроек — фронт показывает её как
+            # «Последнее обновление» над юридическими текстами из админки.
+            'updated_at',
         )
 
 

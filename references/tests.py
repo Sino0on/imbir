@@ -3,7 +3,8 @@ from django.core.management import call_command
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from references.models import Specialization
+from references.models import SiteSettings, Specialization
+from reviews.models import Review
 from users.models import ClinicProfile, DoctorProfile
 
 
@@ -57,3 +58,68 @@ class RegistrationSpecializationSeedTests(TestCase):
         self.assertEqual(Specialization.objects.get(name='Кардиология').id, existing.id)
         self.assertEqual(Specialization.objects.get(name='фиброскан').id, fibroscan.id)
         self.assertFalse(Specialization.objects.filter(name='Кардиолог').exists())
+
+
+class UserAccountStatusPercentTests(TestCase):
+    """Доля положительных/отрицательных отзывов считается по самим отзывам,
+    а не выводится из среднего балла."""
+
+    def setUp(self):
+        self.client = APIClient()
+        User = get_user_model()
+        self.author = User.objects.create_user(
+            email='status-author@example.com', password='Testpassword123!', role='patient',
+        )
+        self.doctors = []
+        for i in range(3):
+            user = User.objects.create_user(
+                email=f'status-doctor{i}@example.com', password='Testpassword123!', role='doctor',
+            )
+            self.doctors.append(DoctorProfile.objects.create(user=user, is_published=True))
+
+    def leave(self, *ratings):
+        for doctor, rating in zip(self.doctors, ratings):
+            Review.objects.create(
+                author=self.author, target_type='doctor', doctor=doctor, rating=rating,
+            )
+
+    def data(self):
+        response = self.client.get(f'/api/references/user-status/{self.author.id}/')
+        self.assertEqual(response.status_code, 200)
+        return response.data['data']
+
+    def test_only_four_star_reviews_have_no_negative_share(self):
+        self.leave(4, 4)
+        data = self.data()
+        self.assertEqual(data['percent'], 80.0)
+        self.assertEqual(data['positive_percent'], 100.0)
+        self.assertEqual(data['negative_percent'], 0.0)
+
+    def test_single_one_star_review_is_fully_negative(self):
+        self.leave(1)
+        data = self.data()
+        self.assertEqual(data['positive_percent'], 0.0)
+        self.assertEqual(data['negative_percent'], 100.0)
+
+    def test_mixed_reviews_split_by_count_and_neutral_excluded(self):
+        self.leave(5, 1, 3)
+        data = self.data()
+        self.assertEqual(data['positive_percent'], 33.33)
+        self.assertEqual(data['negative_percent'], 33.33)
+
+    def test_no_reviews_returns_nulls(self):
+        data = self.data()
+        self.assertIsNone(data['percent'])
+        self.assertIsNone(data['positive_percent'])
+        self.assertIsNone(data['negative_percent'])
+
+
+class SiteSettingsUpdatedAtTests(TestCase):
+    def test_site_settings_expose_updated_at(self):
+        SiteSettings.load().save()
+        response = APIClient().get('/api/references/site-settings/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('updated_at', response.data['data'])
+        self.assertTrue(response.data['data']['updated_at'])
+        # Старые поля остаются на месте — задеплоенный фронт их читает.
+        self.assertIn('terms_text', response.data['data'])
