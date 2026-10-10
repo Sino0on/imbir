@@ -53,7 +53,7 @@ class LiveKitTokenView(APIView):
             raise ValidationError({'consultation_id': 'Обязательный параметр.'})
 
         appointment = get_object_or_404(
-            Appointment.objects.select_related('patient', 'doctor__user'),
+            Appointment.objects.select_related('patient', 'doctor__user', 'service'),
             pk=consultation_id,
         )
         data = services.generate_token_for_participant(appointment, request.user)

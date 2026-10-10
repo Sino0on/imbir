@@ -139,15 +139,51 @@ def handle_participant_left(event) -> None:
         appointment.patient_joined = False
         update_fields.append('patient_joined')
 
+    closed = appointment.consultation_status in (
+        Appointment.ConsultationStatus.FINISHED,
+        Appointment.ConsultationStatus.CANCELLED,
+    )
+    both_left = not appointment.doctor_joined and not appointment.patient_joined
+
+    # Завершаем, только если консультация действительно состоялась (оба
+    # участника были в комнате — started_at выставлен) и комната опустела.
+    # Иначе единственный подключившийся, закрыв или перезагрузив вкладку,
+    # навсегда завершал консультацию, в которую второй так и не попал.
+    if both_left and appointment.started_at is not None and not closed:
+        if update_fields:
+            appointment.save(update_fields=update_fields + ['updated_at'])
+        finish_consultation(appointment)
+        return
+
+    if not closed:
+        # В комнате кто-то остался — ждём второго; никого — как до начала.
+        next_status = (
+            Appointment.ConsultationStatus.CREATED if both_left
+            else Appointment.ConsultationStatus.WAITING
+        )
+        if appointment.consultation_status != next_status:
+            appointment.consultation_status = next_status
+            update_fields.append('consultation_status')
+        if both_left:
+            _reset_recordings(appointment, update_fields)
+
     if update_fields:
         appointment.save(update_fields=update_fields + ['updated_at'])
 
-    both_left = not appointment.doctor_joined and not appointment.patient_joined
-    if both_left and appointment.consultation_status not in (
-        Appointment.ConsultationStatus.FINISHED,
-        Appointment.ConsultationStatus.CANCELLED,
-    ):
-        finish_consultation(appointment)
+
+def _reset_recordings(appointment: Appointment, update_fields: list) -> None:
+    """Консультация не состоялась, комната пуста — забываем запись ожидания.
+
+    Иначе при повторном входе handle_track_published считает дорожку роли уже
+    записываемой (по старому egress_id) и новую запись не запускает: резюме
+    строилось бы по записи того, как участник ждал один. Саму дорожку ожидания
+    LiveKit останавливает вместе с уходом участника.
+    """
+    for role in (token_service.DOCTOR_ROLE, token_service.PATIENT_ROLE):
+        for field in (f'{role}_egress_id', f'{role}_egress_status', f'{role}_recording_url'):
+            if getattr(appointment, field):
+                setattr(appointment, field, '')
+                update_fields.append(field)
 
 
 def handle_track_published(event) -> None:
@@ -196,7 +232,30 @@ def handle_room_finished(event) -> None:
     if appointment is None:
         return
     logger.info('LiveKit: получено событие room_finished consultation=%s', appointment.id)
-    finish_consultation(appointment)
+
+    if appointment.started_at is not None:
+        finish_consultation(appointment)
+        return
+
+    # Комната закрылась (LiveKit закрывает пустую по таймауту), а оба участника
+    # так ни разу и не встретились — консультация не состоялась. Не завершаем
+    # её навсегда, а возвращаем в исходное состояние: подключиться можно снова.
+    if appointment.consultation_status in (
+        Appointment.ConsultationStatus.FINISHED,
+        Appointment.ConsultationStatus.CANCELLED,
+    ):
+        return
+    update_fields = []
+    if appointment.consultation_status != Appointment.ConsultationStatus.CREATED:
+        appointment.consultation_status = Appointment.ConsultationStatus.CREATED
+        update_fields.append('consultation_status')
+    for flag in ('doctor_joined', 'patient_joined'):
+        if getattr(appointment, flag):
+            setattr(appointment, flag, False)
+            update_fields.append(flag)
+    _reset_recordings(appointment, update_fields)
+    if update_fields:
+        appointment.save(update_fields=update_fields + ['updated_at'])
 
 
 def finish_consultation(appointment: Appointment) -> None:
@@ -208,6 +267,9 @@ def finish_consultation(appointment: Appointment) -> None:
     appointment.save(update_fields=['consultation_status', 'ended_at', 'updated_at'])
     logger.info('LiveKit: консультация завершена consultation=%s', appointment.id)
 
+    if appointment.started_at is not None:
+        complete_appointment(appointment)
+
     for role in (token_service.DOCTOR_ROLE, token_service.PATIENT_ROLE):
         egress_id = getattr(appointment, f'{role}_egress_id')
         egress_status = getattr(appointment, f'{role}_egress_status')
@@ -215,6 +277,35 @@ def finish_consultation(appointment: Appointment) -> None:
             stop_track_recording(appointment, role)
 
     dispatch_summary_task(appointment)
+
+
+def complete_appointment(appointment: Appointment) -> None:
+    """Состоявшаяся видео-консультация = состоявшийся приём: переводим запись в
+    COMPLETED и зовём пациента оставить отзыв. Раньше конец видео статус записи
+    не трогал — у пациента навсегда висела кнопка «Подключиться», а отзыв
+    (только к завершённому приёму) оставить было нельзя.
+
+    Системное обновление, а не смена статуса через AppointmentStatusSerializer;
+    условный UPDATE — чтобы не перетереть отмену, сделанную параллельно.
+    """
+    from notifications.models import Notification
+    from notifications.utils import appointment_payload, notify
+
+    updated = Appointment.objects.filter(
+        pk=appointment.pk,
+        status__in=(Appointment.Status.PENDING, Appointment.Status.CONFIRMED),
+    ).update(status=Appointment.Status.COMPLETED, updated_at=timezone.now())
+    if not updated:
+        return
+    appointment.status = Appointment.Status.COMPLETED
+    logger.info('LiveKit: запись переведена в COMPLETED consultation=%s', appointment.id)
+
+    notify(
+        appointment.patient, Notification.Type.APPOINTMENT_COMPLETED,
+        'Приём завершён',
+        'Приём завершён. Будем рады, если оставите отзыв о враче.',
+        appointment_payload(appointment),
+    )
 
 
 # --- Запись (Egress) ---------------------------------------------------------

@@ -61,14 +61,25 @@ def ensure_can_join(appointment: Appointment, user) -> str:
     window = timedelta(minutes=settings.LIVEKIT_JOIN_WINDOW_MINUTES)
     now = timezone.now()
 
-    too_early = now < scheduled_at - window
-    too_late = now > scheduled_at + window
+    # Опоздавшего пускаем до конца приёма по расписанию (начало + длительность
+    # услуги), если она дольше окна подключения.
+    late_window = window
+    duration = appointment.service.duration if appointment.service_id else None
+    if duration:
+        late_window = max(window, timedelta(minutes=duration))
 
-    # Если консультация уже идёт (ACTIVE), не отсекаем по опозданию — участник
-    # мог переподключиться (обрыв связи и т.п.).
+    too_early = now < scheduled_at - window
+    too_late = now > scheduled_at + late_window
+
+    # Если консультация уже идёт (ACTIVE) или в комнате ждут второго участника
+    # (WAITING), не отсекаем по опозданию — участник мог переподключиться
+    # (обрыв связи и т.п.), а опоздавший — войти к тому, кто его ждёт.
     if too_early:
         raise ValidationError('Консультация ещё недоступна: слишком рано для подключения.')
-    if too_late and appointment.consultation_status != Appointment.ConsultationStatus.ACTIVE:
+    if too_late and appointment.consultation_status not in (
+        Appointment.ConsultationStatus.ACTIVE,
+        Appointment.ConsultationStatus.WAITING,
+    ):
         raise ValidationError('Время подключения к консультации истекло.')
 
     return role

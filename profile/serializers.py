@@ -81,10 +81,13 @@ class PatientAppointmentSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'date', 'time', 'status', 'notes',
             'is_online', 'google_meet_link',
+            # Статус видео-консультации: по finished фронт прячет «Подключиться».
+            'consultation_status',
             'diagnosis', 'recommendations',
             'doctor', 'clinic', 'service',
             'can_review', 'is_past', 'created_at',
         )
+        read_only_fields = ('consultation_status',)
 
     def get_doctor(self, obj):
         if not obj.doctor:
