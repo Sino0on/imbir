@@ -1,6 +1,11 @@
+import json
+
 from rest_framework import serializers
+from rest_framework.relations import MANY_RELATION_KWARGS, ManyRelatedField
+from rest_framework.utils import html
 
 from appointments.models import Appointment
+from appointments.utils import WEEKDAYS
 from reviews.models import Review
 from services.models import Service
 from references.models import Specialization
@@ -22,7 +27,106 @@ _CLINIC_DOCTOR_PROFILE_FIELDS = (
     'education', 'additional_education',
     # Документы
     'license_number',
+    # «О себе» — текст публичной страницы врача (форма клиники его заполняет)
+    'about',
 )
+
+
+# ── Multipart ───────────────────────────────────────────────────────────────
+# Когда вместе с данными уходит файл (фото врача, логотип, фото процедуры),
+# фронт шлёт multipart, а там список приходит одной JSON-строкой ('["ru","en"]',
+# '[]'). Стандартные ListField/ManyRelatedField берут getlist() и получали
+# список из одной строки: языки и образование сохранялись как ['["ru","en"]'],
+# а пустой список ('[]' или отсутствие значений) вообще не доходил до поля —
+# «очистить» молча не срабатывало. Повторяющиеся ключи (doctor_ids=1&doctor_ids=2)
+# по-прежнему принимаются — так шлёт текущий фронт.
+
+def _json_list_from_form(dictionary, field_name):
+    """Список из multipart-поля, переданного одной JSON-строкой; None, если это не он."""
+    if not html.is_html_input(dictionary) or field_name not in dictionary:
+        return None
+    values = dictionary.getlist(field_name)
+    if len(values) != 1 or not isinstance(values[0], str) or not values[0].strip().startswith('['):
+        return None
+    try:
+        parsed = json.loads(values[0])
+    except ValueError:
+        return None
+    return parsed if isinstance(parsed, list) else None
+
+
+class FormListField(serializers.ListField):
+    """ListField, который в multipart понимает JSON-строку и пустой список."""
+
+    def get_value(self, dictionary):
+        parsed = _json_list_from_form(dictionary, self.field_name)
+        if parsed is not None:
+            return parsed
+        return super().get_value(dictionary)
+
+
+class _FormManyRelatedField(ManyRelatedField):
+    def get_value(self, dictionary):
+        parsed = _json_list_from_form(dictionary, self.field_name)
+        if parsed is not None:
+            return parsed
+        return super().get_value(dictionary)
+
+
+class FormPrimaryKeyRelatedField(serializers.PrimaryKeyRelatedField):
+    """PrimaryKeyRelatedField(many=True), который в multipart понимает '[1,9]' и '[]'."""
+
+    @classmethod
+    def many_init(cls, *args, **kwargs):
+        list_kwargs = {'child_relation': cls(*args, **kwargs)}
+        for key in kwargs:
+            if key in MANY_RELATION_KWARGS:
+                list_kwargs[key] = kwargs[key]
+        return _FormManyRelatedField(**list_kwargs)
+
+
+# ── График врача по умолчанию ───────────────────────────────────────────────
+# Врач, которого заводит клиника, сразу опубликован. С пустым графиком у него
+# нет ни одного слота и любая запись падает, а поменять график может только
+# сам врач. Поэтому даём рабочий график сразу: график клиники, если он задан,
+# иначе пн–пт 09:00–18:00. Перерыв — как у клиники.
+_DEFAULT_DOCTOR_DAY = {'enabled': True, 'from': '09:00', 'to': '18:00'}
+_DEFAULT_DOCTOR_WORKDAYS = WEEKDAYS[:5]
+
+
+def _working_day(day):
+    if not isinstance(day, dict) or not day.get('enabled', True):
+        return None
+    start = day.get('from') or day.get('start')
+    end = day.get('to') or day.get('end')
+    if not start or not end:
+        return None
+    return {'enabled': True, 'from': start, 'to': end}
+
+
+def default_doctor_schedule(clinic):
+    clinic_schedule = clinic.schedule if isinstance(clinic.schedule, dict) else {}
+    days = {day: _working_day(clinic_schedule.get(day)) for day in WEEKDAYS}
+    if any(days.values()):
+        return {
+            day: value or {'enabled': False, 'from': None, 'to': None}
+            for day, value in days.items()
+        }
+    return {
+        day: dict(_DEFAULT_DOCTOR_DAY) if day in _DEFAULT_DOCTOR_WORKDAYS
+        else {'enabled': False, 'from': None, 'to': None}
+        for day in WEEKDAYS
+    }
+
+
+def default_doctor_lunch_break(clinic):
+    lunch = clinic.lunch_break
+    if not isinstance(lunch, dict):
+        return {}
+    # Ключи — как в doctor_lunch_break: from/to или старые start/end.
+    start = lunch.get('from') or lunch.get('start')
+    end = lunch.get('to') or lunch.get('end')
+    return {'from': start, 'to': end} if start and end else {}
 
 
 class ClinicBranchUpdateSerializer(serializers.ModelSerializer):
@@ -133,12 +237,12 @@ class ClinicOwnProfileSerializer(serializers.ModelSerializer):
     photos = serializers.SerializerMethodField()
     documents = serializers.SerializerMethodField()
     primary_specializations = SpecializationSerializer(many=True, read_only=True)
-    primary_specialization_ids = serializers.PrimaryKeyRelatedField(
+    primary_specialization_ids = FormPrimaryKeyRelatedField(
         source='primary_specializations', many=True, write_only=True, required=False, default=list,
         queryset=Specialization.objects.all(),
     )
     narrow_specializations = SpecializationSerializer(many=True, read_only=True)
-    narrow_specialization_ids = serializers.PrimaryKeyRelatedField(
+    narrow_specialization_ids = FormPrimaryKeyRelatedField(
         source='narrow_specializations', many=True, write_only=True, required=False, default=list,
         queryset=Specialization.objects.all(),
     )
@@ -256,8 +360,10 @@ class ClinicDoctorSerializer(serializers.ModelSerializer):
 
 class ClinicDoctorProfileSerializer(serializers.ModelSerializer):
     """Полная карточка уже прикреплённого к клинике врача — просмотр (GET) и правка
-    (PATCH) полей, которые заполняет клиника при найме. Логин (email/пароль) и график
-    приёма сюда не входят — это меняет только сам врач через /api/doctor/profile/."""
+    (PATCH) полей, которые заполняет клиника при найме. Логин (email/пароль), ФИО и
+    телефон сюда не входят — это меняет только сам врач через /api/doctor/profile/.
+    График (schedule/lunch_break) клиника может поправить: у заведённого ею врача
+    он изначально проставлен по умолчанию (см. default_doctor_schedule)."""
     id = serializers.IntegerField(source='user.id', read_only=True)
     first_name = serializers.CharField(source='user.first_name', read_only=True)
     last_name = serializers.CharField(source='user.last_name', read_only=True)
@@ -268,12 +374,12 @@ class ClinicDoctorProfileSerializer(serializers.ModelSerializer):
     photo = HybridImageField(required=False, allow_null=True)
 
     primary_specializations = SpecializationSerializer(many=True, read_only=True)
-    primary_specialization_ids = serializers.PrimaryKeyRelatedField(
+    primary_specialization_ids = FormPrimaryKeyRelatedField(
         source='primary_specializations', many=True, write_only=True, required=False,
         queryset=Specialization.objects.all(),
     )
     narrow_specializations = SpecializationSerializer(many=True, read_only=True)
-    narrow_specialization_ids = serializers.PrimaryKeyRelatedField(
+    narrow_specialization_ids = FormPrimaryKeyRelatedField(
         source='narrow_specializations', many=True, write_only=True, required=False,
         queryset=Specialization.objects.all(),
     )
@@ -283,8 +389,18 @@ class ClinicDoctorProfileSerializer(serializers.ModelSerializer):
         model = DoctorProfile
         fields = (
             'id', 'first_name', 'last_name', 'patronymic', 'full_name', 'email', 'phone',
-        ) + _CLINIC_DOCTOR_PROFILE_FIELDS + ('documents',)
+        ) + _CLINIC_DOCTOR_PROFILE_FIELDS + ('schedule', 'lunch_break', 'documents')
         read_only_fields = ('id', 'first_name', 'last_name', 'patronymic', 'full_name', 'email', 'phone')
+
+    def validate_schedule(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('График должен быть объектом по дням недели.')
+        return value
+
+    def validate_lunch_break(self, value):
+        if value is not None and not isinstance(value, dict):
+            raise serializers.ValidationError('Перерыв должен быть объектом {from, to}.')
+        return value
 
     def get_documents(self, obj):
         request = self.context.get('request')
@@ -330,7 +446,7 @@ class ClinicServiceReadSerializer(serializers.ModelSerializer):
 
 
 class ClinicServiceWriteSerializer(serializers.ModelSerializer):
-    doctor_ids = serializers.ListField(
+    doctor_ids = FormListField(
         child=serializers.IntegerField(),
         required=False,
         write_only=True
@@ -457,15 +573,15 @@ class ClinicDoctorCreateSerializer(serializers.Serializer):
     gender = serializers.CharField(required=False, allow_blank=True, default='')
     birth_date = serializers.DateField(required=False, allow_null=True, default=None)
     city = serializers.CharField(required=False, allow_blank=True, default='')
-    languages = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+    languages = FormListField(child=serializers.CharField(), required=False, default=list)
     photo = HybridImageField(required=False, allow_null=True)
 
     # Профессиональные данные
-    primary_specialization_ids = serializers.PrimaryKeyRelatedField(
+    primary_specialization_ids = FormPrimaryKeyRelatedField(
         source='primary_specializations', many=True, required=False, default=list,
         queryset=Specialization.objects.all(),
     )
-    narrow_specialization_ids = serializers.PrimaryKeyRelatedField(
+    narrow_specialization_ids = FormPrimaryKeyRelatedField(
         source='narrow_specializations', many=True, required=False, default=list,
         queryset=Specialization.objects.all(),
     )
@@ -473,10 +589,11 @@ class ClinicDoctorCreateSerializer(serializers.Serializer):
     position = serializers.CharField(required=False, allow_blank=True, default='')
     qualification_category = serializers.CharField(required=False, allow_blank=True, default='')
     academic_degree = serializers.CharField(required=False, allow_blank=True, default='')
+    about = serializers.CharField(required=False, allow_blank=True, default='')
 
     # Образование
-    education = serializers.ListField(required=False, default=list)
-    additional_education = serializers.ListField(required=False, default=list)
+    education = FormListField(required=False, default=list)
+    additional_education = FormListField(required=False, default=list)
 
     # Документы
     license_number = serializers.CharField(required=False, allow_blank=True, default='')
@@ -520,9 +637,13 @@ class ClinicDoctorCreateSerializer(serializers.Serializer):
             position=validated_data.get('position', ''),
             qualification_category=validated_data.get('qualification_category', ''),
             academic_degree=validated_data.get('academic_degree', ''),
+            about=validated_data.get('about', ''),
             education=validated_data.get('education') or [],
             additional_education=validated_data.get('additional_education') or [],
             license_number=validated_data.get('license_number', ''),
+            # Опубликованный врач с пустым графиком не принимает записи вовсе.
+            schedule=default_doctor_schedule(clinic),
+            lunch_break=default_doctor_lunch_break(clinic),
         )
         doctor_profile.primary_specializations.set(validated_data.get('primary_specializations') or [])
         doctor_profile.narrow_specializations.set(validated_data.get('narrow_specializations') or [])
