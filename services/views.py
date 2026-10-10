@@ -7,6 +7,14 @@ from .models import Service
 from .serializers import ServiceListSerializer, ServiceDetailSerializer
 
 
+# Услуга клиники видна, только пока видна сама клиника (опубликована, аккаунт
+# активен) — иначе из каталога и поиска можно было попасть на услугу клиники,
+# страница которой отдаёт 404. Частные услуги врача (без клиники) — как раньше.
+VISIBLE_CLINIC_Q = Q(clinic__isnull=True) | Q(
+    clinic__is_published=True, clinic__user__is_active=True,
+)
+
+
 class ServiceListView(ListAPIView):
     permission_classes = (AllowAny,)
     serializer_class = ServiceListSerializer
@@ -15,7 +23,7 @@ class ServiceListView(ListAPIView):
     def get_queryset(self):
         qs = (
             Service.objects
-            .filter(is_active=True)
+            .filter(VISIBLE_CLINIC_Q, is_active=True)
             .select_related('clinic', 'branch')
             .prefetch_related('doctors__user')
         )
@@ -90,4 +98,4 @@ class ServiceListView(ListAPIView):
 class ServiceDetailView(RetrieveAPIView):
     permission_classes = (AllowAny,)
     serializer_class = ServiceDetailSerializer
-    queryset = Service.objects.filter(is_active=True).select_related('clinic', 'branch').prefetch_related('doctors__user')
+    queryset = Service.objects.filter(VISIBLE_CLINIC_Q, is_active=True).select_related('clinic', 'branch').prefetch_related('doctors__user')

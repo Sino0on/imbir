@@ -78,8 +78,18 @@ class ClinicDetailSerializer(serializers.ModelSerializer):
 
     def get_doctors(self, obj):
         request = self.context.get('request')
-        links = obj.doctor_links.filter(is_active=True).select_related(
-            'doctor', 'doctor__user',
+        # Только опубликованные врачи с активным аккаунтом: остальных нет ни в
+        # каталоге, ни на их собственной странице (там 404), и карточка вела в
+        # никуда. Порядок — как в каталоге врачей, по рейтингу.
+        links = (
+            obj.doctor_links
+            .filter(
+                is_active=True,
+                doctor__is_published=True,
+                doctor__user__is_active=True,
+            )
+            .select_related('doctor', 'doctor__user')
+            .order_by('-doctor__rating', '-doctor__reviews_count', 'id')
         )
         result = []
         for link in links:
@@ -97,19 +107,30 @@ class ClinicDetailSerializer(serializers.ModelSerializer):
                 'photo': photo_url,
                 'specialty': spec.name if spec else '',
                 'rating': float(doc.rating),
+                # Нужны карточке врача на странице клиники (оценка и онлайн-приём).
+                'reviews_count': doc.reviews_count,
                 'experience_years': doc.experience_years,
+                'is_online_available': doc.is_online_available,
             })
         return result
 
     def get_services(self, obj):
+        request = self.context.get('request')
         services = obj.services.filter(is_active=True)
         result = []
         for svc in services:
+            photo_url = None
+            if svc.photo:
+                photo_url = (
+                    request.build_absolute_uri(svc.photo.url)
+                    if request else svc.photo.url
+                )
             result.append({
                 'id': svc.id,
                 'name': svc.name,
                 'category': svc.category,
                 'price': str(svc.price) if svc.price is not None else None,
                 'duration': svc.duration,
+                'photo': photo_url,
             })
         return result

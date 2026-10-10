@@ -6,6 +6,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from users.models import DoctorProfile, ClinicProfile
 from services.models import Service
+from services.views import VISIBLE_CLINIC_Q
 
 # Import suggest serializers
 from doctors.search_serializers import (
@@ -90,9 +91,9 @@ class GlobalSearchSuggestView(APIView):
             name__icontains=query
         )
 
-        # Search services
+        # Search services (услуги скрытых клиник не показываем)
         services = Service.objects.filter(
-            is_active=True
+            VISIBLE_CLINIC_Q, is_active=True
         ).filter(
             Q(name__icontains=query)
             | Q(category__icontains=query)
@@ -154,9 +155,9 @@ class GlobalSearchView(APIView):
             name__icontains=query
         )
 
-        # Search services
+        # Search services (услуги скрытых клиник не показываем)
         services = Service.objects.filter(
-            is_active=True
+            VISIBLE_CLINIC_Q, is_active=True
         ).select_related('clinic', 'branch').prefetch_related('doctors__user').filter(
             Q(name__icontains=query)
             | Q(category__icontains=query)
