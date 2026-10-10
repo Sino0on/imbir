@@ -1,3 +1,8 @@
+from datetime import timedelta
+
+from django.conf import settings
+from django.db.models import Q
+from django.utils import timezone
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field, inline_serializer
 from appointments.models import Appointment
@@ -47,11 +52,29 @@ class PatientProfileSerializer(serializers.ModelSerializer):
         return instance
 
 
+def upcoming_cutoff():
+    """Местные (date, time), раньше которых запись уже не «предстоящая».
+
+    Запись остаётся в «Предстоящих», пока не закрылось окно подключения к
+    онлайн-консультации (LIVEKIT_JOIN_WINDOW_MINUTES после начала): иначе
+    опоздавший пациент не нашёл бы кнопку «Подключиться».
+    """
+    cutoff = timezone.localtime() - timedelta(minutes=settings.LIVEKIT_JOIN_WINDOW_MINUTES)
+    return cutoff.date(), cutoff.time().replace(microsecond=0)
+
+
+def upcoming_q():
+    """Фильтр записей, время которых ещё не прошло (см. upcoming_cutoff)."""
+    date, time = upcoming_cutoff()
+    return Q(date__gt=date) | Q(date=date, time__gte=time)
+
+
 class PatientAppointmentSerializer(serializers.ModelSerializer):
     doctor = serializers.SerializerMethodField()
     clinic = serializers.SerializerMethodField()
     service = serializers.SerializerMethodField()
     can_review = serializers.SerializerMethodField()
+    is_past = serializers.SerializerMethodField()
 
     class Meta:
         model = Appointment
@@ -60,23 +83,42 @@ class PatientAppointmentSerializer(serializers.ModelSerializer):
             'is_online', 'google_meet_link',
             'diagnosis', 'recommendations',
             'doctor', 'clinic', 'service',
-            'can_review', 'created_at',
+            'can_review', 'is_past', 'created_at',
         )
 
     def get_doctor(self, obj):
         if not obj.doctor:
             return None
+        doctor = obj.doctor
+        # Фото, специальность и рейтинг отдаём прямо в записи: раньше фронт
+        # дочитывал их через /api/doctors/{id}/, а тот для снятого с публикации
+        # врача отвечает 404 и на каждый просмотр накручивает profile_views.
+        photo = None
+        if doctor.photo:
+            request = self.context.get('request')
+            photo = request.build_absolute_uri(doctor.photo.url) if request else doctor.photo.url
+        # .all(), а не .first(): так берётся из prefetch_related, без запроса на каждую запись.
+        spec = next(iter(doctor.primary_specializations.all()), None)
         return {
-            'id': obj.doctor.user_id,
-            'full_name': obj.doctor.user.full_name,
+            'id': doctor.user_id,
+            'full_name': doctor.user.full_name,
+            'photo': photo,
+            'specialty': spec.name if spec else '',
+            'rating': str(doctor.rating),
+            'is_published': doctor.is_published,
         }
 
     def get_clinic(self, obj):
         if not obj.clinic:
             return None
+        # Адрес того места, где проходит именно эта запись: филиал услуги, если
+        # он указан, иначе основной адрес клиники (а не первой клиники врача).
+        branch = obj.service.branch if obj.service else None
+        address = (branch.address if branch else '') or obj.clinic.address
         return {
             'id': obj.clinic.user_id,
             'name': obj.clinic.name,
+            'address': address,
         }
 
     def get_service(self, obj):
@@ -89,15 +131,55 @@ class PatientAppointmentSerializer(serializers.ModelSerializer):
             'duration': obj.service.duration,
         }
 
+    def _reviewed_targets(self):
+        """(doctor_ids, clinic_ids), которым пользователь уже оставил отзыв.
+
+        Считается один раз на весь список: при many=True сериализатор записи
+        один на все элементы, а context общий.
+        """
+        cache = self.context.setdefault('_reviewed_targets', {})
+        if 'value' not in cache:
+            request = self.context.get('request')
+            user = getattr(request, 'user', None)
+            if user is None or not user.is_authenticated:
+                cache['value'] = (set(), set())
+            else:
+                rows = list(
+                    Review.objects.filter(author=user).values_list('doctor_id', 'clinic_id')
+                )
+                cache['value'] = (
+                    {doctor_id for doctor_id, _ in rows if doctor_id},
+                    {clinic_id for _, clinic_id in rows if clinic_id},
+                )
+        return cache['value']
+
     @extend_schema_field(serializers.BooleanField)
     def get_can_review(self, obj):
+        # То же правило, что в ReviewCreateSerializer: один отзыв на врача (на
+        # клинику, если запись без врача) и только опубликованному. Раньше
+        # смотрели лишь на отзыв к этой записи, и кнопка «Оставить отзыв» вела
+        # к ошибке «Вы уже оставили отзыв этому врачу».
         if obj.status != Appointment.Status.COMPLETED:
             return False
         try:
             obj.review
             return False
         except Appointment.review.RelatedObjectDoesNotExist:
+            pass
+        reviewed_doctors, reviewed_clinics = self._reviewed_targets()
+        if obj.doctor:
+            return obj.doctor.is_published and obj.doctor_id not in reviewed_doctors
+        if obj.clinic:
+            return obj.clinic.is_published and obj.clinic_id not in reviewed_clinics
+        return False
+
+    @extend_schema_field(serializers.BooleanField)
+    def get_is_past(self, obj):
+        # Вкладка «Прошедшие»: завершённые, отменённые и те, чьё время уже прошло.
+        if obj.status not in (Appointment.Status.PENDING, Appointment.Status.CONFIRMED):
             return True
+        date, time = upcoming_cutoff()
+        return (obj.date, obj.time) < (date, time)
 
 
 from users.models import DoctorProfile, ClinicProfile

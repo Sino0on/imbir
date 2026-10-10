@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from appointments.models import Appointment
 from core.pagination import StandardPagination
 from reviews.models import Review
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from users.models import PatientProfile, User, DoctorProfile, ClinicProfile
 from services.models import Service
@@ -18,6 +19,7 @@ from .serializers import (
     PatientAppointmentSerializer,
     PatientProfileSerializer,
     PatientReviewSerializer,
+    upcoming_q,
 )
 
 
@@ -43,9 +45,23 @@ class PatientAppointmentListView(ListAPIView):
         qs = (
             Appointment.objects
             .filter(patient=self.request.user)
-            .select_related('doctor__user', 'clinic', 'service', 'review')
-            .order_by('-date', '-time')
+            .select_related('doctor__user', 'clinic', 'service__branch', 'review')
+            .prefetch_related('doctor__primary_specializations')
+            .order_by('-date', '-time', '-id')
         )
+
+        # tab — вкладка «Истории записей». upcoming: ожидающие и подтверждённые,
+        # время которых ещё не прошло, ближайшая первой. past: завершённые,
+        # отменённые и те, чьё время прошло, свежие первыми. Раньше фронт брал
+        # status=upcoming, и туда попадали давно прошедшие визиты, а ближайший
+        # оказывался в самом низу. status по-прежнему принимается (и вместе с
+        # tab сужает выборку) — его шлёт уже выложенный фронт.
+        tab = self.request.query_params.get('tab', '').strip()
+        active = Q(status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED])
+        if tab == 'upcoming':
+            qs = qs.filter(active & upcoming_q()).order_by('date', 'time', 'id')
+        elif tab == 'past':
+            qs = qs.exclude(active & upcoming_q())
 
         status_filter = self.request.query_params.get('status', '').strip()
         if status_filter == 'upcoming':
