@@ -6,7 +6,7 @@ from django.core.files.storage import default_storage
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer, OpenApiParameter
 from rest_framework import serializers, status
-from rest_framework.generics import DestroyAPIView, ListCreateAPIView, RetrieveUpdateAPIView, UpdateAPIView
+from rest_framework.generics import DestroyAPIView, ListCreateAPIView, RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -78,14 +78,29 @@ class BranchListCreateView(ListCreateAPIView):
         serializer.save(clinic=clinic)
 
 
-@extend_schema(tags=['Clinic Cabinet'])
-class BranchUpdateView(UpdateAPIView):
+@extend_schema_view(
+    get=extend_schema(tags=['Clinic Cabinet'], summary='Филиал клиники'),
+    put=extend_schema(tags=['Clinic Cabinet'], summary='Изменить филиал (частично)'),
+    patch=extend_schema(tags=['Clinic Cabinet'], summary='Изменить филиал (частично)'),
+    delete=extend_schema(responses={204: None}, tags=['Clinic Cabinet'], summary='Удалить филиал'),
+)
+class BranchUpdateView(RetrieveUpdateDestroyAPIView):
+    """Филиал клиники: правка названия, адреса, телефона и графика, удаление.
+    Все ссылки на филиал (привязки врачей, инвайты, приглашения, процедуры)
+    объявлены с on_delete=SET_NULL — при удалении они остаются, только без
+    филиала; сами связи врачей с клиникой не удаляются."""
     permission_classes = (IsClinic,)
     serializer_class = ClinicBranchUpdateSerializer
-    http_method_names = ['put']
+    http_method_names = ['get', 'put', 'patch', 'delete']
 
     def get_queryset(self):
         return ClinicBranch.objects.filter(clinic__user=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        # PUT — частичное обновление: кабинет шлёт только изменённые поля
+        # (раньше — один адрес), остальные трогать не должен.
+        kwargs['partial'] = True
+        return super().update(request, *args, **kwargs)
 
 
 # ── Appointments ─────────────────────────────────────────────────────────────
@@ -252,6 +267,10 @@ class ClinicDoctorDetailView(RetrieveUpdateAPIView):
         doctor = self.get_object()
         clinic = ClinicProfile.objects.get(user=request.user)
         DoctorClinicLink.objects.filter(clinic=clinic, doctor=doctor).delete()
+        # Откреплённый врач не должен оставаться исполнителем процедур этой
+        # клиники: иначе он по-прежнему виден и доступен для записи, а форма
+        # процедуры его не показывает и при сохранении получала 400.
+        doctor.services.remove(*Service.objects.filter(clinic=clinic))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -397,6 +416,14 @@ class ClinicServiceDetailView(APIView):
         service = self._get_service(request, pk)
         if not service:
             return Response({'detail': 'Не найдено'}, status=status.HTTP_404_NOT_FOUND)
+        # Записи ссылаются на услугу с SET_NULL: удаление стёрло бы у них
+        # название и цену (и выручку), а занятое время сжалось бы до 30 минут.
+        # Услугу с записями можно только деактивировать (is_active=false).
+        if service.appointments.exists():
+            return Response(
+                {'detail': 'У услуги есть записи — деактивируйте её'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         service.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

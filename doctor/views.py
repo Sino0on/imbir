@@ -306,6 +306,14 @@ class DoctorServiceDetailView(APIView):
         service = self._get_service(request, pk)
         if not service:
             return Response({'detail': 'Не найдено'}, status=status.HTTP_404_NOT_FOUND)
+        # Записи ссылаются на услугу с SET_NULL: удаление стёрло бы у них
+        # название и цену, а занятое время сжалось бы до 30 минут. Услугу с
+        # записями можно только деактивировать (is_active=false).
+        if service.appointments.exists():
+            return Response(
+                {'detail': 'У услуги есть записи — деактивируйте её'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         service.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

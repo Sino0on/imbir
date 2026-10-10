@@ -356,10 +356,19 @@ class ClinicServiceWriteSerializer(serializers.ModelSerializer):
         clinic = self.context['clinic']
         from users.models import DoctorClinicLink
         linked_docs = set(
-            DoctorClinicLink.objects.filter(clinic=clinic, doctor__user_id__in=value)
+            DoctorClinicLink.objects.filter(clinic=clinic, doctor__user_id__in=value, is_active=True)
             .values_list('doctor__user_id', flat=True)
         )
         invalid_docs = set(value) - linked_docs
+        if invalid_docs and self.instance is not None:
+            # Врач уже числился исполнителем этой процедуры, но с тех пор
+            # откреплён от клиники: форма его не показывает, а id мог остаться
+            # в отправленном списке. Молча убираем, а не валим всё сохранение.
+            stale_docs = set(
+                self.instance.doctors.filter(user_id__in=invalid_docs).values_list('user_id', flat=True)
+            )
+            value = [doc_id for doc_id in value if doc_id not in stale_docs]
+            invalid_docs -= stale_docs
         if invalid_docs:
             raise serializers.ValidationError(
                 f'Некоторые врачи не принадлежат этой клинике или не найдены: {list(invalid_docs)}'
@@ -377,6 +386,12 @@ class ClinicServiceWriteSerializer(serializers.ModelSerializer):
     def validate_duration(self, value):
         from services.validators import validate_service_duration
         return validate_service_duration(value)
+
+    def validate_price(self, value):
+        # Модель отрицательную цену пропускает — в каталоге висело «-500 с».
+        if value is not None and value < 0:
+            raise serializers.ValidationError('Стоимость не может быть отрицательной.')
+        return value
 
     def create(self, validated_data):
         doctor_ids = validated_data.pop('doctor_ids', [])

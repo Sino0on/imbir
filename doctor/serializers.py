@@ -274,6 +274,12 @@ class DoctorServiceWriteSerializer(serializers.ModelSerializer):
         from services.validators import validate_service_duration
         return validate_service_duration(value)
 
+    def validate_price(self, value):
+        # Модель отрицательную цену пропускает — услуга сохранялась с «-500.00».
+        if value is not None and value < 0:
+            raise serializers.ValidationError('Стоимость не может быть отрицательной.')
+        return value
+
     @staticmethod
     def _resolve_branch(clinic, link_branch, branch_id):
         """Единая логика для обоих путей (авто-подстановка и явный clinic_id):
