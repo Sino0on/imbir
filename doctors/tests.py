@@ -246,9 +246,12 @@ class GlobalSearchTests(APITestCase):
 
 
 from unittest.mock import patch
+from django.core.cache import cache
 
 class GeolocationMiddlewareTests(APITestCase):
     def setUp(self):
+        # Город по IP кешируется — иначе результат прошлого теста протекает в этот.
+        cache.clear()
         # Create doctors in different cities
         self.doc_user_1 = User.objects.create_user(
             email='doc_bishkek@example.com',

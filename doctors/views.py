@@ -70,7 +70,8 @@ class DoctorListView(ListAPIView):
         if city.lower() == 'all':
             city = ''
         elif not city and hasattr(self.request, 'city'):
-            city = self.request.city
+            # request.city ленивый: город по IP определяется только здесь.
+            city = str(self.request.city)
         if city:
             qs = qs.filter(city__icontains=city)
 

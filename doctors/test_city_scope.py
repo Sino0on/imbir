@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+from django.core.cache import cache
+
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -37,6 +39,8 @@ class DoctorListCityAllTests(APITestCase):
     url = '/api/doctors/'
 
     def setUp(self):
+        # Город по IP кешируется — иначе результат прошлого теста протекает в этот.
+        cache.clear()
         self.bishkek = _create_doctor('b@example.com', 'Бишкекский', 'Бишкек')
         self.osh = _create_doctor('o@example.com', 'Ошский', 'Ош')
 
