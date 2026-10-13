@@ -1,10 +1,15 @@
+import logging
+import threading
+
 from django.conf import settings
+from django.db import connection
 from django.db.models import Q
 from rest_framework import status, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 
 from .models import ChatRoom, ChatMessage, AIMessage
@@ -42,6 +47,15 @@ AI_RECOMMENDATION_INSTRUCTIONS = (
     'Доступные специализации: {specializations}'
 )
 MAX_HISTORY = 20
+
+logger = logging.getLogger(__name__)
+
+# Одновременные вызовы OpenAI на процесс (Daphne — один процесс, запросы в
+# потоках). Сверх потолка отвечаем 503 сразу, не ставя запрос в очередь.
+_ai_slots = threading.BoundedSemaphore(settings.AI_CHAT_MAX_CONCURRENT)
+
+AI_BUSY_MESSAGE = 'ИИ-помощник сейчас перегружен. Попробуйте через минуту.'
+AI_FAILED_MESSAGE = 'ИИ-помощник не ответил. Попробуйте ещё раз.'
 
 
 def _build_system_messages():
@@ -161,27 +175,22 @@ class AIChatHistoryView(APIView):
 )
 class AIChatSendView(APIView):
     permission_classes = (IsAuthenticated,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = 'ai_chat'
 
     def post(self, request):
         serializer = SendAIMessageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user_text = serializer.validated_data['message']
 
-        AIMessage.objects.create(user=request.user, role=AIMessage.Role.USER, content=user_text)
-
-        history = list(
-            AIMessage.objects.filter(user=request.user).order_by('-created_at')[:MAX_HISTORY]
-        )
-        openai_messages = _build_system_messages()
-        openai_messages += [{'role': m.role, 'content': m.content} for m in reversed(history)]
-
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        completion = client.chat.completions.create(
-            model='gpt-4o-mini',
-            messages=openai_messages,
-            response_format={'type': 'json_object'},
-        )
-        raw = completion.choices[0].message.content
+        if not _ai_slots.acquire(blocking=False):
+            return Response({'detail': AI_BUSY_MESSAGE}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        try:
+            raw = self._ask_openai(request.user, user_text)
+        finally:
+            _ai_slots.release()
+        if raw is None:
+            return Response({'detail': AI_FAILED_MESSAGE}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         content, recommend, entity_types, specializations = self._parse_ai_reply(raw)
 
@@ -200,6 +209,42 @@ class AIChatSendView(APIView):
             AIMessageSerializer(ai_message, context={'request': request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+    @staticmethod
+    def _ask_openai(user, user_text):
+        """Сохраняет вопрос и спрашивает модель. None — модель не ответила:
+        вопрос тогда удаляем, чтобы повтор не задвоил его в истории."""
+        question = AIMessage.objects.create(user=user, role=AIMessage.Role.USER, content=user_text)
+
+        history = list(
+            AIMessage.objects.filter(user=user).order_by('-created_at')[:MAX_HISTORY]
+        )
+        openai_messages = _build_system_messages()
+        openai_messages += [{'role': m.role, 'content': m.content} for m in reversed(history)]
+
+        # Пока ждём OpenAI (секунды), соединение с БД простаивает. Соединений
+        # у Postgres 100 на весь сайт: при ~100 одновременных вопросах они
+        # кончались, и 500 получали все запросы сайта, а не только чат.
+        # Django откроет новое соединение при следующем запросе к БД.
+        if not connection.in_atomic_block:
+            connection.close()
+
+        client = OpenAI(
+            api_key=settings.OPENAI_API_KEY,
+            timeout=settings.AI_CHAT_TIMEOUT_SECONDS,
+            max_retries=0,
+        )
+        try:
+            completion = client.chat.completions.create(
+                model='gpt-4o-mini',
+                messages=openai_messages,
+                response_format={'type': 'json_object'},
+            )
+        except OpenAIError:
+            logger.exception('AI chat: OpenAI call failed for user=%s', user.pk)
+            question.delete()
+            return None
+        return completion.choices[0].message.content
 
     @staticmethod
     def _parse_ai_reply(raw):

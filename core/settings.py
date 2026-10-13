@@ -146,6 +146,11 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Глобального троттлинга нет — частоту ограничиваем точечно (throttle_scope
+    # у конкретной вьюхи). ИИ-чат: каждое сообщение — платный вызов OpenAI.
+    'DEFAULT_THROTTLE_RATES': {
+        'ai_chat': config('AI_CHAT_RATE', default='10/min'),
+    },
 }
 
 SPECTACULAR_SETTINGS = {
@@ -219,6 +224,12 @@ LIVEKIT_S3_REGION = config('LIVEKIT_S3_REGION', default='')
 LIVEKIT_S3_ENDPOINT = config('LIVEKIT_S3_ENDPOINT', default='')
 
 OPENAI_API_KEY = config('OPENAI_API_KEY', default=None)
+
+# ИИ-чат ждёт OpenAI прямо в запросе. Таймаут меньше 15 с — столько ждёт ответа
+# фронт (axios), иначе пользователь видит обрыв вместо понятной ошибки.
+# Потолок одновременных вызовов бережёт лимиты ключа OpenAI и сам сервер.
+AI_CHAT_TIMEOUT_SECONDS = config('AI_CHAT_TIMEOUT_SECONDS', default=12, cast=float)
+AI_CHAT_MAX_CONCURRENT = config('AI_CHAT_MAX_CONCURRENT', default=30, cast=int)
 
 # В .env переменная называется JEMINI_* (опечатка автора) — здесь читаем её,
 # но в коде проекта везде используем правильное имя GEMINI.

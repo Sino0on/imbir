@@ -116,4 +116,6 @@ class AIMessageSerializer(serializers.ModelSerializer):
 
 
 class SendAIMessageSerializer(serializers.Serializer):
-    message = serializers.CharField()
+    # Вся история уходит в OpenAI с каждым сообщением — длинные простыни
+    # раздувают стоимость и время ответа.
+    message = serializers.CharField(max_length=2000)
