@@ -1,3 +1,5 @@
+import datetime
+
 from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -63,6 +65,156 @@ class DoctorAvailableSlotsTests(APITestCase):
         response = self.client.get(self.url, {'date': '2026-07-06', 'service_id': service.id})
         times = [s['time'] for s in response.data['slots']]
         self.assertEqual(times[:3], ['09:00', '09:30', '10:00'])
+
+
+class DoctorAvailableDatesTests(APITestCase):
+    """available-dates: дни периода, где есть хотя бы один свободный слот. Даты
+    считаются от сегодняшней — слоты на прошедшие дни всегда заняты."""
+
+    def setUp(self):
+        from appointments.models import Appointment
+
+        self.Appointment = Appointment
+        self.user = User.objects.create_user(
+            email='dates-doctor@example.com', password='password123',
+            first_name='Doctor', last_name='Dates', role=User.Role.DOCTOR,
+        )
+        self.patient = User.objects.create_user(
+            email='dates-patient@example.com', password='password123',
+            first_name='Pat', role=User.Role.PATIENT,
+        )
+        working = {'enabled': True, 'from': '09:00', 'to': '18:00'}
+        off = {'enabled': False, 'from': None, 'to': None}
+        self.doctor = DoctorProfile.objects.create(
+            user=self.user,
+            is_published=True,
+            schedule={
+                'monday': working, 'tuesday': working, 'wednesday': working,
+                'thursday': working, 'friday': working,
+                'saturday': off, 'sunday': off,
+            },
+            lunch_break={'from': '13:00', 'to': '14:00'},
+        )
+        self.url = f'/api/doctors/{self.user.id}/available-dates/'
+        # Со «завтра»: сегодняшние слоты могут уже прошли — тест не должен
+        # зависеть от времени суток.
+        self.date_from = timezone.localdate() + datetime.timedelta(days=1)
+        self.date_to = self.date_from + datetime.timedelta(days=13)
+
+    def _get(self, **params):
+        query = {'from': self.date_from.isoformat(), 'to': self.date_to.isoformat(), **params}
+        return self.client.get(self.url, query)
+
+    def _days(self):
+        return [self.date_from + datetime.timedelta(days=i) for i in range(14)]
+
+    def _first_wednesday(self):
+        return next(day for day in self._days() if day.weekday() == 2)
+
+    def _single_slot_wednesday(self):
+        # Среда с одним слотом 10:00–10:30: удобно проверять «день занят целиком».
+        self.doctor.schedule['wednesday'] = {'enabled': True, 'from': '10:00', 'to': '10:30'}
+        self.doctor.save()
+
+    def test_lists_only_working_days(self):
+        response = self._get()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        expected = [day.isoformat() for day in self._days() if day.weekday() < 5]
+        self.assertEqual(response.data['dates'], expected)
+
+    def test_fully_booked_day_is_not_listed(self):
+        self._single_slot_wednesday()
+        busy_day = self._first_wednesday()
+        self.Appointment.objects.create(
+            patient=self.patient, doctor=self.doctor, date=busy_day,
+            time=datetime.time(10, 0),
+        )
+        dates = self._get().data['dates']
+        self.assertNotIn(busy_day.isoformat(), dates)
+        # Другие среды периода и остальные дни не затронуты.
+        later_wednesdays = [
+            day for day in self._days() if day.weekday() == 2 and day != busy_day
+        ]
+        for day in later_wednesdays:
+            self.assertIn(day.isoformat(), dates)
+
+    def test_cancelled_appointment_does_not_block_day(self):
+        self._single_slot_wednesday()
+        day = self._first_wednesday()
+        self.Appointment.objects.create(
+            patient=self.patient, doctor=self.doctor, date=day,
+            time=datetime.time(10, 0), status=self.Appointment.Status.CANCELLED,
+        )
+        self.assertIn(day.isoformat(), self._get().data['dates'])
+
+    def test_matches_slots_endpoint(self):
+        # Главная гарантия: дата в списке ⇔ в available-slots есть свободный слот.
+        self._single_slot_wednesday()
+        self.Appointment.objects.create(
+            patient=self.patient, doctor=self.doctor, date=self._first_wednesday(),
+            time=datetime.time(10, 0),
+        )
+        listed = set(self._get().data['dates'])
+        for day in self._days():
+            slots = self.client.get(
+                f'/api/doctors/{self.user.id}/available-slots/', {'date': day.isoformat()},
+            ).data['slots']
+            has_free = any(slot['available'] for slot in slots)
+            self.assertEqual(day.isoformat() in listed, has_free, day.isoformat())
+
+    def test_service_duration_changes_result(self):
+        from services.models import Service
+
+        self._single_slot_wednesday()
+        day = self._first_wednesday().isoformat()
+        long_service = Service.objects.create(
+            name='Долгий приём', category='general', duration=60, is_active=True,
+        )
+        # Без услуги окно в 30 минут подходит, под часовую услугу — нет.
+        self.assertIn(day, self._get().data['dates'])
+        self.assertNotIn(day, self._get(service_id=long_service.id).data['dates'])
+
+    def test_exclude_appointment_only_for_its_owner(self):
+        self._single_slot_wednesday()
+        day = self._first_wednesday()
+        own = self.Appointment.objects.create(
+            patient=self.patient, doctor=self.doctor, date=day, time=datetime.time(10, 0),
+        )
+        # Аноним не может «освободить» чужую запись: по ответу вычислялось бы чужое время.
+        anonymous = self._get(exclude_appointment_id=own.id).data['dates']
+        self.assertNotIn(day.isoformat(), anonymous)
+
+        self.client.force_authenticate(user=self.patient)
+        owner = self._get(exclude_appointment_id=own.id).data['dates']
+        self.assertIn(day.isoformat(), owner)
+
+    def test_validation(self):
+        base = {'from': self.date_from.isoformat(), 'to': self.date_to.isoformat()}
+        bad_queries = [
+            {'to': base['to']},
+            {'from': base['from']},
+            {'from': 'вчера', 'to': base['to']},
+            {'from': base['to'], 'to': base['from']},
+            {
+                'from': base['from'],
+                'to': (self.date_from + datetime.timedelta(days=62)).isoformat(),
+            },
+        ]
+        for query in bad_queries:
+            response = self.client.get(self.url, query)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, query)
+
+        # Ровно 62 дня — допустимо.
+        edge = self.client.get(self.url, {
+            'from': base['from'],
+            'to': (self.date_from + datetime.timedelta(days=61)).isoformat(),
+        })
+        self.assertEqual(edge.status_code, status.HTTP_200_OK)
+
+    def test_unpublished_doctor_is_404(self):
+        self.doctor.is_published = False
+        self.doctor.save()
+        self.assertEqual(self._get().status_code, status.HTTP_404_NOT_FOUND)
 
 
 class DoctorInterviewsAPITests(APITestCase):

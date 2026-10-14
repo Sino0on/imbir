@@ -332,6 +332,114 @@ class BulkDoctorPhotoUploadView(APIView):
         return Response({'data': result})
 
 
+def _published_doctor(pk):
+    from django.shortcuts import get_object_or_404
+
+    return get_object_or_404(
+        DoctorProfile.objects.select_related('user').filter(
+            user__is_active=True, is_published=True
+        ),
+        user__id=pk,
+    )
+
+
+def _slots_appointments(request, doctor_profile, date_from, date_to):
+    """Записи врача за период, которые занимают время в сетке слотов.
+
+    При переносе своя же запись не должна занимать время, на которое её
+    переносят. Исключаем её, только если спрашивает её пациент или врач —
+    иначе по ответу можно было бы вычислять время чужих записей."""
+    from appointments.models import Appointment
+
+    appointments = Appointment.objects.filter(
+        doctor=doctor_profile,
+        date__range=(date_from, date_to),
+        status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED],
+    ).select_related('service')
+
+    exclude_id = request.query_params.get('exclude_appointment_id', '').strip()
+    if exclude_id.isdigit() and request.user.is_authenticated:
+        own = appointments.filter(pk=int(exclude_id)).filter(
+            Q(patient=request.user) | Q(doctor__user=request.user)
+        )
+        appointments = appointments.exclude(pk__in=own.values('pk'))
+    return appointments
+
+
+def _requested_duration(request):
+    """Длительность услуги из ?service_id (минуты); без неё — дефолт в 30 минут."""
+    from appointments.utils import appointment_duration_minutes
+    from services.models import Service
+
+    service_id = request.query_params.get('service_id', '').strip()
+    # Выключенную услугу записать нельзя (её отклонит и создание записи) — её
+    # длительность не должна менять сетку.
+    requested_service = (
+        Service.objects.filter(id=service_id, is_active=True).first() if service_id.isdigit() else None
+    )
+    return appointment_duration_minutes(requested_service)
+
+
+def _build_day_slots(doctor_profile, target_date, busy_ranges, requested_duration, local_now):
+    """Слоты врача на одну дату: [{'time': 'HH:MM', 'available': bool}].
+    Пусто, если врач в этот день не принимает.
+
+    Один расчёт на available-slots и available-dates: дата со свободным временем
+    в календаре и список слотов под ней не могут разойтись."""
+    from datetime import timedelta
+    from appointments.utils import doctor_lunch_break, doctor_work_hours
+
+    # Те же правила рабочего дня и перерыва проверяются при создании и
+    # переносе записи (appointments.utils.schedule_conflict).
+    work_hours = doctor_work_hours(doctor_profile, target_date)
+    if work_hours is None:
+        return []
+
+    lunch = doctor_lunch_break(doctor_profile, target_date)
+
+    slots = []
+    current_dt, end_dt = work_hours
+
+    local_today = local_now.date()
+    local_time = local_now.time()
+
+    # Шаг сетки = длительность услуги: приёмы идут встык (у услуги на 45 мин —
+    # 09:00, 09:45, 10:30…). Если слот задевает чужую запись или перерыв,
+    # следующий начинается не позже их конца — иначе сетка разъезжается с
+    # записями, сделанными по другой длительности, и свободное окно теряется.
+    blockers = list(busy_ranges)
+    if lunch:
+        blockers.append(lunch)
+
+    while current_dt + timedelta(minutes=requested_duration) <= end_dt:
+        slot_time = current_dt.time()
+        slot_end_dt = current_dt + timedelta(minutes=requested_duration)
+
+        overlapping = [
+            (busy_start, busy_end) for busy_start, busy_end in blockers
+            if current_dt < busy_end and busy_start < slot_end_dt
+        ]
+        available = not overlapping
+
+        if available and target_date < local_today:
+            available = False
+        elif available and target_date == local_today:
+            if slot_time <= local_time:
+                available = False
+
+        slots.append({
+            'time': slot_time.strftime('%H:%M'),
+            'available': available
+        })
+
+        if overlapping:
+            current_dt = min(slot_end_dt, max(busy_end for _, busy_end in overlapping))
+        else:
+            current_dt = slot_end_dt
+
+    return slots
+
+
 class DoctorAvailableSlotsView(APIView):
     permission_classes = (AllowAny,)
 
@@ -359,24 +467,11 @@ class DoctorAvailableSlotsView(APIView):
         ),
     )
     def get(self, request, pk):
-        from rest_framework.response import Response
-        from rest_framework import status
-        from django.shortcuts import get_object_or_404
-        from datetime import datetime, timedelta
+        from datetime import datetime
         from django.utils import timezone
-        from appointments.models import Appointment
-        from appointments.utils import (
-            appointment_duration_minutes, appointment_time_range,
-            doctor_lunch_break, doctor_work_hours,
-        )
-        from services.models import Service
+        from appointments.utils import appointment_time_range, doctor_work_hours
 
-        doctor_profile = get_object_or_404(
-            DoctorProfile.objects.select_related('user').filter(
-                user__is_active=True, is_published=True
-            ),
-            user__id=pk,
-        )
+        doctor_profile = _published_doctor(pk)
         date_str = request.query_params.get('date', '').strip()
         if not date_str:
             return Response({'detail': 'Параметр date обязателен (YYYY-MM-DD).'}, status=status.HTTP_400_BAD_REQUEST)
@@ -386,85 +481,97 @@ class DoctorAvailableSlotsView(APIView):
         except ValueError:
             return Response({'detail': 'Некорректный формат даты. Используйте YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Те же правила рабочего дня и перерыва проверяются при создании и
-        # переносе записи (appointments.utils.schedule_conflict).
-        work_hours = doctor_work_hours(doctor_profile, target_date)
-        if work_hours is None:
+        if doctor_work_hours(doctor_profile, target_date) is None:
             return Response({'date': date_str, 'slots': []})
-
-        appointments = Appointment.objects.filter(
-            doctor=doctor_profile,
-            date=target_date,
-            status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED],
-        ).select_related('service')
-
-        # При переносе своя же запись не должна занимать время, на которое её
-        # переносят. Исключаем её, только если спрашивает её пациент или врач —
-        # иначе по ответу можно было бы вычислять время чужих записей.
-        exclude_id = request.query_params.get('exclude_appointment_id', '').strip()
-        if exclude_id.isdigit() and request.user.is_authenticated:
-            own = appointments.filter(pk=int(exclude_id)).filter(
-                Q(patient=request.user) | Q(doctor__user=request.user)
-            )
-            appointments = appointments.exclude(pk__in=own.values('pk'))
 
         busy_ranges = [
             appointment_time_range(apt.date, apt.time, apt.service)
-            for apt in appointments
+            for apt in _slots_appointments(request, doctor_profile, target_date, target_date)
         ]
-
-        service_id = request.query_params.get('service_id', '').strip()
-        # Выключенную услугу записать нельзя (её отклонит и создание записи) — её
-        # длительность не должна менять сетку.
-        requested_service = (
-            Service.objects.filter(id=service_id, is_active=True).first() if service_id.isdigit() else None
+        slots = _build_day_slots(
+            doctor_profile, target_date, busy_ranges,
+            _requested_duration(request), timezone.localtime(timezone.now()),
         )
-        requested_duration = appointment_duration_minutes(requested_service)
-
-        lunch = doctor_lunch_break(doctor_profile, target_date)
-
-        slots = []
-        current_dt, end_dt = work_hours
-
-        local_now = timezone.localtime(timezone.now())
-        local_today = local_now.date()
-        local_time = local_now.time()
-
-        # Шаг сетки = длительность услуги: приёмы идут встык (у услуги на 45 мин —
-        # 09:00, 09:45, 10:30…). Если слот задевает чужую запись или перерыв,
-        # следующий начинается не позже их конца — иначе сетка разъезжается с
-        # записями, сделанными по другой длительности, и свободное окно теряется.
-        blockers = list(busy_ranges)
-        if lunch:
-            blockers.append(lunch)
-
-        while current_dt + timedelta(minutes=requested_duration) <= end_dt:
-            slot_time = current_dt.time()
-            slot_end_dt = current_dt + timedelta(minutes=requested_duration)
-
-            overlapping = [
-                (busy_start, busy_end) for busy_start, busy_end in blockers
-                if current_dt < busy_end and busy_start < slot_end_dt
-            ]
-            available = not overlapping
-
-            if available and target_date < local_today:
-                available = False
-            elif available and target_date == local_today:
-                if slot_time <= local_time:
-                    available = False
-
-            slots.append({
-                'time': slot_time.strftime('%H:%M'),
-                'available': available
-            })
-
-            if overlapping:
-                current_dt = min(slot_end_dt, max(busy_end for _, busy_end in overlapping))
-            else:
-                current_dt = slot_end_dt
-
         return Response({'date': date_str, 'slots': slots})
+
+
+# Календарь записи смотрит на 60 дней вперёд (BOOKING_HORIZON_DAYS на фронте);
+# больше двух месяцев за раз не считаем — запрос открыт без авторизации.
+AVAILABLE_DATES_MAX_DAYS = 62
+
+
+class DoctorAvailableDatesView(APIView):
+    permission_classes = (AllowAny,)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='from', type=str, description='Начало периода, YYYY-MM-DD', required=True),
+            OpenApiParameter(
+                name='to', type=str, required=True,
+                description=f'Конец периода включительно, YYYY-MM-DD. Не больше {AVAILABLE_DATES_MAX_DAYS} дней от from.',
+            ),
+            OpenApiParameter(
+                name='service_id', type=int, required=False,
+                description='ID услуги: свободным считается день, где под её длительность есть окно.',
+            ),
+            OpenApiParameter(
+                name='exclude_appointment_id', type=int, required=False,
+                description='При переносе: своя запись (пациента или врача) не занимает время.',
+            ),
+        ],
+        tags=['Doctors Catalog'],
+        summary='Даты врача со свободным временем',
+        description=(
+            'Возвращает даты периода, на которые есть хотя бы один свободный слот. '
+            'Слоты считаются так же, как в available-slots, — день с пустым списком '
+            'доступных слотов сюда не попадает.'
+        ),
+    )
+    def get(self, request, pk):
+        from collections import defaultdict
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        from appointments.utils import appointment_time_range
+
+        doctor_profile = _published_doctor(pk)
+
+        parsed = {}
+        for key in ('from', 'to'):
+            raw = request.query_params.get(key, '').strip()
+            if not raw:
+                return Response({'detail': f'Параметр {key} обязателен (YYYY-MM-DD).'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                parsed[key] = datetime.strptime(raw, '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'detail': 'Некорректный формат даты. Используйте YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+        date_from, date_to = parsed['from'], parsed['to']
+
+        if date_to < date_from:
+            return Response({'detail': 'Параметр to не может быть раньше from.'}, status=status.HTTP_400_BAD_REQUEST)
+        if (date_to - date_from).days + 1 > AVAILABLE_DATES_MAX_DAYS:
+            return Response(
+                {'detail': f'Период не больше {AVAILABLE_DATES_MAX_DAYS} дней.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        busy_by_date = defaultdict(list)
+        for apt in _slots_appointments(request, doctor_profile, date_from, date_to):
+            busy_by_date[apt.date].append(appointment_time_range(apt.date, apt.time, apt.service))
+
+        requested_duration = _requested_duration(request)
+        local_now = timezone.localtime(timezone.now())
+
+        dates = []
+        day = date_from
+        while day <= date_to:
+            slots = _build_day_slots(
+                doctor_profile, day, busy_by_date.get(day, []), requested_duration, local_now,
+            )
+            if any(slot['available'] for slot in slots):
+                dates.append(day.isoformat())
+            day += timedelta(days=1)
+
+        return Response({'from': date_from.isoformat(), 'to': date_to.isoformat(), 'dates': dates})
 
 
 def bulk_photo_tool(request):
